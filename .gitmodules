@@ -1,0 +1,6 @@
+[submodule "plugins/ultrawork"]
+	path = plugins/ultrawork
+	url = https://github.com/gprecious/ultrawork-plugin.git
+[submodule "plugins/youtube-assistant"]
+	path = plugins/youtube-assistant
+	url = https://github.com/gprecious/youtube-assistant.git
