@@ -113,9 +113,13 @@ Phase 7: Oracle 채널 결정 (일괄)
 ├── 채널 간 배분 균형 고려
 └── 중복 주제 회피
 
-Phase 8: 업로드 (병렬)
-├── video-uploader × N (run_in_background=true)
-└── history.json 업데이트
+Phase 8: 업로드 (순차 - 중복 방지)
+├── ⚠️ 병렬 업로드 금지 (history.json 레이스 컨디션 방지)
+├── for each video: video-uploader (run_in_background=false)
+│   ├── 업로드 전: global-history.json에서 event_id 중복 검사
+│   ├── 중복 시: 스킵 (이미 업로드됨)
+│   └── 업로드 후: history.json 업데이트 완료 후 다음 영상
+└── history.json 업데이트 (순차 완료 보장)
 
 Phase 9: 마무리
 ├── wisdom.md 업데이트
@@ -143,10 +147,22 @@ Task(oracle, prompt="assign_channels", videos=results, lang={lang})
 # 언어별 채널 구조: {lang}/channel-young, {lang}/channel-middle, {lang}/channel-senior
 ```
 
-### 병렬 업로드
+### 순차 업로드 (중복 방지 필수)
 ```
+⚠️ 병렬 업로드 금지! 레이스 컨디션으로 중복 업로드 발생
+
 for each video:
-    Task(video-uploader, prompt=video_data, run_in_background=true)
+    # 1. 중복 검사 (업로드 전)
+    if is_already_uploaded(video.event_id):
+        skip("이미 업로드됨")
+        continue
+
+    # 2. 순차 업로드 (run_in_background=false 필수!)
+    result = Task(video-uploader, prompt=video_data, run_in_background=false)
+
+    # 3. 업로드 완료 확인 후 다음 영상
+    if result.success:
+        log("업로드 완료: " + video.event_id)
 ```
 
 ## 상수

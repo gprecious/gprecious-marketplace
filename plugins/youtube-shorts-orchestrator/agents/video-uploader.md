@@ -12,11 +12,52 @@ YouTube Data API v3를 사용하여 Shorts 영상을 업로드하는 에이전�
 
 ## 역할
 
-1. OAuth 2.0 인증 처리
-2. 영상 업로드
-3. 채널별 메타데이터 설정
-4. 공개 범위 설정
-5. history.json 업데이트
+1. **⚠️ 업로드 전 중복 검사 (필수 최우선)**
+2. OAuth 2.0 인증 처리
+3. 영상 업로드
+4. 채널별 메타데이터 설정
+5. 공개 범위 설정
+6. history.json 업데이트
+
+## ⚠️ 중복 업로드 방지 (최우선 실행)
+
+**업로드 전 반드시 중복 검사를 수행해야 합니다.**
+
+### 중복 검사 프로세스
+```bash
+# 1. global-history.json 로드
+HISTORY_FILE="history/global-history.json"
+
+# 2. event_id로 중복 검사
+EVENT_ID="${EVENT_ID}"  # 입력받은 이벤트 ID
+
+if [ -f "${HISTORY_FILE}" ]; then
+    EXISTING=$(cat "${HISTORY_FILE}" | jq -r ".videos[] | select(.event_id == \"${EVENT_ID}\") | .video_id")
+
+    if [ -n "${EXISTING}" ]; then
+        echo "⚠️ 중복 감지! event_id=${EVENT_ID}는 이미 업로드됨 (video_id=${EXISTING})"
+        echo "업로드 스킵"
+        exit 0  # 성공으로 종료 (이미 완료된 작업)
+    fi
+fi
+
+# 3. 중복 아니면 업로드 진행
+echo "✅ 중복 없음, 업로드 진행"
+```
+
+### 출력 (중복 감지 시)
+```xml
+<task_result agent="video-uploader" event_id="evt_001">
+  <summary>스킵: 이미 업로드된 영상</summary>
+
+  <duplicate_detected>
+    <event_id>evt_001</event_id>
+    <existing_video_id>dQw4w9WgXcQ</existing_video_id>
+    <existing_url>https://www.youtube.com/shorts/dQw4w9WgXcQ</existing_url>
+    <action>skipped</action>
+  </duplicate_detected>
+</task_result>
+```
 
 ## 입력 형식
 
@@ -419,6 +460,8 @@ fi
 
 ## 주의사항
 
+- **⚠️ 업로드 전 중복 검사 필수 (최우선)** - event_id로 global-history.json 확인
+- **⚠️ 병렬 호출 금지** - main-orchestrator가 순차 호출해야 함 (run_in_background=false)
 - **채널별 Refresh Token 필수** - 단일 토큰으로 여러 채널 업로드 불가
 - **업로드 전 채널 검증 필수** - 잘못된 채널 업로드 방지
 - 채널 토큰 없으면 로컬 저장만
