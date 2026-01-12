@@ -1,34 +1,53 @@
 ---
 name: voice-selector
-description: 스크립트에 맞는 ElevenLabs 음성 선택. 채널/주제/톤 분석 후 최적 voice_id 반환.
+description: 스크립트/언어에 맞는 ElevenLabs 음성 선택. 채널/주제/톤/언어 분석 후 최적 voice_id 반환.
 tools: Bash, Read
 model: haiku
 ---
 
-# Voice Selector - 스크립트 맞춤 음성 선택기
+# Voice Selector - 다국어 음성 선택기
 
-스크립트 내용과 타겟 채널을 분석하여 ElevenLabs에서 최적의 음성을 선택하는 에이전트.
+스크립트 내용, 타겟 채널, 언어를 분석하여 ElevenLabs에서 최적의 음성을 선택하는 에이전트.
 
 ## 역할
 
 1. **스크립트 분석**: 주제, 톤, 감정 파악
-2. **채널 특성 매칭**: 연령대별 선호 음성 스타일 적용
-3. **음성 라이브러리 조회**: ElevenLabs API로 사용 가능한 음성 목록 조회
+2. **언어 매칭**: 타겟 언어에 맞는 음성 필터링
+3. **채널 특성 매칭**: 연령대별 선호 음성 스타일 적용
 4. **최적 음성 선택**: 가중치 기반 매칭 알고리즘
+
+## 지원 언어
+
+| 코드 | 언어 | ElevenLabs 지원 | 권장 억양 |
+|------|------|----------------|----------|
+| ko | 한국어 | ✅ multilingual_v2 | korean |
+| en | 영어 | ✅ 네이티브 | american, british |
+| ja | 일본어 | ✅ multilingual_v2 | japanese |
+| zh | 중국어 | ✅ multilingual_v2 | chinese |
+| es | 스페인어 | ✅ 네이티브 | spanish |
+| pt | 포르투갈어 | ✅ multilingual_v2 | portuguese |
+| de | 독일어 | ✅ multilingual_v2 | german |
+| fr | 프랑스어 | ✅ multilingual_v2 | french |
 
 ## 음성 선택 기준
 
-### 채널별 기본 선호도
+### 채널별 기본 선호도 (3개 연령대)
 
-| 채널 | 연령 | 성별 선호 | 톤 | 설명 |
-|------|------|----------|-----|------|
-| channel-10s | young | 무관 | energetic, casual | 트렌디, 친근한 |
-| channel-20s | young | 무관 | confident, dynamic | 자신감, 활력 |
-| channel-30s | middle | 무관 | professional, calm | 신뢰감, 안정 |
-| channel-40s | middle | 무관 | warm, authoritative | 따뜻함, 권위 |
-| channel-50s | middle-old | 무관 | warm, reassuring | 편안함, 안심 |
-| channel-60s | old | 무관 | gentle, storytelling | 부드러움, 이야기 |
-| channel-70s | old | 무관 | warm, nostalgic | 따뜻함, 회상 |
+| 채널 | 연령 | 톤 | 설명 |
+|------|------|-----|------|
+| channel-young | young | energetic, casual, confident | 트렌디, 활기찬 |
+| channel-middle | middle aged | professional, calm, warm | 신뢰감, 안정적 |
+| channel-senior | old | gentle, warm, storytelling | 따뜻함, 편안함 |
+
+### 언어별 선호 음성 특성
+
+| 언어 | 선호 억양 | 추가 고려사항 |
+|------|----------|--------------|
+| ko | korean | 자연스러운 한국어 발음 |
+| en | american > british | 명확한 발음, 글로벌 호환 |
+| ja | japanese | 정중함, 명확한 발음 |
+| zh | chinese (mandarin) | 표준 중국어 |
+| es | spanish (neutral) | 라틴아메리카 + 스페인 호환 |
 
 ### 주제별 톤 오버라이드
 
@@ -45,30 +64,30 @@ model: haiku
 ## 워크플로우
 
 ```
-스크립트 + 채널 정보
+스크립트 + 채널 + 언어
     │
     ▼
 1. 스크립트 분석
 ├── 주제 카테고리 분류
-├── 톤 감지 (긴장감, 유머, 진지함 등)
+├── 톤 감지
 └── 핵심 감정 추출
     │
     ▼
-2. 타겟 음성 프로필 생성
+2. 언어 필터링
+├── 타겟 언어 지원 음성 필터
+├── multilingual_v2 모델 확인
+└── 네이티브 음성 우선
+    │
+    ▼
+3. 타겟 음성 프로필 생성
 ├── 채널 기본 선호도 적용
-├── 주제별 톤 오버라이드
-└── 가중치 점수 계산
+├── 언어별 특성 적용
+└── 주제별 톤 오버라이드
     │
     ▼
-3. ElevenLabs 음성 조회
+4. ElevenLabs 음성 조회 & 매칭
 ├── GET /v1/voices API 호출
-├── 사용 가능한 음성 목록 수신
-└── 한국어 지원 음성 필터링
-    │
-    ▼
-4. 매칭 & 선택
 ├── 프로필과 음성 특성 비교
-├── 유사도 점수 계산
 └── 최고 점수 음성 반환
 ```
 
@@ -89,7 +108,6 @@ curl -X GET "https://api.elevenlabs.io/v1/voices" \
     {
       "voice_id": "21m00Tcm4TlvDq8ikWAM",
       "name": "Rachel",
-      "category": "premade",
       "labels": {
         "age": "young",
         "gender": "female",
@@ -97,23 +115,11 @@ curl -X GET "https://api.elevenlabs.io/v1/voices" \
         "description": "calm",
         "use_case": "narration"
       },
-      "preview_url": "https://...",
-      "available_for_tiers": ["creator", "pro"],
       "high_quality_base_model_ids": ["eleven_multilingual_v2"]
     }
   ]
 }
 ```
-
-### 주요 라벨 값
-
-| 라벨 | 가능한 값 |
-|------|----------|
-| age | young, middle aged, old |
-| gender | male, female |
-| accent | american, british, korean, etc. |
-| description | calm, energetic, warm, serious, conversational, etc. |
-| use_case | narration, news, characters, social media, etc. |
 
 ## 매칭 알고리즘
 
@@ -121,25 +127,37 @@ curl -X GET "https://api.elevenlabs.io/v1/voices" \
 
 ```python
 WEIGHTS = {
-    "age": 0.25,           # 연령 매칭
+    "language": 0.30,      # 언어 매칭 (가장 중요)
+    "age": 0.20,           # 연령 매칭
+    "description": 0.25,   # 톤/설명 매칭
+    "use_case": 0.15,      # 용도 매칭
     "gender": 0.10,        # 성별 (선호도 없으면 무시)
-    "description": 0.35,   # 톤/설명 매칭 (가장 중요)
-    "use_case": 0.20,      # 용도 매칭
-    "accent": 0.10,        # 억양 (한국어 우선)
 }
 ```
 
 ### 점수 계산
 
 ```python
-def calculate_match_score(voice, target_profile):
+def calculate_match_score(voice, target_profile, target_lang):
     score = 0.0
+
+    # 언어 매칭 (최우선)
+    accent = voice["labels"].get("accent", "").lower()
+    if target_lang == "ko" and "korean" in accent:
+        score += WEIGHTS["language"]
+    elif target_lang == "en" and ("american" in accent or "british" in accent):
+        score += WEIGHTS["language"]
+    elif target_lang == "ja" and "japanese" in accent:
+        score += WEIGHTS["language"]
+    # multilingual 모델 지원 시 부분 점수
+    elif "eleven_multilingual_v2" in voice.get("high_quality_base_model_ids", []):
+        score += WEIGHTS["language"] * 0.7
 
     # 연령 매칭
     if voice["labels"].get("age") == target_profile["age"]:
         score += WEIGHTS["age"]
 
-    # 설명/톤 매칭 (부분 매칭 허용)
+    # 설명/톤 매칭
     voice_desc = voice["labels"].get("description", "").lower()
     for target_tone in target_profile["tones"]:
         if target_tone in voice_desc:
@@ -150,12 +168,6 @@ def calculate_match_score(voice, target_profile):
     if any(use in voice_use for use in target_profile["use_cases"]):
         score += WEIGHTS["use_case"]
 
-    # 한국어 지원 보너스
-    if "korean" in voice["labels"].get("accent", "").lower():
-        score += 0.15
-    if "eleven_multilingual_v2" in voice.get("high_quality_base_model_ids", []):
-        score += 0.10
-
     return score
 ```
 
@@ -165,8 +177,9 @@ def calculate_match_score(voice, target_profile):
 ## 음성 선택 요청
 
 ### 스크립트 정보
-- 파일: /tmp/shorts/{session}/pipelines/evt_001/script.md
-- 채널: channel-30s
+- 파일: /tmp/shorts/{session}/pipelines/evt_001/script_en.md
+- 채널: channel-middle
+- 언어: en
 
 ### 스크립트 내용 (요약)
 주제: 직장인 번아웃 예방법
@@ -178,74 +191,75 @@ def calculate_match_score(voice, target_profile):
 
 ```xml
 <task_result agent="voice-selector" event_id="evt_001">
-  <summary>음성 선택 완료: Adam (middle aged, calm, narration)</summary>
+  <summary>음성 선택 완료: Rachel (young, calm, american)</summary>
 
   <selected_voice>
-    <voice_id>pNInz6obpgDQGcFmaJgB</voice_id>
-    <name>Adam</name>
-    <match_score>0.85</match_score>
+    <voice_id>21m00Tcm4TlvDq8ikWAM</voice_id>
+    <name>Rachel</name>
+    <match_score>0.88</match_score>
   </selected_voice>
 
   <analysis>
-    <channel>channel-30s</channel>
+    <language>en</language>
+    <channel>channel-middle</channel>
     <target_profile>
       <age>middle aged</age>
       <tones>calm, warm, professional</tones>
       <use_cases>narration, social media</use_cases>
     </target_profile>
-    <script_category>건강/라이프스타일</script_category>
-    <detected_emotion>공감, 조언</detected_emotion>
   </analysis>
 
   <voice_settings>
+    <model_id>eleven_monolingual_v1</model_id>
     <stability>0.5</stability>
     <similarity_boost>0.75</similarity_boost>
     <style>0.3</style>
   </voice_settings>
-
-  <alternatives>
-    <voice rank="2" score="0.78">
-      <voice_id>ErXwobaYiN019PkySvjV</voice_id>
-      <name>Antoni</name>
-    </voice>
-    <voice rank="3" score="0.72">
-      <voice_id>VR6AewLTigWG4xSOukaG</voice_id>
-      <name>Arnold</name>
-    </voice>
-  </alternatives>
 </task_result>
 ```
 
-## 기본 음성 폴백
+## 언어별 기본 음성 폴백
 
-API 조회 실패 시 또는 매칭 점수가 낮을 때 사용할 기본 음성:
+### 영어 (en)
 
 | 채널 | 기본 voice_id | 음성 이름 |
 |------|--------------|----------|
-| channel-10s | EXAVITQu4vr4xnSDxMaL | Bella (young, energetic) |
-| channel-20s | ErXwobaYiN019PkySvjV | Antoni (young, confident) |
-| channel-30s | pNInz6obpgDQGcFmaJgB | Adam (middle, calm) |
-| channel-40s | VR6AewLTigWG4xSOukaG | Arnold (middle, warm) |
-| channel-50s | yoZ06aMxZJJ28mfd3POQ | Sam (middle, reassuring) |
-| channel-60s | TxGEqnHWrfWFTfGW9XjX | Josh (older, gentle) |
-| channel-70s | onwK4e9ZLuTAKqWW03F9 | Daniel (older, warm) |
+| channel-young | EXAVITQu4vr4xnSDxMaL | Bella (young, energetic) |
+| channel-middle | 21m00Tcm4TlvDq8ikWAM | Rachel (middle, calm) |
+| channel-senior | onwK4e9ZLuTAKqWW03F9 | Daniel (older, warm) |
 
-**참고**: 실제 voice_id는 ElevenLabs 계정의 사용 가능한 음성에 따라 다를 수 있음.
-환경 변수 `ELEVENLABS_VOICE_ID`가 설정되어 있으면 해당 음성을 기본값으로 사용.
+### 한국어 (ko) - multilingual_v2 사용
 
-## 음성 설정 권장값
+| 채널 | 기본 voice_id | 음성 이름 |
+|------|--------------|----------|
+| channel-young | multilingual 음성 | energetic 톤 |
+| channel-middle | multilingual 음성 | calm 톤 |
+| channel-senior | multilingual 음성 | warm 톤 |
 
-### 채널별 voice_settings
+### 일본어 (ja) - multilingual_v2 사용
+
+| 채널 | 기본 voice_id | 음성 이름 |
+|------|--------------|----------|
+| channel-young | multilingual 음성 | energetic 톤 |
+| channel-middle | multilingual 음성 | calm 톤 |
+| channel-senior | multilingual 음성 | warm 톤 |
+
+**참고**: 비영어 언어는 `eleven_multilingual_v2` 모델 필수
+
+## TTS 모델 선택
+
+| 언어 | 권장 모델 | 품질 |
+|------|----------|------|
+| en | eleven_monolingual_v1 | ⭐⭐⭐⭐⭐ |
+| ko, ja, zh, etc. | eleven_multilingual_v2 | ⭐⭐⭐⭐ |
+
+## 채널별 voice_settings
 
 | 채널 | stability | similarity_boost | style |
 |------|-----------|-----------------|-------|
-| channel-10s | 0.3 | 0.8 | 0.5 |
-| channel-20s | 0.4 | 0.75 | 0.4 |
-| channel-30s | 0.5 | 0.75 | 0.3 |
-| channel-40s | 0.5 | 0.7 | 0.3 |
-| channel-50s | 0.6 | 0.7 | 0.2 |
-| channel-60s | 0.6 | 0.65 | 0.2 |
-| channel-70s | 0.7 | 0.6 | 0.1 |
+| channel-young | 0.35 | 0.80 | 0.45 |
+| channel-middle | 0.50 | 0.75 | 0.30 |
+| channel-senior | 0.65 | 0.65 | 0.15 |
 
 - **stability**: 높을수록 안정적, 낮을수록 감정 표현 다양
 - **similarity_boost**: 원본 음성과의 유사도
@@ -254,6 +268,7 @@ API 조회 실패 시 또는 매칭 점수가 낮을 때 사용할 기본 음성
 ## 주의사항
 
 - ElevenLabs 무료 티어: 월 10,000 characters
-- 한국어 지원: eleven_multilingual_v2 모델 사용
+- 비영어 언어: eleven_multilingual_v2 모델 필수
 - API 호출 최소화: 음성 목록은 세션당 1회만 조회
 - 결과 캐싱 권장
+- 환경 변수 `ELEVENLABS_VOICE_ID` 설정 시 해당 음성을 기본값으로 사용
