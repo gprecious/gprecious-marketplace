@@ -140,9 +140,9 @@ curl -X POST \
   --data-binary @thumbnail.jpg
 ```
 
-## history.json 업데이트
+## 히스토리 업데이트 (2곳)
 
-### 형식
+### 1. 채널별 history.json
 ```json
 {
   "channel_id": "channel-30s",
@@ -169,6 +169,37 @@ curl -X POST \
   }
 }
 ```
+
+### 2. 전역 global-history.json (중복 방지용)
+**경로**: `history/global-history.json`
+
+```json
+{
+  "version": "1.0.0",
+  "last_updated": "2025-01-12T15:30:00+09:00",
+  "total_videos": 1,
+  "videos": [
+    {
+      "id": "upload_20250112_001",
+      "video_id": "dQw4w9WgXcQ",
+      "title": "NASA가 숨긴 달의 비밀",
+      "channel": "channel-30s",
+      "topic": "우주/미스터리",
+      "keywords": ["NASA", "달", "미스터리", "우주"],
+      "uploaded_at": "2025-01-12T15:30:00+09:00"
+    }
+  ],
+  "topics_index": {
+    "우주/미스터리": ["upload_20250112_001"]
+  },
+  "keywords_index": ["NASA", "달", "미스터리", "우주"]
+}
+```
+
+### 업데이트 필수 필드
+- `title`: 중복 체크용
+- `keywords`: 유사 주제 필터링용
+- `topic`: 카테고리별 분류
 
 ## 카테고리 ID
 

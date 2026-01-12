@@ -37,13 +37,15 @@ oh-my-opencode의 Sisyphus 패턴을 구현.
 ```
 Phase 1: 초기화
 ├── wisdom.md 로드
+├── **global-history.json 로드 → 기존 영상 주제/키워드 목록 추출**
 ├── 입력 확인 (컨텍스트 or 자동 수집)
 ├── --count 파라미터로 수집할 이벤트 수 결정 (기본 1, 최대 5)
 └── 채널 상태 확인
 
 Phase 2: 소재 수집 (병렬)
 ├── curious-event-collector × N (run_in_background=true)
-├── 결과 수집 후 중복 제거
+│   └── **exclude_topics 파라미터로 기존 주제 전달**
+├── 결과 수집 후 중복 제거 (기존 영상과 유사도 체크)
 └── 품질 필터링
 
 Phase 3-6: VIDEO PIPELINE × N (병렬 실행)
