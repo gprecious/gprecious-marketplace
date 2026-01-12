@@ -46,6 +46,15 @@ usage: /shorts [--topic <주제>] [--channel <연령대>] [--count <개수>] [--
 /shorts 실행
     │
     ▼
+Phase 0: 환경 변수 체크 ⚠️
+├── .env 파일 존재 확인
+├── 필수 환경 변수 검증
+│   ├── ELEVENLABS_API_KEY (TTS)
+│   └── (--upload 시) YOUTUBE_* 변수
+├── 미설정 시 → 설정 가이드 출력 후 중단
+└── 설정 완료 → Phase 1 진행
+    │
+    ▼
 Phase 1: 초기화
 ├── wisdom.md 로드
 ├── 파라미터 파싱
@@ -140,6 +149,72 @@ Phase 9: 마무리
 ```
 
 ## 에러 처리
+
+### 환경 변수 미설정 시
+
+환경 변수가 설정되지 않으면 다음과 같은 안내가 출력됩니다:
+
+```
+╔════════════════════════════════════════════════════════════════╗
+║  ⚠️  환경 변수 설정 필요                                        ║
+╠════════════════════════════════════════════════════════════════╣
+║  다음 환경 변수가 설정되지 않았습니다:                           ║
+║                                                                ║
+║  ❌ ELEVENLABS_API_KEY (필수 - TTS 음성 생성)                   ║
+║  ❌ YOUTUBE_CLIENT_ID (업로드 시 필수)                          ║
+║  ❌ YOUTUBE_CLIENT_SECRET (업로드 시 필수)                      ║
+║  ❌ YOUTUBE_REFRESH_TOKEN (업로드 시 필수)                      ║
+╚════════════════════════════════════════════════════════════════╝
+
+📋 설정 방법:
+
+1. 프로젝트 루트에 .env 파일 생성:
+   cp ~/.claude/plugins/cache/gprecious-marketplace/youtube-shorts-orchestrator/1.0.0/.env.example .env
+
+2. .env 파일을 열어 API 키 입력:
+   vi .env
+
+3. API 키 발급:
+   - ElevenLabs: https://elevenlabs.io
+   - YouTube: https://console.cloud.google.com
+
+자세한 설정 가이드는 README.md를 참고하세요.
+```
+
+### 환경 변수 체크 로직
+
+```python
+def check_env():
+    required = {
+        "ELEVENLABS_API_KEY": "TTS 음성 생성 (필수)",
+    }
+
+    upload_required = {
+        "YOUTUBE_CLIENT_ID": "YouTube 업로드",
+        "YOUTUBE_CLIENT_SECRET": "YouTube 업로드",
+        "YOUTUBE_REFRESH_TOKEN": "YouTube 업로드",
+    }
+
+    optional = {
+        "PEXELS_API_KEY": "스톡 영상",
+        "OPENAI_API_KEY": "DALL-E 이미지",
+    }
+
+    missing = []
+    for key, desc in required.items():
+        if not os.getenv(key):
+            missing.append(f"❌ {key} ({desc})")
+
+    if "--upload" in args:
+        for key, desc in upload_required.items():
+            if not os.getenv(key):
+                missing.append(f"❌ {key} ({desc})")
+
+    if missing:
+        print_setup_guide(missing)
+        return False
+    return True
+```
 
 ### 파이프라인 실패 시
 - 실패한 파이프라인은 건너뛰고 계속 진행

@@ -35,6 +35,15 @@ oh-my-opencode의 Sisyphus 패턴을 구현.
 ## 워크플로우
 
 ```
+Phase 0: 환경 변수 체크 ⚠️ (최우선)
+├── .env 파일 존재 확인
+├── 필수 환경 변수 검증
+│   ├── ELEVENLABS_API_KEY (TTS - 항상 필수)
+│   ├── PEXELS_API_KEY 또는 PIXABAY_API_KEY (스톡 영상)
+│   └── (--upload 시) YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET, YOUTUBE_REFRESH_TOKEN
+├── 미설정 시 → 설정 가이드 출력 후 **즉시 중단**
+└── 모든 필수 변수 확인 → Phase 1 진행
+
 Phase 1: 초기화
 ├── wisdom.md 로드
 ├── **global-history.json 로드 → 기존 영상 주제/키워드 목록 추출**
@@ -254,8 +263,66 @@ next_action: "complete"       # → 파이프라인 완료
 </final_report>
 ```
 
+## Phase 0: 환경 변수 체크 (상세)
+
+### 체크 순서
+
+1. **.env 파일 존재 확인**
+   ```bash
+   # 프로젝트 루트에 .env 파일이 있는지 확인
+   if [ ! -f ".env" ]; then
+       echo "❌ .env 파일이 없습니다"
+   fi
+   ```
+
+2. **필수 환경 변수 검증**
+   ```
+   필수 (항상):
+   - ELEVENLABS_API_KEY: TTS 음성 생성
+
+   필수 (스톡 영상 - 둘 중 하나):
+   - PEXELS_API_KEY 또는 PIXABAY_API_KEY
+
+   필수 (--upload 시):
+   - YOUTUBE_CLIENT_ID
+   - YOUTUBE_CLIENT_SECRET
+   - YOUTUBE_REFRESH_TOKEN
+   - CHANNEL_*_ID (타겟 채널)
+   ```
+
+3. **미설정 시 출력**
+   ```
+   ╔════════════════════════════════════════════════════════════════╗
+   ║  ⚠️  환경 변수 설정 필요                                        ║
+   ╠════════════════════════════════════════════════════════════════╣
+   ║  다음 환경 변수가 설정되지 않았습니다:                           ║
+   ║                                                                ║
+   ║  ❌ ELEVENLABS_API_KEY (필수 - TTS 음성 생성)                   ║
+   ╚════════════════════════════════════════════════════════════════╝
+
+   📋 설정 방법:
+
+   1. .env 파일 생성:
+      cp ~/.claude/plugins/cache/gprecious-marketplace/youtube-shorts-orchestrator/1.0.0/.env.example .env
+
+   2. API 키 입력:
+      vi .env
+
+   3. API 키 발급:
+      - ElevenLabs: https://elevenlabs.io
+      - Pexels: https://www.pexels.com/api/
+      - YouTube: https://console.cloud.google.com
+
+   자세한 가이드: README.md 참고
+   ```
+
+4. **체크 통과 시**
+   - Phase 1로 진행
+   - 설정된 환경 변수 요약 출력 (키 값은 마스킹)
+
 ## 주의사항
 
+- **Phase 0 실패 시 즉시 중단** (다른 Phase 진행 금지)
 - 직접 검색, 콘텐츠 생성 금지 (서브에이전트 위임)
 - 모든 결과 검증 필수
 - 실패해도 다른 파이프라인 계속 진행
