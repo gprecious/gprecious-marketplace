@@ -1,6 +1,6 @@
 {
   "name": "youtube-shorts-orchestrator",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "다국어(ko/en/ja/zh/es/pt/de/fr) YouTube Shorts 채널을 통합 관리하는 Claude Code 플러그인. Sisyphus 패턴 기반 오케스트레이션, 연령대별(young/middle/senior) 채널 관리, 국가별 트렌딩 수집, AI 음성 선택, 자동 자막 생성.",
   "author": {
     "name": "gprecious",
@@ -17,6 +17,22 @@
     "automation"
   ],
   "commands": "./commands/",
-  "agents": "./agents/",
+  "agents": [
+    {"name": "main-orchestrator", "description": "전체 워크플로우 지휘, 서브에이전트 결과 검토 및 적용 결정", "prompt": "./agents/main-orchestrator.md"},
+    {"name": "oracle", "description": "복잡한 결정, 아키텍처 자문, 스토리텔링 마스터", "prompt": "./agents/oracle.md"},
+    {"name": "curious-event-collector", "description": "국가별 트렌딩 주제 수집", "prompt": "./agents/curious-event-collector.md"},
+    {"name": "scenario-writer", "description": "시나리오 작성", "prompt": "./agents/scenario-writer.md"},
+    {"name": "script-writer", "description": "스크립트 작성 및 첨삭", "prompt": "./agents/script-writer.md"},
+    {"name": "neuroscientist", "description": "뇌과학 기반 도파민 트리거 최적화", "prompt": "./agents/neuroscientist.md"},
+    {"name": "impatient-viewer", "description": "다양한 시청자 관점에서 스크립트 검토", "prompt": "./agents/impatient-viewer.md"},
+    {"name": "translator", "description": "스크립트 번역 및 로컬라이제이션", "prompt": "./agents/translator.md"},
+    {"name": "voice-selector", "description": "ElevenLabs 음성 자동 선택", "prompt": "./agents/voice-selector.md"},
+    {"name": "shorts-video-generator", "description": "Shorts 영상 생성", "prompt": "./agents/shorts-video-generator.md"},
+    {"name": "subtitle-generator", "description": "AssemblyAI 자막 자동 생성", "prompt": "./agents/subtitle-generator.md"},
+    {"name": "video-uploader", "description": "YouTube 영상 업로드", "prompt": "./agents/video-uploader.md"},
+    {"name": "channel-young", "description": "청년층(20-35세) 채널 관리", "prompt": "./agents/channels/channel-young.md"},
+    {"name": "channel-middle", "description": "중년층(36-55세) 채널 관리", "prompt": "./agents/channels/channel-middle.md"},
+    {"name": "channel-senior", "description": "시니어층(56세+) 채널 관리", "prompt": "./agents/channels/channel-senior.md"}
+  ],
   "skills": "./skills/"
 }
