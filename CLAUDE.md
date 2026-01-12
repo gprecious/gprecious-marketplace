@@ -1,5 +1,10 @@
 # Claude Code Plugin 개발 규칙
 
+## 절대 금지 사항
+
+- **plugin.json에 없다고 폴더/파일 삭제 금지** - agents, channels 등 핵심 로직 폴더는 plugin.json과 무관하게 존재
+- **폴더 구조 변경 시 반드시 사용자 확인** - 삭제/이동/통합 전 명시적 승인 필요
+
 ## plugin.json 스키마
 
 **허용되는 키:**
