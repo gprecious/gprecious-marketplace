@@ -59,24 +59,31 @@ Phase 2: 소재 수집 (병렬)
 ├── 결과 수집 후 중복 제거 (기존 영상과 유사도 체크)
 └── 품질 필터링 (로컬 관련성 점수 포함)
 
+Phase 2.5: Oracle 초기 전략 자문 ⭐ NEW
+├── oracle이 수집된 이벤트별 채널 힌트 제공
+├── 주제별 접근 전략 사전 조언
+└── 예상 난이도 평가 (검증 통과 예측)
+
 Phase 3-6: VIDEO PIPELINE × N (병렬 실행)
 ┌─────────────────────────────────────────────────────────────────────┐
 │  SCENARIO LOOP (외부 루프, 최대 3회)                                 │
 │                                                                     │
 │  Phase 3: 시나리오 & 스크립트 작성                                   │
-│  ├── scenario-writer                                               │
+│  ├── scenario-writer (oracle 힌트 반영)                             │
 │  ├── script-writer (한국어로 작성)                                  │
 │  └── **translator (--lang != ko 시 번역 + 로컬라이제이션)**          │
 │                                                                     │
 │  Phase 4: 뇌과학 검증 루프 (내부 루프, 최대 3회)                      │
 │  ├── neuroscientist 분석                                           │
 │  ├── 점수 >= 7 → Phase 5                                           │
-│  └── 3회 실패 → scenario 재작성                                     │
+│  ├── 2회 실패 → ⭐ oracle 긴급 자문 요청                             │
+│  └── 3회 실패 → scenario 재작성 (oracle 피드백 반영)                 │
 │                                                                     │
 │  Phase 5: 시청자 검증 루프 (내부 루프, 최대 3회)                      │
 │  ├── impatient-viewer 리뷰                                         │
 │  ├── 점수 >= 7 → Phase 6                                           │
-│  └── 3회 실패 → scenario 재작성                                     │
+│  ├── 2회 실패 → ⭐ oracle 긴급 자문 요청                             │
+│  └── 3회 실패 → scenario 재작성 (oracle 피드백 반영)                 │
 └─────────────────────────────────────────────────────────────────────┘
 
 Phase 6: 영상 생성
@@ -135,10 +142,28 @@ Task(curious-event-collector, prompt="count=5, lang={lang}", run_in_background=t
 # lang에 따라 해당 국가 트렌딩 소스 사용
 ```
 
+### Oracle 초기 전략 자문 ⭐ NEW
+```
+# 소재 수집 후, 파이프라인 실행 전
+Task(oracle, prompt="initial_strategy", events=collected_events, lang={lang})
+# 반환값: 각 이벤트별 채널 힌트, 접근 전략, 예상 난이도
+```
+
 ### 파이프라인 실행
 ```
 for each event:
-    Task(run_single_pipeline, event=event, lang={lang}, run_in_background=true)
+    Task(run_single_pipeline, event=event, oracle_hint=hints[event.id], lang={lang}, run_in_background=true)
+```
+
+### Oracle 긴급 자문 (검증 2회 실패 시) ⭐ NEW
+```
+# 내부 루프 2회차 실패 직후
+Task(oracle, prompt="emergency_consult",
+     event=event,
+     failure_type="neuro|viewer",
+     failure_history=feedback_list,
+     lang={lang})
+# 반환값: 즉각 적용 가능한 수정 방향
 ```
 
 ### Oracle 채널 결정
@@ -177,9 +202,9 @@ MIN_SCORE = 7
 ## 파이프라인 단일 실행 로직
 
 ```python
-def run_single_pipeline(event, lang="ko"):
+def run_single_pipeline(event, oracle_hint=None, lang="ko"):
     scenario_iteration = 0
-    scenario_feedback = None
+    scenario_feedback = oracle_hint  # ⭐ oracle 초기 힌트 반영
 
     while scenario_iteration < MAX_SCENARIO_ITERATIONS:
         # Phase 3: 시나리오 & 스크립트 (한국어로 작성)
@@ -192,29 +217,55 @@ def run_single_pipeline(event, lang="ko"):
 
         # Phase 4: 뇌과학 검증
         neuro_passed = False
-        for _ in range(MAX_FEEDBACK_ITERATIONS):
+        neuro_failures = []
+        for iteration in range(MAX_FEEDBACK_ITERATIONS):
             result = neuroscientist.analyze(script)
             if result.score >= MIN_SCORE:
                 neuro_passed = True
                 break
-            script = script_writer.apply_feedback(script, result.improvements)
+
+            neuro_failures.append(result)
+
+            # ⭐ 2회 실패 시 oracle 긴급 자문
+            if iteration == 1:
+                oracle_advice = oracle.emergency_consult(
+                    event=event,
+                    failure_type="neuro",
+                    failure_history=neuro_failures
+                )
+                script = script_writer.apply_feedback(script, oracle_advice.recommendations)
+            else:
+                script = script_writer.apply_feedback(script, result.improvements)
 
         if not neuro_passed:
-            scenario_feedback = result.summary
+            scenario_feedback = f"[oracle 분석] {result.summary}"  # oracle 피드백 포함
             scenario_iteration += 1
             continue
 
         # Phase 5: 시청자 검증
         viewer_passed = False
-        for _ in range(MAX_FEEDBACK_ITERATIONS):
+        viewer_failures = []
+        for iteration in range(MAX_FEEDBACK_ITERATIONS):
             result = impatient_viewer.review(script)
             if result.score >= MIN_SCORE:
                 viewer_passed = True
                 break
-            script = script_writer.apply_feedback(script, result.swipe_moments)
+
+            viewer_failures.append(result)
+
+            # ⭐ 2회 실패 시 oracle 긴급 자문
+            if iteration == 1:
+                oracle_advice = oracle.emergency_consult(
+                    event=event,
+                    failure_type="viewer",
+                    failure_history=viewer_failures
+                )
+                script = script_writer.apply_feedback(script, oracle_advice.recommendations)
+            else:
+                script = script_writer.apply_feedback(script, result.swipe_moments)
 
         if not viewer_passed:
-            scenario_feedback = result.summary
+            scenario_feedback = f"[oracle 분석] {result.summary}"
             scenario_iteration += 1
             continue
 

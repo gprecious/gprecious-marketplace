@@ -25,7 +25,7 @@ Task(main-orchestrator, prompt="{user_input}")
 | 에이전트 | 역할 | 모델 |
 |----------|------|------|
 | main-orchestrator | Sisyphus 패턴 전체 지휘 | opus |
-| oracle | 채널 결정 및 조율 | opus |
+| oracle | 초기 전략 + 긴급 자문 + 채널 결정 | sonnet |
 | curious-event-collector | 신비한 이벤트 수집 | sonnet |
 | scenario-writer | 시나리오 작성 | sonnet |
 | script-writer | 스크립트 작성 | sonnet |
@@ -68,10 +68,15 @@ Phase 2: 소재 수집 (병렬)
 ├── curious-event-collector × count
 └── 중복 제거 & 필터링
     │
+Phase 2.5: Oracle 초기 전략 자문 ⭐
+├── 이벤트별 채널 힌트
+├── 접근 전략 사전 조언
+└── 예상 난이도 평가
+    │
 Phase 3-6: VIDEO PIPELINE × N (병렬)
-├── scenario-writer → script-writer
-├── neuroscientist 검증 (최대 3회)
-├── impatient-viewer 검증 (최대 3회)
+├── scenario-writer → script-writer (oracle 힌트 반영)
+├── neuroscientist 검증 (2회 실패 → oracle 긴급 자문)
+├── impatient-viewer 검증 (2회 실패 → oracle 긴급 자문)
 ├── translator (lang != ko)
 ├── voice-selector
 ├── bgm-selector
