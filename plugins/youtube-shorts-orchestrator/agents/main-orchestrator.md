@@ -242,6 +242,8 @@ next_action: "complete"       # → 파이프라인 완료
 - 에이전트 결과는 요약만 메모리에 보관
 
 ### 파일 저장 경로
+
+#### 임시 작업 파일 (세션별)
 ```
 /tmp/shorts/{session_id}/
 ├── events/
@@ -264,6 +266,24 @@ next_action: "complete"       # → 파이프라인 완료
 │   └── channel_assignments.json    # {lang}/channel-{age} 형식
 └── report/
     └── final_report.json
+```
+
+#### 영구 저장 파일 (사용자 프로젝트 루트)
+```
+{project_root}/                      # /shorts 실행 폴더
+├── .env                             # 환경 변수
+├── output/                          # 생성된 영상
+│   └── {date}_{event_id}_final.mp4
+└── history/                         # ⭐ 히스토리 (중복 방지 + 업로드 기록)
+    ├── global-history.json          # 전역 중복 방지 (모든 영상 주제/키워드)
+    └── uploads/                     # 채널별 업로드 기록
+        ├── ko-young.json
+        ├── ko-middle.json
+        ├── ko-senior.json
+        ├── en-young.json
+        ├── en-middle.json
+        ├── en-senior.json
+        └── ...                      # 8개 언어 × 3개 채널 = 24개 파일
 ```
 
 ## 출력 형식

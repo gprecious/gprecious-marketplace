@@ -32,13 +32,19 @@ claude /install youtube-shorts-orchestrator@gprecious-marketplace
 
 **프로젝트 루트**에 `.env` 파일을 생성하고 API 키를 설정합니다.
 
-### .env 파일 위치
+### 프로젝트 폴더 구조
 
 ```
 /your-project/           ← /shorts 명령어를 실행하는 폴더
-├── .env                 ← 여기에 생성
+├── .env                 ← API 키 설정
 ├── output/              ← 생성된 영상 저장
-└── ...
+└── history/             ← 영상 히스토리 (자동 생성)
+    ├── global-history.json       ← 전역 중복 방지
+    └── uploads/                  ← 채널별 업로드 기록
+        ├── ko-young.json
+        ├── ko-middle.json
+        ├── ko-senior.json
+        └── ...
 ```
 
 ### 설정 방법

@@ -76,8 +76,9 @@ YouTube Data API v3를 사용하여 Shorts 영상을 업로드하는 에이전�
   </thumbnail>
   
   <history_updated>
-    <channel>channel-30s</channel>
-    <file>channels/channel-30s/history.json</file>
+    <channel>ko-middle</channel>
+    <uploads_file>history/uploads/ko-middle.json</uploads_file>
+    <global_file>history/global-history.json</global_file>
     <new_entry_id>upload_20250112_001</new_entry_id>
   </history_updated>
 </task_result>
@@ -264,10 +265,25 @@ curl -X POST \
 
 ## 히스토리 업데이트 (2곳)
 
-### 1. 채널별 history.json
+⚠️ **중요**: 모든 히스토리 파일은 **사용자 프로젝트 루트**에 저장됩니다.
+```
+{project_root}/history/              # /shorts 실행 폴더 기준
+├── global-history.json              # 전역 중복 방지
+└── uploads/                         # 채널별 업로드 기록
+    ├── ko-young.json
+    ├── ko-middle.json
+    └── ...
+```
+
+### 1. 채널별 업로드 기록
+**경로**: `{project_root}/history/uploads/{lang}-{channel}.json`
+
+예: `history/uploads/ko-middle.json`
 ```json
 {
-  "channel_id": "channel-30s",
+  "channel": "ko-middle",
+  "language": "ko",
+  "age_group": "middle",
   "uploads": [
     {
       "id": "upload_20250112_001",
@@ -293,7 +309,7 @@ curl -X POST \
 ```
 
 ### 2. 전역 global-history.json (중복 방지용)
-**경로**: `history/global-history.json`
+**경로**: `{project_root}/history/global-history.json`
 
 ```json
 {
@@ -305,7 +321,8 @@ curl -X POST \
       "id": "upload_20250112_001",
       "video_id": "dQw4w9WgXcQ",
       "title": "NASA가 숨긴 달의 비밀",
-      "channel": "channel-30s",
+      "channel": "ko-middle",
+      "language": "ko",
       "topic": "우주/미스터리",
       "keywords": ["NASA", "달", "미스터리", "우주"],
       "uploaded_at": "2025-01-12T15:30:00+09:00"
@@ -318,10 +335,20 @@ curl -X POST \
 }
 ```
 
+### 히스토리 초기화 (첫 실행 시)
+```bash
+# 디렉토리 생성 (없으면)
+mkdir -p history/uploads
+
+# global-history.json 초기화
+echo '{"version":"1.0.0","total_videos":0,"videos":[],"topics_index":{},"keywords_index":[]}' > history/global-history.json
+```
+
 ### 업데이트 필수 필드
 - `title`: 중복 체크용
 - `keywords`: 유사 주제 필터링용
 - `topic`: 카테고리별 분류
+- `language`: 언어 필터링용
 
 ## 카테고리 ID
 
