@@ -1,0 +1,56 @@
+{
+  "channel_id": "channel-30s",
+  "channel_name": "30대의 신기한 세상",
+  "youtube_channel_id": "",
+  "target_demographics": {
+    "age_range": [30, 39],
+    "primary_interests": ["직장생활", "육아", "건강", "재테크", "부동산"],
+    "viewing_context": ["출퇴근", "점심시간", "자기 전", "육아 틈틈이"]
+  },
+  "content_pillars": [
+    {
+      "name": "직장생활",
+      "description": "커리어, 연봉, 이직, 직장인 팁",
+      "weight": 25
+    },
+    {
+      "name": "재테크/부동산",
+      "description": "투자, 저축, 내집마련",
+      "weight": 25
+    },
+    {
+      "name": "가정/육아",
+      "description": "결혼생활, 육아, 가족",
+      "weight": 20
+    },
+    {
+      "name": "건강",
+      "description": "운동, 식단, 피로회복",
+      "weight": 15
+    },
+    {
+      "name": "신기한 사실",
+      "description": "과학, 역사, 미스터리",
+      "weight": 15
+    }
+  ],
+  "tone_and_manner": {
+    "style": "실용적이고 공감적",
+    "language": "해요체, 정중하지만 친근",
+    "energy": "중간",
+    "examples": [
+      "이건 알아두세요",
+      "저도 겪어봤는데요",
+      "실제로 효과가 있었어요"
+    ]
+  },
+  "upload_schedule": {
+    "optimal_times": ["07:00", "12:00", "22:30"],
+    "frequency": "매일 1-2개"
+  },
+  "forbidden_topics": [
+    "확정되지 않은 투자 조언",
+    "검증되지 않은 건강 정보",
+    "육아 관련 위험한 조언"
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "channel_id": "channel-10s",
+  "channel_name": "10대의 신기한 세상",
+  "youtube_channel_id": "",
+  "target_demographics": {
+    "age_range": [13, 19],
+    "primary_interests": ["트렌드", "밈", "게임", "K-POP", "학교생활"],
+    "viewing_context": ["등하교", "쉬는시간", "자기 전", "친구와 함께"]
+  },
+  "content_pillars": [
+    {
+      "name": "트렌드",
+      "description": "틱톡/인스타 트렌드, 밈, 챌린지",
+      "weight": 30
+    },
+    {
+      "name": "게임/엔터",
+      "description": "게임 팁, 스트리머, 연예인",
+      "weight": 25
+    },
+    {
+      "name": "학교생활",
+      "description": "공부법, 학교 꿀팁, 시험",
+      "weight": 20
+    },
+    {
+      "name": "신기한 사실",
+      "description": "놀라운 과학, 미스터리",
+      "weight": 25
+    }
+  ],
+  "tone_and_manner": {
+    "style": "자극적이고 빠른",
+    "language": "반말, 슬랭, 밈 언어 OK",
+    "energy": "높음",
+    "examples": [
+      "ㄹㅇ 미쳤다",
+      "이거 실화냐",
+      "와 대박"
+    ]
+  },
+  "upload_schedule": {
+    "optimal_times": ["16:00", "21:00"],
+    "frequency": "매일 1-2개"
+  },
+  "forbidden_topics": [
+    "성인 콘텐츠",
+    "도박",
+    "약물",
+    "폭력적 콘텐츠"
+  ]
+}
