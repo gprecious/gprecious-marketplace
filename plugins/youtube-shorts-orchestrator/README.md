@@ -37,7 +37,12 @@ claude /install youtube-shorts-orchestrator@gprecious-marketplace
 ```
 /your-project/           ← /shorts 명령어를 실행하는 폴더
 ├── .env                 ← API 키 설정
-├── output/              ← 생성된 영상 저장
+├── output/              ← ⭐ 최종 결과물 (자동 저장)
+│   └── 20250113_evt_001/        ← 영상별 폴더
+│       ├── scenario.json        ← 시나리오
+│       ├── script.md            ← 스크립트
+│       ├── final.mp4            ← 최종 영상
+│       └── metadata.json        ← 메타데이터
 └── history/             ← 영상 히스토리 (자동 생성)
     ├── global-history.json       ← 전역 중복 방지
     └── uploads/                  ← 채널별 업로드 기록

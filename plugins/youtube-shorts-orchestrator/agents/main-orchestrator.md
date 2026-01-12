@@ -268,13 +268,18 @@ next_action: "complete"       # → 파이프라인 완료
     └── final_report.json
 ```
 
-#### 영구 저장 파일 (사용자 프로젝트 루트)
+#### 영구 저장 파일 (사용자 프로젝트 루트) ⭐ 필수
 ```
 {project_root}/                      # /shorts 실행 폴더
 ├── .env                             # 환경 변수
-├── output/                          # 생성된 영상
-│   └── {date}_{event_id}_final.mp4
-└── history/                         # ⭐ 히스토리 (중복 방지 + 업로드 기록)
+├── output/                          # ⭐ 최종 결과물 (반드시 저장)
+│   └── {YYYYMMDD}_{event_id}/       # 영상별 폴더
+│       ├── scenario.json            # 시나리오
+│       ├── script.md                # 원본 스크립트 (ko)
+│       ├── script_{lang}.md         # 번역된 스크립트 (lang != ko 시)
+│       ├── final.mp4                # 최종 영상
+│       └── metadata.json            # 메타데이터 (채널, 점수, 업로드 정보)
+└── history/                         # 히스토리 (중복 방지 + 업로드 기록)
     ├── global-history.json          # 전역 중복 방지 (모든 영상 주제/키워드)
     └── uploads/                     # 채널별 업로드 기록
         ├── ko-young.json
@@ -284,6 +289,32 @@ next_action: "complete"       # → 파이프라인 완료
         ├── en-middle.json
         ├── en-senior.json
         └── ...                      # 8개 언어 × 3개 채널 = 24개 파일
+```
+
+#### 최종 결과물 저장 (Phase 6 완료 후 필수)
+```bash
+# 영상별 output 폴더 생성
+DATE=$(date +%Y%m%d)
+OUTPUT_DIR="output/${DATE}_${EVENT_ID}"
+mkdir -p "${OUTPUT_DIR}"
+
+# 필수 파일 복사
+cp /tmp/shorts/{session}/pipelines/{event_id}/scenario.json "${OUTPUT_DIR}/"
+cp /tmp/shorts/{session}/pipelines/{event_id}/script.md "${OUTPUT_DIR}/"
+cp /tmp/shorts/{session}/pipelines/{event_id}/script_{lang}.md "${OUTPUT_DIR}/" 2>/dev/null || true
+cp /tmp/shorts/{session}/pipelines/{event_id}/output/final.mp4 "${OUTPUT_DIR}/"
+
+# 메타데이터 생성
+cat > "${OUTPUT_DIR}/metadata.json" << EOF
+{
+  "event_id": "${EVENT_ID}",
+  "created_at": "$(date -Iseconds)",
+  "language": "${LANG}",
+  "channel": "${CHANNEL}",
+  "quality_score": ${SCORE},
+  "uploaded": false
+}
+EOF
 ```
 
 ## 출력 형식

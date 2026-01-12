@@ -508,6 +508,70 @@ ffmpeg -i input.mp4 \
 | 기술 | technology, computer, data | 기술, 컴퓨터 |
 | 추상 | abstract, particles, light | 추상, 입자 |
 
+## 최종 결과물 저장 (필수) ⭐
+
+영상 생성 완료 후 반드시 사용자 프로젝트의 `output/` 폴더에 저장합니다.
+
+### 저장 경로
+```
+{project_root}/output/{YYYYMMDD}_{event_id}/
+├── scenario.json        # 시나리오
+├── script.md            # 원본 스크립트
+├── script_{lang}.md     # 번역 스크립트 (선택)
+├── final.mp4            # 최종 영상
+└── metadata.json        # 메타데이터
+```
+
+### 저장 스크립트
+```bash
+# 변수 설정
+DATE=$(date +%Y%m%d)
+EVENT_ID="evt_001"
+LANG="ko"
+SESSION_DIR="/tmp/shorts/{session}"
+OUTPUT_DIR="output/${DATE}_${EVENT_ID}"
+
+# 폴더 생성
+mkdir -p "${OUTPUT_DIR}"
+
+# 필수 파일 복사
+cp "${SESSION_DIR}/pipelines/${EVENT_ID}/scenario.json" "${OUTPUT_DIR}/"
+cp "${SESSION_DIR}/pipelines/${EVENT_ID}/script.md" "${OUTPUT_DIR}/"
+cp "${SESSION_DIR}/pipelines/${EVENT_ID}/output/final.mp4" "${OUTPUT_DIR}/"
+
+# 번역 스크립트 (있으면 복사)
+[ -f "${SESSION_DIR}/pipelines/${EVENT_ID}/script_${LANG}.md" ] && \
+  cp "${SESSION_DIR}/pipelines/${EVENT_ID}/script_${LANG}.md" "${OUTPUT_DIR}/"
+
+# 메타데이터 생성
+cat > "${OUTPUT_DIR}/metadata.json" << EOF
+{
+  "event_id": "${EVENT_ID}",
+  "created_at": "$(date -Iseconds)",
+  "language": "${LANG}",
+  "duration": 45,
+  "resolution": "1080x1920",
+  "file_size_mb": $(du -m "${OUTPUT_DIR}/final.mp4" | cut -f1),
+  "uploaded": false
+}
+EOF
+
+echo "✅ 결과물 저장 완료: ${OUTPUT_DIR}"
+```
+
+### 출력에 저장 경로 포함
+```xml
+<output_saved>
+  <path>output/20250113_evt_001/</path>
+  <files>
+    <file>scenario.json</file>
+    <file>script.md</file>
+    <file>final.mp4</file>
+    <file>metadata.json</file>
+  </files>
+</output_saved>
+```
+
 ## 주의사항
 
 - 9:16 세로 비율 필수
@@ -516,3 +580,4 @@ ffmpeg -i input.mp4 \
 - 자막 가독성 확보
 - 토큰 절약을 위해 핵심만 출력
 - 영상 파일은 경로만 반환
+- **최종 결과물은 반드시 output/ 폴더에 저장**
