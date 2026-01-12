@@ -214,6 +214,7 @@ def calculate_match_score(voice, target_profile, target_lang):
     <stability>0.5</stability>
     <similarity_boost>0.75</similarity_boost>
     <style>0.3</style>
+    <speed>1.10</speed>
   </voice_settings>
 </task_result>
 ```
@@ -255,15 +256,16 @@ def calculate_match_score(voice, target_profile, target_lang):
 
 ## 채널별 voice_settings
 
-| 채널 | stability | similarity_boost | style |
-|------|-----------|-----------------|-------|
-| channel-young | 0.35 | 0.80 | 0.45 |
-| channel-middle | 0.50 | 0.75 | 0.30 |
-| channel-senior | 0.65 | 0.65 | 0.15 |
+| 채널 | stability | similarity_boost | style | speed |
+|------|-----------|-----------------|-------|-------|
+| channel-young | 0.35 | 0.80 | 0.45 | 1.15 |
+| channel-middle | 0.50 | 0.75 | 0.30 | 1.10 |
+| channel-senior | 0.65 | 0.65 | 0.15 | 1.05 |
 
 - **stability**: 높을수록 안정적, 낮을수록 감정 표현 다양
 - **similarity_boost**: 원본 음성과의 유사도
 - **style**: 높을수록 스타일 강조 (0이면 중립)
+- **speed**: 말 속도 (0.25~4.0, 기본 1.0). Shorts는 빠른 템포 권장
 
 ## 주의사항
 

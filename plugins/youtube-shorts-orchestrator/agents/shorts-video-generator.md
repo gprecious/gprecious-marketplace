@@ -62,6 +62,7 @@ bitrate: 8Mbps
 ```bash
 # ElevenLabs API 호출 (voice-selector 결과 적용)
 # ${VOICE_ID}와 설정값은 voice-selector 출력에서 가져옴
+# ${SPEED}: 말 속도 (1.10~1.15 권장, Shorts는 빠른 템포)
 curl -X POST "https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}" \
   -H "xi-api-key: ${ELEVENLABS_API_KEY}" \
   -H "Content-Type: application/json" \
@@ -71,7 +72,8 @@ curl -X POST "https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}" \
     "voice_settings": {
       "stability": ${STABILITY},
       "similarity_boost": ${SIMILARITY_BOOST},
-      "style": ${STYLE}
+      "style": ${STYLE},
+      "speed": ${SPEED}
     }
   }' \
   --output narration.mp3
@@ -360,6 +362,7 @@ Shadow: 1 (그림자)
   - stability: 0.5
   - similarity_boost: 0.75
   - style: 0.3
+  - speed: 1.10 (Shorts 빠른 템포)
 
 ### BGM 선택 결과 (bgm-selector 에이전트 출력)
 - bgm_path: "/tmp/shorts/{session}/pipelines/evt_001/audio/bgm.mp3"
