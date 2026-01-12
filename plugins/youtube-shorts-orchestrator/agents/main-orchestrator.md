@@ -48,14 +48,16 @@ Phase 1: 초기화
 ├── wisdom.md 로드
 ├── **global-history.json 로드 → 기존 영상 주제/키워드 목록 추출**
 ├── 입력 확인 (컨텍스트 or 자동 수집)
+├── **--lang 파라미터 파싱 (기본값: ko)**
 ├── --count 파라미터로 수집할 이벤트 수 결정 (기본 1, 최대 5)
-└── 채널 상태 확인
+└── 채널 상태 확인 (언어별 채널 구조)
 
 Phase 2: 소재 수집 (병렬)
 ├── curious-event-collector × N (run_in_background=true)
+│   ├── **lang 파라미터로 해당 국가 트렌딩 수집**
 │   └── **exclude_topics 파라미터로 기존 주제 전달**
 ├── 결과 수집 후 중복 제거 (기존 영상과 유사도 체크)
-└── 품질 필터링
+└── 품질 필터링 (로컬 관련성 점수 포함)
 
 Phase 3-6: VIDEO PIPELINE × N (병렬 실행)
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -63,7 +65,8 @@ Phase 3-6: VIDEO PIPELINE × N (병렬 실행)
 │                                                                     │
 │  Phase 3: 시나리오 & 스크립트 작성                                   │
 │  ├── scenario-writer                                               │
-│  └── script-writer                                                 │
+│  ├── script-writer (한국어로 작성)                                  │
+│  └── **translator (--lang != ko 시 번역 + 로컬라이제이션)**          │
 │                                                                     │
 │  Phase 4: 뇌과학 검증 루프 (내부 루프, 최대 3회)                      │
 │  ├── neuroscientist 분석                                           │
@@ -77,20 +80,23 @@ Phase 3-6: VIDEO PIPELINE × N (병렬 실행)
 └─────────────────────────────────────────────────────────────────────┘
 
 Phase 6: 영상 생성
-├── **voice-selector (스크립트 맞춤 음성 선택)**
-│   ├── 스크립트/채널 분석
+├── **voice-selector (스크립트/언어 맞춤 음성 선택)**
+│   ├── 스크립트/채널/언어 분석
 │   ├── ElevenLabs 음성 라이브러리 조회
+│   ├── **언어별 음성 필터링 (multilingual_v2 모델)**
 │   └── 최적 voice_id 반환
 ├── shorts-video-generator (9:16, 15-60초)
-│   └── voice-selector 결과로 TTS 생성
+│   └── voice-selector 결과로 TTS 생성 (언어 지정)
 └── **subtitle-generator (자막 자동 생성)**
-    ├── AssemblyAI로 음성 → 텍스트
+    ├── AssemblyAI로 음성 → 텍스트 (language_code 지정)
     ├── SRT 파일 생성
     └── FFmpeg로 자막 하드코딩
 
 Phase 7: Oracle 채널 결정 (일괄)
 ├── 모든 파이프라인 완료 대기
 ├── oracle이 각 영상별 최적 채널 결정
+│   ├── **언어별 채널 선택 ({lang}/channel-young, {lang}/channel-middle, {lang}/channel-senior)**
+│   └── 연령대별 배분
 ├── 채널 간 배분 균형 고려
 └── 중복 주제 회피
 
@@ -108,18 +114,20 @@ Phase 9: 마무리
 
 ### 병렬 소재 수집
 ```
-Task(curious-event-collector, prompt="count=5", run_in_background=true)
+Task(curious-event-collector, prompt="count=5, lang={lang}", run_in_background=true)
+# lang에 따라 해당 국가 트렌딩 소스 사용
 ```
 
 ### 파이프라인 실행
 ```
 for each event:
-    Task(run_single_pipeline, event=event, run_in_background=true)
+    Task(run_single_pipeline, event=event, lang={lang}, run_in_background=true)
 ```
 
 ### Oracle 채널 결정
 ```
-Task(oracle, prompt="assign_channels", videos=results)
+Task(oracle, prompt="assign_channels", videos=results, lang={lang})
+# 언어별 채널 구조: {lang}/channel-young, {lang}/channel-middle, {lang}/channel-senior
 ```
 
 ### 병렬 업로드
@@ -140,15 +148,19 @@ MIN_SCORE = 7
 ## 파이프라인 단일 실행 로직
 
 ```python
-def run_single_pipeline(event):
+def run_single_pipeline(event, lang="ko"):
     scenario_iteration = 0
     scenario_feedback = None
-    
+
     while scenario_iteration < MAX_SCENARIO_ITERATIONS:
-        # Phase 3: 시나리오 & 스크립트
+        # Phase 3: 시나리오 & 스크립트 (한국어로 작성)
         scenario = scenario_writer.create(event, scenario_feedback)
         script = script_writer.create(scenario)
-        
+
+        # 번역 (lang != "ko" 시)
+        if lang != "ko":
+            script = translator.translate(script, target_lang=lang)
+
         # Phase 4: 뇌과학 검증
         neuro_passed = False
         for _ in range(MAX_FEEDBACK_ITERATIONS):
@@ -157,12 +169,12 @@ def run_single_pipeline(event):
                 neuro_passed = True
                 break
             script = script_writer.apply_feedback(script, result.improvements)
-        
+
         if not neuro_passed:
             scenario_feedback = result.summary
             scenario_iteration += 1
             continue
-        
+
         # Phase 5: 시청자 검증
         viewer_passed = False
         for _ in range(MAX_FEEDBACK_ITERATIONS):
@@ -171,18 +183,18 @@ def run_single_pipeline(event):
                 viewer_passed = True
                 break
             script = script_writer.apply_feedback(script, result.swipe_moments)
-        
+
         if not viewer_passed:
             scenario_feedback = result.summary
             scenario_iteration += 1
             continue
-        
+
         # Phase 6: 영상 생성
-        voice_selection = voice_selector.select(script, channel)
-        video = shorts_video_generator.create(script, scenario, voice_selection)
-        subtitled_video = subtitle_generator.add_subtitles(video)
-        return {"success": True, "video": subtitled_video, "event": event}
-    
+        voice_selection = voice_selector.select(script, channel, lang)
+        video = shorts_video_generator.create(script, scenario, voice_selection, lang)
+        subtitled_video = subtitle_generator.add_subtitles(video, lang)
+        return {"success": True, "video": subtitled_video, "event": event, "lang": lang}
+
     return {"success": False, "event": event, "reason": scenario_feedback}
 ```
 
@@ -216,18 +228,21 @@ next_action: "complete"       # → 파이프라인 완료
 ```
 /tmp/shorts/{session_id}/
 ├── events/
+│   ├── collection_{lang}.json      # 언어별 트렌딩 수집 결과
 │   ├── evt_001.json
 │   └── ...
 ├── pipelines/
 │   ├── evt_001/
 │   │   ├── scenario.json
-│   │   ├── script.md
+│   │   ├── script.md               # 원본 스크립트 (ko)
+│   │   ├── script_{lang}.md        # 번역된 스크립트
 │   │   ├── neuro_analysis.json
 │   │   ├── viewer_review.json
+│   │   ├── voice_selection.json    # 선택된 음성 정보
 │   │   └── video_meta.json
 │   └── ...
 ├── decisions/
-│   └── channel_assignments.json
+│   └── channel_assignments.json    # {lang}/channel-{age} 형식
 └── report/
     └── final_report.json
 ```
@@ -249,15 +264,16 @@ next_action: "complete"       # → 파이프라인 완료
 
 ### 최종 리포트
 ```xml
-<final_report session_id="[session_id]">
+<final_report session_id="[session_id]" lang="[lang]">
   <summary>
+    <language>[lang]</language>
     <total_events>[N]</total_events>
     <successful_videos>[M]</successful_videos>
     <failed_pipelines>[K]</failed_pipelines>
     <uploaded>[L]</uploaded>
   </summary>
   <videos>
-    <video id="1" event_id="evt_001" channel="channel-30s">
+    <video id="1" event_id="evt_001" channel="en/channel-middle">
       <title>영상 제목</title>
       <url>https://youtube.com/shorts/xxx</url>
       <score>8.5</score>
