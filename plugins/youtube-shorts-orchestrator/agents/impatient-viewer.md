@@ -87,7 +87,7 @@ Fail 조건:
 
 ### 검토 옵션
 - strictness: extreme (기본값)
-- target_channel: channel-30s
+- target_channel: channel-middle
 ```
 
 ## 출력 형식

@@ -81,7 +81,7 @@ LOW    └──┘     └──┘
 /tmp/shorts/{session}/pipelines/evt_001/scenario.json
 
 ### 분석 옵션
-- target_channel: channel-30s (연령대 고려)
+- target_channel: channel-middle (연령대 고려)
 - focus: dopamine_triggers (또는 attention, all)
 ```
 
