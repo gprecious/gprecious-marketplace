@@ -1,7 +1,7 @@
 {
   "name": "youtube-shorts-orchestrator",
-  "version": "1.1.1",
-  "description": "다국어(ko/en/ja/zh/es/pt/de/fr) YouTube Shorts 채널을 통합 관리하는 Claude Code 플러그인. Sisyphus 패턴 기반 오케스트레이션, 연령대별(young/middle/senior) 채널 관리, 국가별 트렌딩 수집, AI 음성 선택, 자동 자막 생성.",
+  "version": "1.2.0",
+  "description": "다국어(ko/en/ja/zh/es/pt/de/fr) YouTube Shorts 채널을 통합 관리하는 Claude Code 플러그인. Sisyphus 패턴 기반 오케스트레이션, 연령대별(young/middle/senior) 채널 관리, Sora/Veo AI 후킹 영상, 무료 BGM 자동 선택, Shorts 스타일 자막(2-3단어), 채널별 토큰 분리 업로드.",
   "author": {
     "name": "gprecious",
     "email": "gprecious@users.noreply.github.com"
