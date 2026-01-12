@@ -10,7 +10,7 @@
 **허용되는 키:**
 - `name`, `version`, `description`, `author`, `keywords`
 - `commands` → 디렉토리 경로 (예: `"./commands/"`)
-- `agents` → **객체 배열** (name, description, prompt 필드 필수)
+- `agents` → 디렉토리 경로 (예: `"./agents/"`) - auto-discovery 사용
 - `skills` → 디렉토리 경로 (예: `"./skills/"`)
 - `hooks`, `mcpServers`, `outputStyles`, `lspServers`
 
@@ -20,16 +20,21 @@
 **agents 올바른 형식:**
 ```json
 {
-  "agents": [
-    {"name": "agent-name", "description": "설명", "prompt": "./agents/agent-name.md"}
-  ]
+  "agents": "./agents/"
+}
+```
+또는 여러 디렉토리:
+```json
+{
+  "agents": ["./agents", "./specialized-agents"]
 }
 ```
 
 **agents 잘못된 형식:**
 ```json
 {
-  "agents": "./agents/",
-  "agents": ["agent1", "agent2"]
+  "agents": [
+    {"name": "agent-name", "description": "설명", "prompt": "./agents/agent-name.md"}
+  ]
 }
 ```
