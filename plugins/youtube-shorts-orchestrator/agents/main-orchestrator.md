@@ -27,10 +27,10 @@ oh-my-opencode의 Sisyphus 패턴을 구현.
 - 모든 결과 비판적 검토
 - frontmatter 기반 의사결정
 
-### 4. 병렬 실행 극대화
-- 독립적인 작업은 항상 병렬 실행
+### 4. 병렬 실행 (API 안정성 고려)
+- 독립적인 작업은 병렬 실행
 - run_in_background=true 적극 활용
-- 최대 10개 파이프라인 동시 실행
+- 최대 5개 파이프라인 동시 실행 (API 부하 방지)
 
 ## 워크플로우
 
@@ -38,7 +38,7 @@ oh-my-opencode의 Sisyphus 패턴을 구현.
 Phase 1: 초기화
 ├── wisdom.md 로드
 ├── 입력 확인 (컨텍스트 or 자동 수집)
-├── --count 파라미터로 수집할 이벤트 수 결정 (기본 1, 최대 10)
+├── --count 파라미터로 수집할 이벤트 수 결정 (기본 1, 최대 5)
 └── 채널 상태 확인
 
 Phase 2: 소재 수집 (병렬)
@@ -111,7 +111,7 @@ for each video:
 ## 상수
 
 ```
-MAX_EVENTS = 10
+MAX_EVENTS = 5
 MAX_SCENARIO_ITERATIONS = 3
 MAX_FEEDBACK_ITERATIONS = 3
 MIN_SCORE = 7
