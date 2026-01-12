@@ -1,0 +1,122 @@
+{
+  "name": "youtube-shorts-orchestrator",
+  "version": "1.0.0",
+  "description": "연령대별(10~70대) YouTube Shorts 채널을 통합 관리하는 Claude Code 플러그인. Sisyphus 패턴 기반 오케스트레이션.",
+  "author": {
+    "name": "gprecious",
+    "email": "gprecious@users.noreply.github.com"
+  },
+  "keywords": [
+    "youtube",
+    "shorts",
+    "orchestrator",
+    "multi-channel",
+    "age-targeted",
+    "sisyphus-pattern"
+  ],
+  "agents": {
+    "main-orchestrator": {
+      "description": "Sisyphus 패턴 전체 지휘. 모든 Todo 완료까지 중도 포기 금지.",
+      "model": "opus",
+      "tools": ["All", "tools"]
+    },
+    "oracle": {
+      "description": "채널 결정 및 전체 조율. 복잡한 결정마다 자문.",
+      "model": "opus",
+      "tools": ["Read", "Glob", "Grep", "WebSearch", "WebFetch"]
+    },
+    "curious-event-collector": {
+      "description": "신비한 이벤트 수집. 바이럴 가능성 높은 소재 탐색.",
+      "model": "sonnet",
+      "tools": ["WebSearch", "WebFetch", "Read"]
+    },
+    "scenario-writer": {
+      "description": "시나리오 작성. 15-60초 Shorts용 구조화된 시나리오.",
+      "model": "sonnet",
+      "tools": ["Read", "Write", "Edit"]
+    },
+    "script-writer": {
+      "description": "스크립트 작성. 도파민 트리거 기반 후킹 스크립트.",
+      "model": "sonnet",
+      "tools": ["Read", "Write", "Edit"]
+    },
+    "neuroscientist": {
+      "description": "도파민 기반 hooking 연구. Variable Reward 패턴 분석.",
+      "model": "opus",
+      "tools": ["Read", "WebSearch", "WebFetch"]
+    },
+    "impatient-viewer": {
+      "description": "쇼츠 중독 시청자 리뷰. 0.5초 스와이프 기준 테스트.",
+      "model": "sonnet",
+      "tools": ["Read"]
+    },
+    "shorts-video-generator": {
+      "description": "Shorts 영상 생성. 9:16, 15-60초 세로 포맷.",
+      "model": "sonnet",
+      "tools": ["Bash", "Read", "Write", "WebFetch"]
+    },
+    "video-uploader": {
+      "description": "YouTube 업로드. 채널별 메타데이터 관리.",
+      "model": "haiku",
+      "tools": ["Bash", "Read", "Write"]
+    },
+    "channel-10s": {
+      "description": "10대 채널 관리. 트렌드, 밈, 게임, K-POP.",
+      "model": "haiku",
+      "tools": ["Read", "Write"]
+    },
+    "channel-20s": {
+      "description": "20대 채널 관리. 자기계발, 재테크, 연애, 취업.",
+      "model": "haiku",
+      "tools": ["Read", "Write"]
+    },
+    "channel-30s": {
+      "description": "30대 채널 관리. 직장생활, 육아, 건강, 재테크.",
+      "model": "haiku",
+      "tools": ["Read", "Write"]
+    },
+    "channel-40s": {
+      "description": "40대 채널 관리. 자녀교육, 건강, 노후준비, 여행.",
+      "model": "haiku",
+      "tools": ["Read", "Write"]
+    },
+    "channel-50s": {
+      "description": "50대 채널 관리. 건강, 취미, 노후준비, 자녀.",
+      "model": "haiku",
+      "tools": ["Read", "Write"]
+    },
+    "channel-60s": {
+      "description": "60대 채널 관리. 건강, 추억, 가족, 여유로운 삶.",
+      "model": "haiku",
+      "tools": ["Read", "Write"]
+    },
+    "channel-70s": {
+      "description": "70대 채널 관리. 건강, 추억, 일상, 손주.",
+      "model": "haiku",
+      "tools": ["Read", "Write"]
+    }
+  },
+  "commands": {
+    "shorts": {
+      "description": "YouTube Shorts 영상 제작 파이프라인 실행",
+      "usage": "/shorts [--topic <주제>] [--channel <연령대>] [--count <개수>] [--upload] [--visibility <public|unlisted|private>]"
+    }
+  },
+  "skills": {
+    "shorts-production": {
+      "description": "YouTube Shorts 영상 제작 스킬",
+      "entry": "skills/shorts-production/SKILL.md"
+    }
+  },
+  "config": {
+    "max_events": 10,
+    "max_scenario_iterations": 3,
+    "max_feedback_iterations": 3,
+    "min_quality_score": 7,
+    "video_format": {
+      "aspect_ratio": "9:16",
+      "min_duration_seconds": 15,
+      "max_duration_seconds": 60
+    }
+  }
+}
