@@ -18,10 +18,118 @@ oh-my-opencode의 Sisyphus 패턴과 youtube-assistant의 피드백 루프 패�
 ## 설치
 
 ```bash
-# 환경 변수 설정
-cp .env.example .env
-# .env 파일을 편집하여 API 키 입력
+# 플러그인 설치
+claude /install youtube-shorts-orchestrator@gprecious-marketplace
 ```
+
+## 환경 변수 설정
+
+프로젝트 루트에 `.env` 파일을 생성하고 API 키를 설정합니다.
+
+```bash
+# .env.example 복사
+cp ~/.claude/plugins/cache/gprecious-marketplace/youtube-shorts-orchestrator/1.0.0/.env.example .env
+```
+
+### 필수 환경 변수
+
+```bash
+# ===== YouTube API (업로드용) =====
+YOUTUBE_CLIENT_ID=your_client_id
+YOUTUBE_CLIENT_SECRET=your_client_secret
+YOUTUBE_REFRESH_TOKEN=your_refresh_token
+
+# ===== TTS (음성 생성) =====
+ELEVENLABS_API_KEY=your_elevenlabs_api_key
+ELEVENLABS_VOICE_ID=your_preferred_voice_id
+```
+
+### 선택 환경 변수
+
+```bash
+# 스톡 영상 (둘 중 하나 이상)
+PEXELS_API_KEY=your_pexels_api_key
+PIXABAY_API_KEY=your_pixabay_api_key
+
+# AI 이미지/영상 생성
+OPENAI_API_KEY=your_openai_api_key        # DALL-E 이미지
+REPLICATE_API_TOKEN=your_replicate_token   # AI 영상 생성
+
+# 작업 디렉토리
+SHORTS_WORK_DIR=/tmp/shorts
+SHORTS_OUTPUT_DIR=./output
+```
+
+### 채널 ID 설정 (채널 생성 후)
+
+```bash
+CHANNEL_10S_ID=UC...
+CHANNEL_20S_ID=UC...
+CHANNEL_30S_ID=UC...
+CHANNEL_40S_ID=UC...
+CHANNEL_50S_ID=UC...
+CHANNEL_60S_ID=UC...
+CHANNEL_70S_ID=UC...
+```
+
+### API 키 발급 방법
+
+| 서비스 | 발급 URL | 용도 |
+|--------|----------|------|
+| YouTube | [Google Cloud Console](https://console.cloud.google.com) | 영상 업로드 |
+| ElevenLabs | [elevenlabs.io](https://elevenlabs.io) | TTS 음성 |
+| Pexels | [pexels.com/api](https://www.pexels.com/api/) | 스톡 영상 |
+| Pixabay | [pixabay.com/api](https://pixabay.com/api/docs/) | 스톡 영상 |
+| OpenAI | [platform.openai.com](https://platform.openai.com) | DALL-E 이미지 |
+| Replicate | [replicate.com](https://replicate.com) | AI 영상 생성 |
+
+### YouTube OAuth 토큰 발급
+
+1. [Google Cloud Console](https://console.cloud.google.com) 접속
+2. 새 프로젝트 생성
+3. **YouTube Data API v3** 활성화
+4. **사용자 인증 정보** → **OAuth 2.0 클라이언트 ID** 생성
+5. **OAuth 동의 화면** 설정 (테스트 사용자 추가)
+6. Refresh Token 발급:
+
+```bash
+# OAuth Playground 사용
+# https://developers.google.com/oauthplayground/
+
+# 또는 CLI 도구 사용
+npx google-auth-library
+```
+
+## YouTube 채널 생성
+
+한 Google 계정으로 여러 브랜드 채널을 만들 수 있습니다.
+
+### 채널 생성 방법
+
+1. YouTube 우측 상단 **프로필 아이콘** 클릭
+2. **"설정"** 클릭
+3. **"채널 추가 또는 관리"** 클릭
+4. **"채널 만들기"** 버튼 클릭
+5. 채널 이름 입력 → 완료
+
+또는 직접 접속: https://www.youtube.com/channel_switcher
+
+### 추천 채널 이름
+
+| 채널 | 추천 이름 예시 |
+|------|---------------|
+| channel-10s | 10대를 위한 신기한 세상 |
+| channel-20s | 20대 브레인 업그레이드 |
+| channel-30s | 30대 직장인 꿀지식 |
+| channel-40s | 40대를 위한 슬기로운 생활 |
+| channel-50s | 50대 인생 2막 |
+| channel-60s | 60대 여유로운 하루 |
+| channel-70s | 70대 행복한 일상 |
+
+### 채널 ID 확인
+
+1. 채널 페이지 → **YouTube Studio** → **설정** → **채널** → **고급 설정**
+2. 또는 URL에서 확인: `youtube.com/channel/UC...` ← UC로 시작하는 부분이 채널 ID
 
 ## 사용법
 
@@ -29,7 +137,7 @@ cp .env.example .env
 # 기본 사용 (자동 소재 수집)
 /shorts
 
-# 다중 영상 생성 (최대 10개)
+# 다중 영상 생성 (최대 5개)
 /shorts --count 5
 
 # 주제 지정
@@ -47,11 +155,17 @@ cp .env.example .env
 ```
 /shorts 트리거
     |
-Phase 1: 초기화 & 소재 수집
+Phase 1: 초기화
+├── wisdom.md 로드
+├── global-history.json 로드 (중복 방지)
+└── 채널 상태 확인
     |
-curious-event-collector × N (최대 10개 병렬)
+Phase 2: 소재 수집
+├── curious-event-collector × N (최대 5개 병렬)
+├── 기존 영상과 중복 체크
+└── 품질 필터링
     |
-VIDEO PIPELINE × N (병렬)
+Phase 3-6: VIDEO PIPELINE × N (병렬)
 ├── scenario-writer → script-writer
 ├── neuroscientist 검증 (최대 3회)
 ├── impatient-viewer 검증 (최대 3회)
@@ -60,9 +174,44 @@ VIDEO PIPELINE × N (병렬)
 Phase 7: Oracle 채널 결정 (일괄)
     |
 Phase 8: 업로드 (병렬)
+├── video-uploader × N
+└── history.json 업데이트 (채널별 + 전역)
     |
 Phase 9: 마무리
+├── wisdom.md 업데이트
+└── 최종 리포트 출력
 ```
+
+## 중복 방지
+
+이미 생성한 영상과 유사한 주제는 자동으로 필터링됩니다.
+
+### 히스토리 파일
+
+| 파일 | 위치 | 용도 |
+|------|------|------|
+| global-history.json | `history/` | 전체 영상 통합 기록 |
+| history.json | `channels/{channel}/` | 채널별 업로드 기록 |
+
+### 중복 체크 규칙
+
+| 규칙 | 조건 | 결과 |
+|------|------|------|
+| 제목 유사도 | 70% 이상 | 제외 |
+| 키워드 중복 | 3개 이상 겹침 | 제외 |
+| 주제 변형 | 같은 주제, 다른 앵글 | 허용 |
+
+## 병렬 실행 제한
+
+API 안정성을 위해 병렬 실행이 제한됩니다.
+
+| 항목 | 제한 |
+|------|------|
+| 최대 동시 파이프라인 | 5개 |
+| --count 최대값 | 5 |
+| 시나리오 재작성 | 최대 3회 |
+| 피드백 루프 | 최대 3회 |
+| 최소 품질 점수 | 7점 |
 
 ## 에이전트
 
