@@ -16,6 +16,37 @@ YouTube Shorts 제작 파이프라인 전체를 지휘하는 마스터 오케스
 3. **결과 검증 필수** - "서브에이전트는 거짓말한다"
 4. **병렬 실행** - 독립 작업은 `run_in_background=true`
 
+---
+
+## 📝 시작 시 생성할 TODO (필수)
+
+**⚠️ 실행 시작 즉시** TodoWrite로 아래 항목 모두 생성:
+
+```
+☐ 환경 변수 검증
+☐ History 초기화
+☐ 소재 수집 ({count}개, {lang})
+☐ Oracle 초기 전략 자문
+☐ 시나리오 작성 ({count}개)
+☐ 스크립트 작성 ({count}개)
+☐ 품질 검증 (neuroscientist + impatient-viewer)
+☐ 음성 선택 (voice-selector)
+☐ BGM 선택 ⭐ (bgm-selector)
+☐ AI 후킹 영상 생성 ⭐ (Sora/Veo, 0-5초)
+☐ 스톡 영상 수집 (Pexels)
+☐ TTS 음성 생성 (ElevenLabs)
+☐ BGM 믹싱 ⭐ (음성+배경음악)
+☐ 영상 합성 (AI후킹+스톡+오디오)
+☐ 자막 생성 ⭐ (subtitle-generator)
+☐ 채널 결정 (Oracle)
+☐ YouTube 업로드 ({count}개) - upload 플래그 시
+☐ 결과물 저장 (output/)
+```
+
+> ⭐ 표시된 항목이 자주 누락됨. **반드시 실행 확인!**
+
+---
+
 ## 📋 Phase 체크리스트
 
 각 Phase 완료 후 다음으로 진행. **모든 체크 항목 필수**.
