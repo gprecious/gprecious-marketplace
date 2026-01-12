@@ -85,12 +85,25 @@ Phase 6: 영상 생성
 │   ├── ElevenLabs 음성 라이브러리 조회
 │   ├── **언어별 음성 필터링 (multilingual_v2 모델)**
 │   └── 최적 voice_id 반환
-├── shorts-video-generator (9:16, 15-60초)
-│   └── voice-selector 결과로 TTS 생성 (언어 지정)
+├── **bgm-selector (저작권 무료 배경음악 선택)**
+│   ├── 스크립트 분위기 분석 (mysterious, energetic, calm 등)
+│   ├── Pixabay Music API로 무료 BGM 검색
+│   ├── 영상 길이에 맞는 음악 선택
+│   └── BGM 다운로드 및 메타데이터 저장
+├── **shorts-video-generator (9:16, 15-60초)**
+│   ├── **AI 후킹 영상 생성 (0-5초)** ⭐ 핵심
+│   │   ├── Sora (OpenAI) - 1차 선택
+│   │   ├── Veo (Google) - 2차 선택
+│   │   └── DALL-E + Ken Burns - 폴백
+│   ├── 스톡 영상 수집 (5초 이후) - Pexels/Pixabay
+│   ├── voice-selector 결과로 TTS 생성
+│   ├── bgm-selector 결과로 배경음악 믹싱
+│   └── AI 후킹 + 스톡 영상 결합
 └── **subtitle-generator (자막 자동 생성)**
     ├── AssemblyAI로 음성 → 텍스트 (language_code 지정)
+    ├── **2-3단어씩 청킹** (Shorts 스타일)
     ├── SRT 파일 생성
-    └── FFmpeg로 자막 하드코딩
+    └── FFmpeg로 자막 하드코딩 (20pt Bold, 하단)
 
 Phase 7: Oracle 채널 결정 (일괄)
 ├── 모든 파이프라인 완료 대기
@@ -190,8 +203,12 @@ def run_single_pipeline(event, lang="ko"):
             continue
 
         # Phase 6: 영상 생성
+        # 6-1: 음성 및 BGM 선택 (병렬 실행 가능)
         voice_selection = voice_selector.select(script, channel, lang)
-        video = shorts_video_generator.create(script, scenario, voice_selection, lang)
+        bgm_selection = bgm_selector.select(script, scenario)  # 저작권 무료 BGM
+
+        # 6-2: 영상 생성 (음성 + BGM 믹싱)
+        video = shorts_video_generator.create(script, scenario, voice_selection, bgm_selection, lang)
         subtitled_video = subtitle_generator.add_subtitles(video, lang)
         return {"success": True, "video": subtitled_video, "event": event, "lang": lang}
 
@@ -239,6 +256,8 @@ next_action: "complete"       # → 파이프라인 완료
 │   │   ├── neuro_analysis.json
 │   │   ├── viewer_review.json
 │   │   ├── voice_selection.json    # 선택된 음성 정보
+│   │   ├── bgm_meta.json           # 배경음악 정보 (저작권 무료)
+│   │   ├── ai_hook_meta.json       # AI 후킹 영상 정보 (Sora/Veo)
 │   │   └── video_meta.json
 │   └── ...
 ├── decisions/
@@ -308,14 +327,21 @@ next_action: "complete"       # → 파이프라인 완료
    필수 (항상):
    - ELEVENLABS_API_KEY: TTS 음성 생성
 
+   필수 (AI 후킹 영상 - 하나 이상):
+   - OPENAI_API_KEY: Sora 영상 생성 (권장)
+   - GCP_PROJECT_ID + GOOGLE_ACCESS_TOKEN: Veo 영상 생성 (대안)
+
    필수 (스톡 영상 - 둘 중 하나):
    - PEXELS_API_KEY 또는 PIXABAY_API_KEY
 
    필수 (--upload 시):
    - YOUTUBE_CLIENT_ID
    - YOUTUBE_CLIENT_SECRET
-   - YOUTUBE_REFRESH_TOKEN
-   - CHANNEL_*_ID (타겟 채널)
+   - YOUTUBE_REFRESH_TOKEN_YOUNG (young 채널 전용 토큰)
+   - YOUTUBE_REFRESH_TOKEN_MIDDLE (middle 채널 전용 토큰)
+   - YOUTUBE_REFRESH_TOKEN_SENIOR (senior 채널 전용 토큰)
+   ⚠️ YouTube API는 토큰 발급 시 선택한 채널에만 업로드됨
+      → 각 채널별로 별도 토큰 필요 (video-uploader.md 참조)
    ```
 
 3. **미설정 시 출력**
@@ -326,6 +352,7 @@ next_action: "complete"       # → 파이프라인 완료
    ║  다음 환경 변수가 설정되지 않았습니다:                           ║
    ║                                                                ║
    ║  ❌ ELEVENLABS_API_KEY (필수 - TTS 음성 생성)                   ║
+   ║  ❌ OPENAI_API_KEY (권장 - Sora AI 후킹 영상)                   ║
    ╚════════════════════════════════════════════════════════════════╝
 
    📋 설정 방법:
@@ -341,6 +368,8 @@ next_action: "complete"       # → 파이프라인 완료
 
    4. API 키 발급:
       - ElevenLabs: https://elevenlabs.io
+      - OpenAI (Sora): https://platform.openai.com (영상 생성 권한 필요)
+      - Google Cloud (Veo): https://console.cloud.google.com (Vertex AI)
       - Pexels: https://www.pexels.com/api/
       - YouTube: https://console.cloud.google.com
 

@@ -50,11 +50,13 @@ FFmpeg 하드코딩
 
 ### 옵션
 - language: ko (한국어)
-- style: shorts (큰 글씨, 중앙 배치)
-- font_size: 24
+- style: shorts-default (2-3단어씩, 하단 중앙)
+- max_words_per_line: 3 (한 번에 표시할 최대 단어 수)
+- font_size: 20
+- font_weight: bold
 - font_color: white
 - outline_color: black
-- position: center
+- position: bottom-center
 ```
 
 ## AssemblyAI API 호출
@@ -122,35 +124,78 @@ curl -X GET "https://api.assemblyai.com/v2/transcript/${TRANSCRIPT_ID}/srt" \
   -o subtitles.srt
 ```
 
-## SRT 형식
+## SRT 형식 (Shorts 스타일: 2-3단어씩)
+
+**핵심**: 한 번에 2-3단어만 표시하여 시청자 집중도 향상
 
 ```srt
 1
-00:00:00,000 --> 00:00:02,500
-안녕하세요 오늘은
+00:00:00,000 --> 00:00:01,200
+안녕하세요
 
 2
-00:00:02,600 --> 00:00:05,000
-신기한 사실을 알려드릴게요
+00:00:01,200 --> 00:00:02,500
+오늘은
 
 3
-00:00:05,100 --> 00:00:08,000
-꿈에 나오는 모든 얼굴은
+00:00:02,600 --> 00:00:03,800
+신기한 사실을
+
+4
+00:00:03,800 --> 00:00:05,000
+알려드릴게요
+
+5
+00:00:05,100 --> 00:00:06,500
+꿈에 나오는
+
+6
+00:00:06,500 --> 00:00:08,000
+모든 얼굴은
+```
+
+### 단어 그룹핑 로직
+```python
+# AssemblyAI words 결과를 2-3단어씩 청킹
+def chunk_words(words, max_words=3):
+    chunks = []
+    current_chunk = []
+
+    for word in words:
+        current_chunk.append(word)
+        if len(current_chunk) >= max_words:
+            chunks.append({
+                "text": " ".join([w["text"] for w in current_chunk]),
+                "start": current_chunk[0]["start"],
+                "end": current_chunk[-1]["end"]
+            })
+            current_chunk = []
+
+    # 남은 단어 처리
+    if current_chunk:
+        chunks.append({
+            "text": " ".join([w["text"] for w in current_chunk]),
+            "start": current_chunk[0]["start"],
+            "end": current_chunk[-1]["end"]
+        })
+
+    return chunks
 ```
 
 ## FFmpeg 자막 하드코딩
 
-### Shorts 스타일 (큰 글씨, 중앙)
+### Shorts 스타일 (2-3단어, 하단 중앙)
 
 ```bash
 ffmpeg -i raw.mp4 -vf "subtitles=subtitles.srt:force_style='\
-  FontName=NanumGothic,\
-  FontSize=24,\
+  FontName=NanumGothic Bold,\
+  FontSize=20,\
   PrimaryColour=&HFFFFFF,\
   OutlineColour=&H000000,\
   Outline=2,\
-  Alignment=10,\
-  MarginV=50'" \
+  Shadow=1,\
+  Alignment=2,\
+  MarginV=120'" \
   -c:a copy output_with_subs.mp4
 ```
 
@@ -158,11 +203,12 @@ ffmpeg -i raw.mp4 -vf "subtitles=subtitles.srt:force_style='\
 
 | 옵션 | 값 | 설명 |
 |------|-----|------|
-| FontSize | 24-32 | Shorts는 큰 글씨 권장 |
-| Alignment | 10 | 중앙 상단 (2=하단, 10=상단) |
-| OutlineColour | &H000000 | 검정 테두리 |
-| Outline | 2-3 | 테두리 두께 |
-| MarginV | 50 | 상하 여백 |
+| FontSize | **20** | 2-3단어만 표시하므로 가독성 위해 키움 |
+| FontName | NanumGothic **Bold** | 굵은 글씨로 시인성 향상 |
+| Alignment | 2 | 하단 중앙 |
+| Outline | **2** | 테두리로 가독성 확보 |
+| Shadow | 1 | 그림자 |
+| MarginV | **120** | 하단 여백 (UI 요소 회피) |
 
 ## 출력 형식
 
@@ -184,9 +230,10 @@ ffmpeg -i raw.mp4 -vf "subtitles=subtitles.srt:force_style='\
   </files>
   
   <style_applied>
-    <font>NanumGothic</font>
-    <size>24</size>
-    <position>center-top</position>
+    <font>NanumGothic Bold</font>
+    <size>20</size>
+    <max_words>3</max_words>
+    <position>bottom-center</position>
   </style_applied>
 </task_result>
 ```
@@ -201,20 +248,23 @@ ffmpeg -i raw.mp4 -vf "subtitles=subtitles.srt:force_style='\
 
 ## 자막 스타일 프리셋
 
-### shorts-default (기본)
-- 큰 글씨 (24pt)
-- 흰색 + 검정 테두리
-- 중앙 배치
-
-### shorts-impact (임팩트)
-- 매우 큰 글씨 (32pt)
-- 노란색 + 검정 테두리
-- 대문자 스타일
+### shorts-default (기본) ← 권장
+- **2-3단어씩 표시** (집중도 향상)
+- 굵은 글씨 (20pt Bold)
+- 흰색 + 검정 테두리 + 그림자
+- 하단 중앙 배치
 
 ### shorts-minimal (미니멀)
-- 중간 글씨 (20pt)
+- 2-3단어씩 표시
+- 중간 글씨 (16pt)
 - 흰색 반투명 배경
 - 하단 배치
+
+### shorts-impact (임팩트)
+- **1-2단어씩 표시** (더 빠른 전환)
+- 큰 글씨 (24pt Bold)
+- 노란색/흰색 + 검정 테두리
+- 하단 중앙
 
 ## 주의사항
 

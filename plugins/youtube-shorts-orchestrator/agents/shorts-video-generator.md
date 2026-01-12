@@ -13,9 +13,10 @@ TTS 음성 + 스톡/AI 영상 합성.
 ## 역할
 
 1. **TTS 생성**: ElevenLabs로 내레이션 음성 생성
-2. **영상 소스 수집**: Pexels/Pixabay 스톡 또는 AI 생성
-3. **영상 합성**: FFmpeg로 최종 영상 조합
-4. **자막 생성**: 동적 자막 오버레이
+2. **AI 후킹 영상 생성**: Sora/Veo로 초반 3-5초 임팩트 영상 생성
+3. **영상 소스 수집**: Pexels/Pixabay 스톡 (AI 영상 이후 구간)
+4. **영상 합성**: FFmpeg로 최종 영상 조합
+5. **자막 생성**: 동적 자막 오버레이
 
 ## 기술 스펙
 
@@ -35,9 +36,12 @@ bitrate: 8Mbps
 /tmp/shorts/{session}/pipelines/{event_id}/
 ├── audio/
 │   ├── narration.mp3      # TTS 음성
-│   └── bgm.mp3            # 배경음악 (선택)
+│   └── bgm.mp3            # 배경음악
 ├── video/
-│   ├── clips/             # 개별 클립
+│   ├── ai_hook/           # AI 생성 후킹 영상 (Sora/Veo)
+│   │   ├── hook_sora.mp4  # Sora 생성 (0-5초)
+│   │   └── hook_veo.mp4   # Veo 생성 (폴백)
+│   ├── clips/             # 스톡 클립 (Pexels/Pixabay)
 │   │   ├── clip_001.mp4
 │   │   ├── clip_002.mp4
 │   │   └── ...
@@ -78,9 +82,115 @@ curl -X POST "https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}" \
 2. 환경 변수 `ELEVENLABS_VOICE_ID` 사용
 3. 채널별 기본 음성 사용 (voice-selector.md 참조)
 
-### 2. 스톡 영상 검색
+### 2. AI 후킹 영상 생성 (Sora/Veo) ⭐ 핵심
+
+**목적**: 초반 3-5초에 시선을 사로잡는 임팩트 영상으로 이탈 방지
+
+#### 2-1. Sora (OpenAI) - 1차 선택
 ```bash
-# Pexels API
+# Sora API 호출 (영상 생성)
+curl -X POST "https://api.openai.com/v1/videos/generations" \
+  -H "Authorization: Bearer ${OPENAI_API_KEY}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "sora",
+    "prompt": "Cinematic close-up of mysterious ancient structure on the moon surface, dramatic lighting, dust particles floating, 9:16 vertical format, photorealistic, 5 seconds",
+    "duration": 5,
+    "aspect_ratio": "9:16",
+    "resolution": "1080p"
+  }' \
+  --output hook_sora.mp4
+```
+
+**Sora 프롬프트 가이드**:
+```yaml
+필수 요소:
+  - "9:16 vertical format" (세로 비율)
+  - "cinematic" (영화적 품질)
+  - "5 seconds" (짧은 길이)
+  - 주제 관련 핵심 시각 요소
+
+권장 스타일:
+  - "dramatic lighting" (극적인 조명)
+  - "slow motion" (슬로우 모션)
+  - "photorealistic" (사실적)
+  - "close-up" 또는 "wide shot" (샷 타입)
+```
+
+#### 2-2. Veo (Google) - 2차 선택/폴백
+```bash
+# Veo API 호출 (Vertex AI)
+curl -X POST "https://us-central1-aiplatform.googleapis.com/v1/projects/${GCP_PROJECT_ID}/locations/us-central1/publishers/google/models/veo:generateVideo" \
+  -H "Authorization: Bearer ${GOOGLE_ACCESS_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "instances": [{
+      "prompt": "Cinematic shot of mysterious structure on moon, dramatic atmosphere, vertical 9:16, 5 seconds"
+    }],
+    "parameters": {
+      "aspectRatio": "9:16",
+      "durationSeconds": 5,
+      "outputFormat": "mp4"
+    }
+  }'
+```
+
+**Veo 프롬프트 가이드**:
+```yaml
+필수 요소:
+  - "vertical 9:16" (세로 비율)
+  - "cinematic" (영화적 품질)
+  - "5 seconds" (짧은 길이)
+
+권장 스타일:
+  - "dramatic atmosphere"
+  - "high quality"
+  - "smooth camera movement"
+```
+
+#### 2-3. AI 영상 생성 전략
+```yaml
+영상 구조:
+  hook (0-5초): AI 생성 (Sora/Veo) ← 핵심 임팩트
+  body (5-50초): 스톡 영상 (Pexels/Pixabay)
+  outro (50-60초): 스톡 영상 또는 AI 생성
+
+우선순위:
+  1. Sora (품질 최고)
+  2. Veo (안정성)
+  3. DALL-E + Ken Burns (폴백)
+
+비용 최적화:
+  - AI 영상은 후킹 구간(3-5초)만 사용
+  - 나머지는 무료 스톡으로 채움
+```
+
+#### 2-4. 주제별 AI 프롬프트 템플릿
+```yaml
+science:
+  sora: "Cinematic visualization of {topic}, scientific accuracy, dramatic lighting, particles and energy effects, 9:16 vertical, 5 seconds"
+  veo: "Scientific visualization of {topic}, high detail, dramatic, vertical 9:16, 5 seconds"
+
+mystery:
+  sora: "Mysterious {topic} emerging from darkness, fog and shadows, cinematic atmosphere, suspenseful, 9:16 vertical, 5 seconds"
+  veo: "Dark mysterious scene of {topic}, atmospheric fog, vertical 9:16, 5 seconds"
+
+nature:
+  sora: "Breathtaking {topic} in golden hour light, cinematic drone shot, slow motion, 9:16 vertical, 5 seconds"
+  veo: "Beautiful nature scene of {topic}, cinematic, golden light, vertical 9:16, 5 seconds"
+
+technology:
+  sora: "Futuristic {topic} with holographic elements, neon lights, cyberpunk aesthetic, 9:16 vertical, 5 seconds"
+  veo: "High-tech visualization of {topic}, futuristic, glowing elements, vertical 9:16, 5 seconds"
+
+historical:
+  sora: "Dramatic recreation of {topic}, epic historical scene, cinematic lighting, 9:16 vertical, 5 seconds"
+  veo: "Historical scene of {topic}, dramatic atmosphere, vertical 9:16, 5 seconds"
+```
+
+### 3. 스톡 영상 검색 (본편용: 5초 이후)
+```bash
+# Pexels API (세로 영상 검색)
 curl "https://api.pexels.com/videos/search?query=space+moon&orientation=portrait&per_page=5" \
   -H "Authorization: ${PEXELS_API_KEY}"
 
@@ -88,29 +198,114 @@ curl "https://api.pexels.com/videos/search?query=space+moon&orientation=portrait
 curl "https://pixabay.com/api/videos/?key=${PIXABAY_API_KEY}&q=space+moon&video_type=film"
 ```
 
-### 3. AI 이미지 생성 (필요시)
+### 4. AI 이미지 생성 (폴백: Sora/Veo 실패 시)
 ```bash
-# DALL-E 3
+# DALL-E 3 + Ken Burns 효과로 폴백
 curl "https://api.openai.com/v1/images/generations" \
   -H "Authorization: Bearer ${OPENAI_API_KEY}" \
   -H "Content-Type: application/json" \
   -d '{
     "model": "dall-e-3",
-    "prompt": "Mysterious structure on the moon surface, cinematic, 9:16 vertical",
+    "prompt": "Mysterious structure on the moon surface, cinematic, 9:16 vertical, photorealistic",
     "n": 1,
     "size": "1024x1792"
   }'
+
+# Ken Burns 효과로 이미지 → 영상 변환
+ffmpeg -loop 1 -i dalle_image.png -t 5 \
+  -filter_complex "scale=1200:2133,zoompan=z='min(zoom+0.002,1.3)':d=150:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)',scale=1080:1920" \
+  -c:v libx264 -pix_fmt yuv420p hook_fallback.mp4
 ```
 
-### 4. FFmpeg 합성
+### 5. BGM 믹싱 (bgm-selector 결과 사용)
+
+**bgm-selector 결과 사용**: BGM 파일과 믹싱 설정은 bgm-selector 에이전트의 결과를 사용합니다.
+
 ```bash
-# 기본 합성 명령
-ffmpeg -i background.mp4 \
-  -i narration.mp3 \
+# 음성 + BGM 믹싱 (bgm-selector 권장 설정 적용)
+# ${BGM_VOLUME}: 10-15% 권장 (bgm_meta.json에서 가져옴)
+# ${FADE_IN}, ${FADE_OUT}: bgm-selector 권장값
+
+ffmpeg -i narration.mp3 -i bgm.mp3 \
   -filter_complex "
-    [0:v]scale=1080:1920:force_original_aspect_ratio=decrease,
-    pad=1080:1920:(ow-iw)/2:(oh-ih)/2,
-    subtitles=captions.srt:force_style='FontSize=24,PrimaryColour=&HFFFFFF&'
+    [1:a]afade=t=in:st=0:d=${FADE_IN},afade=t=out:st=${FADE_OUT_START}:d=${FADE_OUT},volume=${BGM_VOLUME}[bgm];
+    [0:a][bgm]amix=inputs=2:duration=first:dropout_transition=2
+  " \
+  -c:a aac -b:a 192k \
+  mixed_audio.m4a
+```
+
+**Ducking (음성 구간 BGM 볼륨 감소)**:
+```bash
+# 음성이 나올 때 BGM 볼륨 자동 감소
+ffmpeg -i narration.mp3 -i bgm.mp3 \
+  -filter_complex "
+    [1:a]volume=0.15[bgm_base];
+    [0:a][bgm_base]sidechaincompress=threshold=0.02:ratio=4:attack=50:release=200[compressed];
+    [0:a][compressed]amix=inputs=2:duration=first
+  " \
+  -c:a aac -b:a 192k \
+  mixed_audio.m4a
+```
+
+### 6. FFmpeg 최종 합성 (AI 후킹 + 스톡 결합)
+
+#### 6-1. AI 후킹 영상 + 스톡 영상 결합
+```bash
+# 1단계: AI 후킹 영상(0-5초) + 스톡 영상(5초~) 연결
+ffmpeg -i hook_sora.mp4 -i stock_clips.mp4 \
+  -filter_complex "
+    [0:v]scale=1080:1920,setsar=1[hook];
+    [1:v]scale=1080:1920,setsar=1[body];
+    [hook][body]concat=n=2:v=1:a=0[outv]
+  " \
+  -map "[outv]" \
+  -c:v libx264 -preset fast \
+  combined_video.mp4
+```
+
+#### 6-2. 오디오 + 영상 + 자막 최종 합성
+```bash
+# 영상 + 믹싱된 오디오(음성+BGM) + 자막 합성
+# 자막: Shorts 스타일 (2-3단어씩, 20pt Bold, 하단 중앙)
+ffmpeg -i combined_video.mp4 \
+  -i mixed_audio.m4a \
+  -filter_complex "
+    [0:v]subtitles=captions.srt:force_style='FontName=NanumGothic Bold,FontSize=20,PrimaryColour=&HFFFFFF&,OutlineColour=&H000000&,Outline=2,Shadow=1,Alignment=2,MarginV=120'
+  " \
+  -c:v libx264 -preset fast -crf 23 \
+  -c:a aac -b:a 128k \
+  -t 45 \
+  -y output/final.mp4
+```
+
+#### 6-3. 전체 파이프라인 (한 번에)
+```bash
+# AI 후킹(5초) + 스톡(40초) + 오디오 + 자막 = 최종 영상
+ffmpeg \
+  -i hook_sora.mp4 \
+  -i stock_body.mp4 \
+  -i mixed_audio.m4a \
+  -filter_complex "
+    [0:v]scale=1080:1920,setsar=1,fps=30[hook];
+    [1:v]scale=1080:1920,setsar=1,fps=30[body];
+    [hook][body]concat=n=2:v=1:a=0[video];
+    [video]subtitles=captions.srt:force_style='FontName=NanumGothic Bold,FontSize=20,PrimaryColour=&HFFFFFF&,OutlineColour=&H000000&,Outline=2,Shadow=1,Alignment=2,MarginV=120'[final]
+  " \
+  -map "[final]" -map 2:a \
+  -c:v libx264 -preset fast -crf 23 \
+  -c:a aac -b:a 128k \
+  -shortest \
+  -y output/final.mp4
+```
+
+**폴백 (AI 영상 없이 스톡만)**:
+```bash
+# Sora/Veo 실패 시 스톡 영상만 사용
+ffmpeg -i stock_only.mp4 \
+  -i mixed_audio.m4a \
+  -filter_complex "
+    [0:v]scale=1080:1920,subtitles=captions.srt:force_style='FontName=NanumGothic Bold,FontSize=20,PrimaryColour=&HFFFFFF&,OutlineColour=&H000000&,Outline=2,Shadow=1,Alignment=2,MarginV=120'
   " \
   -c:v libx264 -preset fast -crf 23 \
   -c:a aac -b:a 128k \
@@ -120,7 +315,7 @@ ffmpeg -i background.mp4 \
 
 ## 자막 스타일
 
-### 기본 스타일
+### Shorts 스타일 (2-3단어씩, Bold, 하단)
 ```ass
 [Script Info]
 ScriptType: v4.00+
@@ -128,15 +323,24 @@ PlayResX: 1080
 PlayResY: 1920
 
 [V4+ Styles]
-Style: Default,Arial,48,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,2,0,2,30,30,30,1
+; FontSize=20 Bold, Alignment=2(하단중앙), MarginV=120
+Style: Default,NanumGothic Bold,20,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,2,1,2,10,10,120,1
 ```
 
-### 강조 스타일
+### 스타일 필드 설명
 ```
-- 핵심 단어: 노란색 (#FFFF00)
-- 숫자: 주황색 (#FF8800)
-- 질문: 파란색 (#00AAFF)
+FontSize: 20 (2-3단어만 표시하므로 가독성 확보)
+FontWeight: Bold (-1)
+Alignment: 2 (하단 중앙)
+MarginV: 120 (YouTube UI 회피)
+Outline: 2 (테두리)
+Shadow: 1 (그림자)
 ```
+
+### 핵심: 2-3단어씩 청킹
+- AssemblyAI word-level timestamp 활용
+- 최대 3단어씩 그룹핑하여 SRT 생성
+- 빠른 전환으로 시청자 집중도 유지
 
 ## 입력 형식
 
@@ -157,14 +361,26 @@ Style: Default,Arial,48,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,
   - similarity_boost: 0.75
   - style: 0.3
 
+### BGM 선택 결과 (bgm-selector 에이전트 출력)
+- bgm_path: "/tmp/shorts/{session}/pipelines/evt_001/audio/bgm.mp3"
+- bgm_source: "pixabay"
+- bgm_title: "Mysterious Atmosphere"
+- bgm_license: "Pixabay License (크레딧 불필요)"
+- mixing_settings:
+  - volume: 0.15 (10-15% 권장)
+  - fade_in: 2
+  - fade_out: 3
+  - ducking: true
+
 ### 옵션
-- bgm_style: "mysterious" (또는 energetic, calm, dramatic)
 - subtitle_style: "default" (또는 bold, minimal)
 - stock_source: "pexels" (또는 pixabay, ai)
 ```
 
-**참고**: voice_id는 voice-selector 에이전트가 스크립트/채널 분석 후 자동 선택합니다.
-환경 변수 `ELEVENLABS_VOICE_ID`가 설정되어 있으면 해당 값이 폴백으로 사용됩니다.
+**참고**:
+- voice_id는 voice-selector 에이전트가 스크립트/채널 분석 후 자동 선택합니다.
+- BGM은 bgm-selector 에이전트가 스크립트 분위기 분석 후 Pixabay Music에서 자동 선택합니다.
+- 환경 변수 `ELEVENLABS_VOICE_ID`가 설정되어 있으면 해당 값이 폴백으로 사용됩니다.
 
 ## 출력 형식
 
@@ -208,9 +424,12 @@ Style: Default,Arial,48,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,
     </video_clips>
     
     <bgm>
-      <source>epidemic_sound</source>
+      <source>pixabay</source>
       <track>Mysterious Atmosphere</track>
+      <license>Pixabay License (크레딧 불필요)</license>
       <volume>15%</volume>
+      <ducking>enabled</ducking>
+      <file>/tmp/shorts/{session}/pipelines/evt_001/audio/bgm.mp3</file>
     </bgm>
     
     <subtitles>

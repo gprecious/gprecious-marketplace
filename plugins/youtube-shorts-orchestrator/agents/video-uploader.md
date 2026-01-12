@@ -39,8 +39,8 @@ YouTube Data API v3를 사용하여 Shorts 영상을 업로드하는 에이전�
 - visibility: unlisted
 
 ### 채널 정보
-- channel_id: channel-30s
-- youtube_channel_id: UC... (환경변수에서)
+- channel_type: young (또는 middle, senior) ← Oracle 결정
+- expected_channel_id: UC... (검증용)
 
 ### 옵션
 - notify_subscribers: false
@@ -85,26 +85,117 @@ YouTube Data API v3를 사용하여 Shorts 영상을 업로드하는 에이전�
 
 ## OAuth 2.0 설정
 
-### 환경 변수
+### ⚠️ 중요: YouTube API 채널 업로드 특성
+
+YouTube API는 **OAuth 토큰을 발급받은 채널에만** 업로드됩니다.
+- 단일 Refresh Token으로 여러 채널에 업로드 **불가능**
+- 각 채널(Brand Account)별로 **별도의 Refresh Token** 필요
+- 토큰 발급 시 해당 채널로 **전환된 상태**에서 인증해야 함
+
+### 환경 변수 (채널별 분리 필수)
 ```bash
+# OAuth 클라이언트 (공통)
 YOUTUBE_CLIENT_ID=your_client_id
 YOUTUBE_CLIENT_SECRET=your_client_secret
-YOUTUBE_REFRESH_TOKEN=your_refresh_token
+
+# 채널별 Refresh Token (각 채널마다 별도 발급 필수!)
+YOUTUBE_REFRESH_TOKEN_YOUNG=refresh_token_for_young_channel
+YOUTUBE_REFRESH_TOKEN_MIDDLE=refresh_token_for_middle_channel
+YOUTUBE_REFRESH_TOKEN_SENIOR=refresh_token_for_senior_channel
+
+# 채널 ID (확인용)
+YOUTUBE_CHANNEL_ID_YOUNG=UC...
+YOUTUBE_CHANNEL_ID_MIDDLE=UC...
+YOUTUBE_CHANNEL_ID_SENIOR=UC...
 ```
 
-### 토큰 갱신
+### 채널별 토큰 발급 방법
+
+**각 채널마다 아래 과정을 반복해야 합니다:**
+
+#### 1단계: Brand Account 채널로 전환
+1. YouTube Studio 접속
+2. 우측 상단 프로필 클릭
+3. "채널 전환" 선택
+4. **업로드할 채널 선택** (예: young 채널)
+
+#### 2단계: OAuth 인증
+```bash
+# 인증 URL 생성 (브라우저에서 접속)
+https://accounts.google.com/o/oauth2/v2/auth?\
+  client_id=${YOUTUBE_CLIENT_ID}&\
+  redirect_uri=http://localhost:8080&\
+  response_type=code&\
+  scope=https://www.googleapis.com/auth/youtube.upload&\
+  access_type=offline&\
+  prompt=consent
+```
+
+#### 3단계: Authorization Code → Refresh Token
 ```bash
 curl -X POST "https://oauth2.googleapis.com/token" \
   -d "client_id=${YOUTUBE_CLIENT_ID}" \
   -d "client_secret=${YOUTUBE_CLIENT_SECRET}" \
-  -d "refresh_token=${YOUTUBE_REFRESH_TOKEN}" \
+  -d "code=${AUTHORIZATION_CODE}" \
+  -d "redirect_uri=http://localhost:8080" \
+  -d "grant_type=authorization_code"
+
+# 응답에서 refresh_token 저장 → YOUTUBE_REFRESH_TOKEN_YOUNG
+```
+
+#### 4단계: 다른 채널도 반복
+- middle 채널로 전환 → 인증 → YOUTUBE_REFRESH_TOKEN_MIDDLE
+- senior 채널로 전환 → 인증 → YOUTUBE_REFRESH_TOKEN_SENIOR
+
+### 토큰 갱신 (업로드 시 자동)
+```bash
+# 채널에 맞는 refresh token 사용
+REFRESH_TOKEN=${YOUTUBE_REFRESH_TOKEN_${CHANNEL_TYPE}}
+
+curl -X POST "https://oauth2.googleapis.com/token" \
+  -d "client_id=${YOUTUBE_CLIENT_ID}" \
+  -d "client_secret=${YOUTUBE_CLIENT_SECRET}" \
+  -d "refresh_token=${REFRESH_TOKEN}" \
   -d "grant_type=refresh_token"
+```
+
+### 채널 타입 → 환경 변수 매핑
+```yaml
+young:  YOUTUBE_REFRESH_TOKEN_YOUNG
+middle: YOUTUBE_REFRESH_TOKEN_MIDDLE
+senior: YOUTUBE_REFRESH_TOKEN_SENIOR
 ```
 
 ## 업로드 프로세스
 
+### 0. 채널별 Access Token 획득 (필수 선행)
+```bash
+# 1. Oracle이 결정한 채널 타입 확인 (young, middle, senior)
+CHANNEL_TYPE="young"  # 예시
+
+# 2. 채널에 맞는 Refresh Token 선택
+case ${CHANNEL_TYPE} in
+  "young")  REFRESH_TOKEN=${YOUTUBE_REFRESH_TOKEN_YOUNG} ;;
+  "middle") REFRESH_TOKEN=${YOUTUBE_REFRESH_TOKEN_MIDDLE} ;;
+  "senior") REFRESH_TOKEN=${YOUTUBE_REFRESH_TOKEN_SENIOR} ;;
+esac
+
+# 3. Access Token 발급
+ACCESS_TOKEN=$(curl -s -X POST "https://oauth2.googleapis.com/token" \
+  -d "client_id=${YOUTUBE_CLIENT_ID}" \
+  -d "client_secret=${YOUTUBE_CLIENT_SECRET}" \
+  -d "refresh_token=${REFRESH_TOKEN}" \
+  -d "grant_type=refresh_token" | jq -r '.access_token')
+
+# 4. 토큰 검증 (선택적)
+curl -s "https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true" \
+  -H "Authorization: Bearer ${ACCESS_TOKEN}" | jq '.items[0].snippet.title'
+# → 올바른 채널명이 출력되는지 확인
+```
+
 ### 1. Resumable Upload 초기화
 ```bash
+# ⚠️ 위에서 획득한 채널별 ACCESS_TOKEN 사용
 curl -X POST \
   "https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status" \
   -H "Authorization: Bearer ${ACCESS_TOKEN}" \
@@ -235,6 +326,32 @@ curl -X POST \
 | 403 | 권한 부족 | 채널 권한 확인 |
 | 400 | 잘못된 요청 | 메타데이터 확인 |
 | 429 | 할당량 초과 | 다음 날 재시도 |
+| **채널 불일치** | 잘못된 채널에 업로드됨 | 아래 참조 |
+
+### ⚠️ 채널 불일치 오류 해결
+
+**증상**: 영상이 의도한 채널이 아닌 기본 계정 채널에 업로드됨
+
+**원인**:
+- 단일 Refresh Token을 모든 채널에 사용
+- 토큰 발급 시 다른 채널로 전환되어 있었음
+
+**해결**:
+1. 각 채널별 Refresh Token 재발급
+2. 토큰 발급 전 YouTube Studio에서 해당 채널로 전환 확인
+3. 업로드 전 토큰 검증으로 채널 확인
+
+```bash
+# 업로드 전 채널 확인 (필수)
+ACTUAL_CHANNEL=$(curl -s "https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true" \
+  -H "Authorization: Bearer ${ACCESS_TOKEN}" | jq -r '.items[0].id')
+
+if [ "${ACTUAL_CHANNEL}" != "${EXPECTED_CHANNEL_ID}" ]; then
+  echo "❌ 채널 불일치! 예상: ${EXPECTED_CHANNEL_ID}, 실제: ${ACTUAL_CHANNEL}"
+  echo "해당 채널의 Refresh Token을 다시 발급받으세요."
+  exit 1
+fi
+```
 
 ## API 할당량
 
@@ -244,7 +361,9 @@ curl -X POST \
 
 ## 주의사항
 
-- 채널 ID 없으면 로컬 저장만
+- **채널별 Refresh Token 필수** - 단일 토큰으로 여러 채널 업로드 불가
+- **업로드 전 채널 검증 필수** - 잘못된 채널 업로드 방지
+- 채널 토큰 없으면 로컬 저장만
 - #shorts 태그 필수
 - 60초 이내 확인
 - 9:16 비율 확인
