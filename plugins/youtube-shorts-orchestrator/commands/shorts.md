@@ -47,7 +47,7 @@ usage: /shorts [--topic <주제>] [--channel <연령대>] [--count <개수>] [--
     │
     ▼
 Phase 0: 환경 변수 체크 ⚠️
-├── .env 파일 존재 확인
+├── **프로젝트 루트**에 .env 파일 존재 확인
 ├── 필수 환경 변수 검증
 │   ├── ELEVENLABS_API_KEY (TTS)
 │   └── (--upload 시) YOUTUBE_* 변수

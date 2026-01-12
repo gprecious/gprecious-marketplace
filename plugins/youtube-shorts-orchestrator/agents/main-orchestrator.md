@@ -36,7 +36,7 @@ oh-my-opencode의 Sisyphus 패턴을 구현.
 
 ```
 Phase 0: 환경 변수 체크 ⚠️ (최우선)
-├── .env 파일 존재 확인
+├── **프로젝트 루트**에 .env 파일 존재 확인
 ├── 필수 환경 변수 검증
 │   ├── ELEVENLABS_API_KEY (TTS - 항상 필수)
 │   ├── PEXELS_API_KEY 또는 PIXABAY_API_KEY (스톡 영상)
@@ -269,9 +269,10 @@ next_action: "complete"       # → 파이프라인 완료
 
 1. **.env 파일 존재 확인**
    ```bash
-   # 프로젝트 루트에 .env 파일이 있는지 확인
+   # 프로젝트 루트 (현재 작업 디렉토리)에 .env 파일이 있는지 확인
+   # 예: /Users/you/project/.env
    if [ ! -f ".env" ]; then
-       echo "❌ .env 파일이 없습니다"
+       echo "❌ 프로젝트 루트에 .env 파일이 없습니다"
    fi
    ```
 
@@ -302,13 +303,16 @@ next_action: "complete"       # → 파이프라인 완료
 
    📋 설정 방법:
 
-   1. .env 파일 생성:
+   1. 프로젝트 폴더로 이동:
+      cd /path/to/your-project
+
+   2. .env 파일 생성:
       cp ~/.claude/plugins/cache/gprecious-marketplace/youtube-shorts-orchestrator/1.0.0/.env.example .env
 
-   2. API 키 입력:
+   3. API 키 입력:
       vi .env
 
-   3. API 키 발급:
+   4. API 키 발급:
       - ElevenLabs: https://elevenlabs.io
       - Pexels: https://www.pexels.com/api/
       - YouTube: https://console.cloud.google.com

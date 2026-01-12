@@ -24,11 +24,28 @@ claude /install youtube-shorts-orchestrator@gprecious-marketplace
 
 ## 환경 변수 설정
 
-프로젝트 루트에 `.env` 파일을 생성하고 API 키를 설정합니다.
+**프로젝트 루트**에 `.env` 파일을 생성하고 API 키를 설정합니다.
+
+### .env 파일 위치
+
+```
+/your-project/           ← /shorts 명령어를 실행하는 폴더
+├── .env                 ← 여기에 생성
+├── output/              ← 생성된 영상 저장
+└── ...
+```
+
+### 설정 방법
 
 ```bash
-# .env.example 복사
+# 1. 프로젝트 폴더로 이동
+cd /path/to/your-project
+
+# 2. .env.example 복사
 cp ~/.claude/plugins/cache/gprecious-marketplace/youtube-shorts-orchestrator/1.0.0/.env.example .env
+
+# 3. .env 파일 편집
+vi .env
 ```
 
 ### 필수 환경 변수
