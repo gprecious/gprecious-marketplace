@@ -61,10 +61,12 @@ vi .env
 YOUTUBE_CLIENT_ID=your_client_id
 YOUTUBE_CLIENT_SECRET=your_client_secret
 
-# ⚠️ 채널별 Refresh Token (각 채널마다 별도 발급 필수!)
-YOUTUBE_REFRESH_TOKEN_YOUNG=token_for_young_channel
-YOUTUBE_REFRESH_TOKEN_MIDDLE=token_for_middle_channel
-YOUTUBE_REFRESH_TOKEN_SENIOR=token_for_senior_channel
+# ⚠️ 채널별 Refresh Token (언어 × 채널 = 24개)
+# 형식: YOUTUBE_REFRESH_TOKEN_{LANG}_{AGE}
+YOUTUBE_REFRESH_TOKEN_KO_YOUNG=token_for_ko_young
+YOUTUBE_REFRESH_TOKEN_KO_MIDDLE=token_for_ko_middle
+YOUTUBE_REFRESH_TOKEN_KO_SENIOR=token_for_ko_senior
+# ... 다른 언어도 동일 (전체 목록은 .env.example 참조)
 
 # ===== TTS (음성 생성) =====
 ELEVENLABS_API_KEY=your_elevenlabs_api_key
@@ -81,12 +83,12 @@ OPENAI_API_KEY=your_openai_api_key  # Sora
 YouTube API는 **토큰 발급 시 선택한 채널에만** 업로드됩니다.
 단일 토큰으로 여러 채널에 업로드할 수 없습니다.
 
-**각 채널(young, middle, senior)마다 아래 과정을 반복하세요:**
+**8개 언어 × 3개 채널 = 24개 토큰을 각각 발급해야 합니다.**
 
 #### 1단계: Brand Account 채널로 전환
 1. [YouTube Studio](https://studio.youtube.com) 접속
 2. 우측 상단 프로필 클릭 → "채널 전환"
-3. **업로드할 채널 선택** (예: young 채널)
+3. **업로드할 채널 선택** (예: ko-young 채널)
 
 #### 2단계: OAuth 인증 URL 접속
 ```
@@ -108,20 +110,23 @@ curl -X POST "https://oauth2.googleapis.com/token" \
   -d "redirect_uri=http://localhost:8080" \
   -d "grant_type=authorization_code"
 
-# 응답의 refresh_token을 YOUTUBE_REFRESH_TOKEN_YOUNG에 저장
+# 응답의 refresh_token을 해당 채널 변수에 저장
+# 예: YOUTUBE_REFRESH_TOKEN_KO_YOUNG
 ```
 
-#### 4단계: 다른 채널도 반복
-- middle 채널로 전환 → 인증 → `YOUTUBE_REFRESH_TOKEN_MIDDLE`
-- senior 채널로 전환 → 인증 → `YOUTUBE_REFRESH_TOKEN_SENIOR`
-
-### 채널 ID 설정 (검증용)
-
+#### 4단계: 모든 채널 반복 (24개)
 ```bash
-# 업로드 전 채널 검증용
-YOUTUBE_CHANNEL_ID_YOUNG=UC...
-YOUTUBE_CHANNEL_ID_MIDDLE=UC...
-YOUTUBE_CHANNEL_ID_SENIOR=UC...
+# 한국어 (ko)
+YOUTUBE_REFRESH_TOKEN_KO_YOUNG=...
+YOUTUBE_REFRESH_TOKEN_KO_MIDDLE=...
+YOUTUBE_REFRESH_TOKEN_KO_SENIOR=...
+
+# 영어 (en)
+YOUTUBE_REFRESH_TOKEN_EN_YOUNG=...
+YOUTUBE_REFRESH_TOKEN_EN_MIDDLE=...
+YOUTUBE_REFRESH_TOKEN_EN_SENIOR=...
+
+# ... ja, zh, es, pt, de, fr 도 동일
 ```
 
 ### API 키 발급 방법

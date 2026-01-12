@@ -92,21 +92,33 @@ YouTube API는 **OAuth 토큰을 발급받은 채널에만** 업로드됩니다.
 - 각 채널(Brand Account)별로 **별도의 Refresh Token** 필요
 - 토큰 발급 시 해당 채널로 **전환된 상태**에서 인증해야 함
 
-### 환경 변수 (채널별 분리 필수)
+### 환경 변수 (언어별 × 채널별 분리 필수)
 ```bash
 # OAuth 클라이언트 (공통)
 YOUTUBE_CLIENT_ID=your_client_id
 YOUTUBE_CLIENT_SECRET=your_client_secret
 
 # 채널별 Refresh Token (각 채널마다 별도 발급 필수!)
-YOUTUBE_REFRESH_TOKEN_YOUNG=refresh_token_for_young_channel
-YOUTUBE_REFRESH_TOKEN_MIDDLE=refresh_token_for_middle_channel
-YOUTUBE_REFRESH_TOKEN_SENIOR=refresh_token_for_senior_channel
+# 형식: YOUTUBE_REFRESH_TOKEN_{LANG}_{AGE}
 
-# 채널 ID (확인용)
-YOUTUBE_CHANNEL_ID_YOUNG=UC...
-YOUTUBE_CHANNEL_ID_MIDDLE=UC...
-YOUTUBE_CHANNEL_ID_SENIOR=UC...
+# 한국어 채널 (ko)
+YOUTUBE_REFRESH_TOKEN_KO_YOUNG=refresh_token_for_ko_young
+YOUTUBE_REFRESH_TOKEN_KO_MIDDLE=refresh_token_for_ko_middle
+YOUTUBE_REFRESH_TOKEN_KO_SENIOR=refresh_token_for_ko_senior
+
+# 영어 채널 (en)
+YOUTUBE_REFRESH_TOKEN_EN_YOUNG=refresh_token_for_en_young
+YOUTUBE_REFRESH_TOKEN_EN_MIDDLE=refresh_token_for_en_middle
+YOUTUBE_REFRESH_TOKEN_EN_SENIOR=refresh_token_for_en_senior
+
+# ... 다른 언어도 동일한 형식
+# 전체 목록은 .env.example 참조
+
+# 채널 ID (검증용)
+# 형식: CHANNEL_{LANG}_{AGE}_ID
+CHANNEL_KO_YOUNG_ID=UC...
+CHANNEL_KO_MIDDLE_ID=UC...
+CHANNEL_KO_SENIOR_ID=UC...
 ```
 
 ### 채널별 토큰 발급 방법
@@ -149,8 +161,12 @@ curl -X POST "https://oauth2.googleapis.com/token" \
 
 ### 토큰 갱신 (업로드 시 자동)
 ```bash
-# 채널에 맞는 refresh token 사용
-REFRESH_TOKEN=${YOUTUBE_REFRESH_TOKEN_${CHANNEL_TYPE}}
+# 언어 + 채널에 맞는 refresh token 사용
+# 예: ko + young → YOUTUBE_REFRESH_TOKEN_KO_YOUNG
+LANG="ko"
+CHANNEL_TYPE="young"
+REFRESH_TOKEN_VAR="YOUTUBE_REFRESH_TOKEN_${LANG^^}_${CHANNEL_TYPE^^}"
+REFRESH_TOKEN=${!REFRESH_TOKEN_VAR}
 
 curl -X POST "https://oauth2.googleapis.com/token" \
   -d "client_id=${YOUTUBE_CLIENT_ID}" \
@@ -159,26 +175,33 @@ curl -X POST "https://oauth2.googleapis.com/token" \
   -d "grant_type=refresh_token"
 ```
 
-### 채널 타입 → 환경 변수 매핑
+### 언어 + 채널 타입 → 환경 변수 매핑
 ```yaml
-young:  YOUTUBE_REFRESH_TOKEN_YOUNG
-middle: YOUTUBE_REFRESH_TOKEN_MIDDLE
-senior: YOUTUBE_REFRESH_TOKEN_SENIOR
+# 형식: YOUTUBE_REFRESH_TOKEN_{LANG}_{AGE}
+ko + young:  YOUTUBE_REFRESH_TOKEN_KO_YOUNG
+ko + middle: YOUTUBE_REFRESH_TOKEN_KO_MIDDLE
+ko + senior: YOUTUBE_REFRESH_TOKEN_KO_SENIOR
+en + young:  YOUTUBE_REFRESH_TOKEN_EN_YOUNG
+en + middle: YOUTUBE_REFRESH_TOKEN_EN_MIDDLE
+en + senior: YOUTUBE_REFRESH_TOKEN_EN_SENIOR
+# ... 8개 언어 × 3개 채널 = 24개 토큰
 ```
 
 ## 업로드 프로세스
 
 ### 0. 채널별 Access Token 획득 (필수 선행)
 ```bash
-# 1. Oracle이 결정한 채널 타입 확인 (young, middle, senior)
-CHANNEL_TYPE="young"  # 예시
+# 1. Oracle이 결정한 언어 + 채널 타입 확인
+LANG="ko"             # 언어 (ko, en, ja, zh, es, pt, de, fr)
+CHANNEL_TYPE="young"  # 채널 (young, middle, senior)
 
-# 2. 채널에 맞는 Refresh Token 선택
-case ${CHANNEL_TYPE} in
-  "young")  REFRESH_TOKEN=${YOUTUBE_REFRESH_TOKEN_YOUNG} ;;
-  "middle") REFRESH_TOKEN=${YOUTUBE_REFRESH_TOKEN_MIDDLE} ;;
-  "senior") REFRESH_TOKEN=${YOUTUBE_REFRESH_TOKEN_SENIOR} ;;
-esac
+# 2. 언어 + 채널에 맞는 Refresh Token 선택
+# 환경 변수명: YOUTUBE_REFRESH_TOKEN_{LANG}_{AGE}
+REFRESH_TOKEN_VAR="YOUTUBE_REFRESH_TOKEN_${LANG^^}_${CHANNEL_TYPE^^}"
+REFRESH_TOKEN=${!REFRESH_TOKEN_VAR}
+
+# 예: ko + young → YOUTUBE_REFRESH_TOKEN_KO_YOUNG
+# 예: en + middle → YOUTUBE_REFRESH_TOKEN_EN_MIDDLE
 
 # 3. Access Token 발급
 ACCESS_TOKEN=$(curl -s -X POST "https://oauth2.googleapis.com/token" \
@@ -187,10 +210,18 @@ ACCESS_TOKEN=$(curl -s -X POST "https://oauth2.googleapis.com/token" \
   -d "refresh_token=${REFRESH_TOKEN}" \
   -d "grant_type=refresh_token" | jq -r '.access_token')
 
-# 4. 토큰 검증 (선택적)
-curl -s "https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true" \
-  -H "Authorization: Bearer ${ACCESS_TOKEN}" | jq '.items[0].snippet.title'
-# → 올바른 채널명이 출력되는지 확인
+# 4. 토큰 검증 - 채널 ID 확인 (필수!)
+EXPECTED_CHANNEL_VAR="CHANNEL_${LANG^^}_${CHANNEL_TYPE^^}_ID"
+EXPECTED_CHANNEL_ID=${!EXPECTED_CHANNEL_VAR}
+
+ACTUAL_CHANNEL=$(curl -s "https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true" \
+  -H "Authorization: Bearer ${ACCESS_TOKEN}" | jq -r '.items[0].id')
+
+if [ "${ACTUAL_CHANNEL}" != "${EXPECTED_CHANNEL_ID}" ]; then
+  echo "❌ 채널 불일치! 예상: ${EXPECTED_CHANNEL_ID}, 실제: ${ACTUAL_CHANNEL}"
+  exit 1
+fi
+echo "✅ 채널 확인 완료: ${LANG}/${CHANNEL_TYPE}"
 ```
 
 ### 1. Resumable Upload 초기화
