@@ -1,6 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "gprecious-marketplace",
+  "version": "1.0.0",
   "description": "gprecious Claude Code 플러그인 마켓플레이스",
   "owner": {
     "name": "gprecious",
