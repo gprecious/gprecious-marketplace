@@ -16,51 +16,7 @@
     "video-generation",
     "automation"
   ],
-  "features": [
-    "다국어 지원 (8개 언어)",
-    "연령대별 채널 관리 (young/middle/senior)",
-    "국가별 트렌딩 주제 수집",
-    "스크립트 자동 번역 및 로컬라이제이션",
-    "ElevenLabs 음성 자동 선택",
-    "AssemblyAI 자막 자동 생성",
-    "뇌과학 기반 도파민 트리거 최적화",
-    "시청자 페르소나 검증",
-    "최대 5개 영상 병렬 생성"
-  ],
-  "commands": [
-    {
-      "name": "shorts",
-      "description": "YouTube Shorts 영상 제작 파이프라인 실행",
-      "usage": "/shorts [--topic <주제>] [--channel <young|middle|senior>] [--lang <ko|en|ja|...>] [--count <개수>] [--upload]"
-    }
-  ],
-  "agents": [
-    "main-orchestrator",
-    "oracle",
-    "curious-event-collector",
-    "scenario-writer",
-    "script-writer",
-    "neuroscientist",
-    "impatient-viewer",
-    "translator",
-    "voice-selector",
-    "shorts-video-generator",
-    "subtitle-generator",
-    "video-uploader",
-    "channel-young",
-    "channel-middle",
-    "channel-senior"
-  ],
-  "requiredEnvVars": [
-    "ELEVENLABS_API_KEY",
-    "ASSEMBLYAI_API_KEY"
-  ],
-  "optionalEnvVars": [
-    "PEXELS_API_KEY",
-    "PIXABAY_API_KEY",
-    "OPENAI_API_KEY",
-    "YOUTUBE_CLIENT_ID",
-    "YOUTUBE_CLIENT_SECRET",
-    "YOUTUBE_REFRESH_TOKEN"
-  ]
+  "commands": "./commands/",
+  "agents": "./agents/",
+  "skills": "./skills/"
 }
