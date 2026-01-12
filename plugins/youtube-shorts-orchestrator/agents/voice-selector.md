@@ -258,8 +258,8 @@ def calculate_match_score(voice, target_profile, target_lang):
 
 | 채널 | stability | similarity_boost | style | speed |
 |------|-----------|-----------------|-------|-------|
-| channel-young | 0.35 | 0.80 | 0.45 | 1.15 |
-| channel-middle | 0.50 | 0.75 | 0.30 | 1.10 |
+| channel-young | 0.35 | 0.80 | 0.45 | 1.20 |
+| channel-middle | 0.50 | 0.75 | 0.30 | 1.50 |
 | channel-senior | 0.65 | 0.65 | 0.15 | 1.05 |
 
 - **stability**: 높을수록 안정적, 낮을수록 감정 표현 다양
