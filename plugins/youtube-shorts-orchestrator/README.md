@@ -12,6 +12,8 @@ oh-my-opencode의 Sisyphus 패턴과 youtube-assistant의 피드백 루프 패�
 - 신비한 이벤트 자동 수집
 - 뇌과학 기반 도파민 트리거 최적화
 - 극단적 시청자 페르소나 검증
+- **스크립트 맞춤 음성 자동 선택** (ElevenLabs)
+- **자막 자동 생성** (AssemblyAI)
 - 9:16 세로 영상 자동 생성 (15-60초)
 - 채널별 자동 배분 및 업로드
 
@@ -190,7 +192,8 @@ Phase 3-6: VIDEO PIPELINE × N (병렬)
 ├── scenario-writer → script-writer
 ├── neuroscientist 검증 (최대 3회)
 ├── impatient-viewer 검증 (최대 3회)
-├── shorts-video-generator
+├── voice-selector (스크립트 맞춤 음성 선택)
+├── shorts-video-generator (선택된 음성으로 TTS)
 └── subtitle-generator (자막 하드코딩)
     |
 Phase 7: Oracle 채널 결정 (일괄)
@@ -237,7 +240,7 @@ API 안정성을 위해 병렬 실행이 제한됩니다.
 
 ## 에이전트
 
-### 핵심 에이전트 (10개)
+### 핵심 에이전트 (11개)
 | 에이전트 | 역할 | 모델 |
 |----------|------|------|
 | main-orchestrator | Sisyphus 패턴 전체 지휘 | opus |
@@ -247,6 +250,7 @@ API 안정성을 위해 병렬 실행이 제한됩니다.
 | script-writer | 스크립트 작성 | sonnet |
 | neuroscientist | 도파민 기반 hooking 연구 | opus |
 | impatient-viewer | 쇼츠 중독 시청자 리뷰 | sonnet |
+| voice-selector | 스크립트 맞춤 음성 선택 | haiku |
 | shorts-video-generator | Shorts 영상 생성 | sonnet |
 | subtitle-generator | 자막 자동 생성 (AssemblyAI) | haiku |
 | video-uploader | YouTube 업로드 | haiku |

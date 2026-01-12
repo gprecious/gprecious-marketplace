@@ -52,21 +52,31 @@ bitrate: 8Mbps
 ## 워크플로우
 
 ### 1. TTS 생성
+
+**voice-selector 결과 사용**: voice_id와 voice_settings는 voice-selector 에이전트가 분석한 결과를 사용합니다.
+
 ```bash
-# ElevenLabs API 호출
-curl -X POST "https://api.elevenlabs.io/v1/text-to-speech/{voice_id}" \
+# ElevenLabs API 호출 (voice-selector 결과 적용)
+# ${VOICE_ID}와 설정값은 voice-selector 출력에서 가져옴
+curl -X POST "https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}" \
   -H "xi-api-key: ${ELEVENLABS_API_KEY}" \
   -H "Content-Type: application/json" \
   -d '{
     "text": "스크립트 텍스트",
     "model_id": "eleven_multilingual_v2",
     "voice_settings": {
-      "stability": 0.5,
-      "similarity_boost": 0.75
+      "stability": ${STABILITY},
+      "similarity_boost": ${SIMILARITY_BOOST},
+      "style": ${STYLE}
     }
   }' \
   --output narration.mp3
 ```
+
+**폴백 로직**:
+1. voice-selector 결과 사용 (권장)
+2. 환경 변수 `ELEVENLABS_VOICE_ID` 사용
+3. 채널별 기본 음성 사용 (voice-selector.md 참조)
 
 ### 2. 스톡 영상 검색
 ```bash
@@ -139,12 +149,22 @@ Style: Default,Arial,48,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,
 ### 시나리오 파일
 /tmp/shorts/{session}/pipelines/evt_001/scenario.json
 
+### 음성 선택 결과 (voice-selector 에이전트 출력)
+- voice_id: "pNInz6obpgDQGcFmaJgB" (자동 선택된 ElevenLabs voice ID)
+- voice_name: "Adam"
+- voice_settings:
+  - stability: 0.5
+  - similarity_boost: 0.75
+  - style: 0.3
+
 ### 옵션
-- voice_id: "한국어 남성" (ElevenLabs voice ID)
 - bgm_style: "mysterious" (또는 energetic, calm, dramatic)
 - subtitle_style: "default" (또는 bold, minimal)
 - stock_source: "pexels" (또는 pixabay, ai)
 ```
+
+**참고**: voice_id는 voice-selector 에이전트가 스크립트/채널 분석 후 자동 선택합니다.
+환경 변수 `ELEVENLABS_VOICE_ID`가 설정되어 있으면 해당 값이 폴백으로 사용됩니다.
 
 ## 출력 형식
 

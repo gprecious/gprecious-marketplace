@@ -77,7 +77,12 @@ Phase 3-6: VIDEO PIPELINE × N (병렬 실행)
 └─────────────────────────────────────────────────────────────────────┘
 
 Phase 6: 영상 생성
+├── **voice-selector (스크립트 맞춤 음성 선택)**
+│   ├── 스크립트/채널 분석
+│   ├── ElevenLabs 음성 라이브러리 조회
+│   └── 최적 voice_id 반환
 ├── shorts-video-generator (9:16, 15-60초)
+│   └── voice-selector 결과로 TTS 생성
 └── **subtitle-generator (자막 자동 생성)**
     ├── AssemblyAI로 음성 → 텍스트
     ├── SRT 파일 생성
@@ -173,8 +178,10 @@ def run_single_pipeline(event):
             continue
         
         # Phase 6: 영상 생성
-        video = shorts_video_generator.create(script, scenario)
-        return {"success": True, "video": video, "event": event}
+        voice_selection = voice_selector.select(script, channel)
+        video = shorts_video_generator.create(script, scenario, voice_selection)
+        subtitled_video = subtitle_generator.add_subtitles(video)
+        return {"success": True, "video": subtitled_video, "event": event}
     
     return {"success": False, "event": event, "reason": scenario_feedback}
 ```

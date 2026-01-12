@@ -70,7 +70,8 @@ Phase 3-6: VIDEO PIPELINE × N (병렬)
 ├── scenario-writer → script-writer
 ├── neuroscientist 검증 (최대 3회)
 ├── impatient-viewer 검증 (최대 3회)
-├── shorts-video-generator
+├── **voice-selector (스크립트 맞춤 음성 선택)**
+├── shorts-video-generator (선택된 음성으로 TTS)
 └── **subtitle-generator (자막 자동 생성)**
     │
     ▼
