@@ -1,9 +1,66 @@
 {
   "name": "youtube-shorts-orchestrator",
-  "version": "1.0.0",
-  "description": "연령대별(10~70대) YouTube Shorts 채널을 통합 관리하는 Claude Code 플러그인. Sisyphus 패턴 기반 오케스트레이션.",
+  "version": "1.1.0",
+  "description": "다국어(ko/en/ja/zh/es/pt/de/fr) YouTube Shorts 채널을 통합 관리하는 Claude Code 플러그인. Sisyphus 패턴 기반 오케스트레이션, 연령대별(young/middle/senior) 채널 관리, 국가별 트렌딩 수집, AI 음성 선택, 자동 자막 생성.",
   "author": {
     "name": "gprecious",
     "email": "gprecious@users.noreply.github.com"
-  }
+  },
+  "keywords": [
+    "youtube",
+    "shorts",
+    "multi-language",
+    "tts",
+    "elevenlabs",
+    "subtitle",
+    "video-generation",
+    "automation"
+  ],
+  "features": [
+    "다국어 지원 (8개 언어)",
+    "연령대별 채널 관리 (young/middle/senior)",
+    "국가별 트렌딩 주제 수집",
+    "스크립트 자동 번역 및 로컬라이제이션",
+    "ElevenLabs 음성 자동 선택",
+    "AssemblyAI 자막 자동 생성",
+    "뇌과학 기반 도파민 트리거 최적화",
+    "시청자 페르소나 검증",
+    "최대 5개 영상 병렬 생성"
+  ],
+  "commands": [
+    {
+      "name": "shorts",
+      "description": "YouTube Shorts 영상 제작 파이프라인 실행",
+      "usage": "/shorts [--topic <주제>] [--channel <young|middle|senior>] [--lang <ko|en|ja|...>] [--count <개수>] [--upload]"
+    }
+  ],
+  "agents": [
+    "main-orchestrator",
+    "oracle",
+    "curious-event-collector",
+    "scenario-writer",
+    "script-writer",
+    "neuroscientist",
+    "impatient-viewer",
+    "translator",
+    "voice-selector",
+    "shorts-video-generator",
+    "subtitle-generator",
+    "video-uploader",
+    "channel-young",
+    "channel-middle",
+    "channel-senior"
+  ],
+  "requiredEnvVars": [
+    "ELEVENLABS_API_KEY",
+    "ASSEMBLYAI_API_KEY"
+  ],
+  "optionalEnvVars": [
+    "PEXELS_API_KEY",
+    "PIXABAY_API_KEY",
+    "OPENAI_API_KEY",
+    "YOUTUBE_CLIENT_ID",
+    "YOUTUBE_CLIENT_SECRET",
+    "YOUTUBE_REFRESH_TOKEN"
+  ]
 }
