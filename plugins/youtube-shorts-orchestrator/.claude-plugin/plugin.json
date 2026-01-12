@@ -1,6 +1,6 @@
 {
   "name": "youtube-shorts-orchestrator",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "다국어(ko/en/ja/zh/es/pt/de/fr) YouTube Shorts 채널을 통합 관리하는 Claude Code 플러그인. Sisyphus 패턴 기반 오케스트레이션, 연령대별(young/middle/senior) 채널 관리, Sora/Veo AI 후킹 영상, 무료 BGM 자동 선택, Shorts 스타일 자막(2-3단어), 채널별 토큰 분리 업로드.",
   "author": {
     "name": "gprecious",
@@ -17,5 +17,20 @@
     "automation"
   ],
   "commands": "./commands/",
-  "skills": "./skills/"
+  "skills": "./skills/",
+  "agents": [
+    {"name": "main-orchestrator", "description": "Sisyphus 패턴 전체 지휘. 모든 Todo 완료까지 중단 금지.", "prompt": "./agents/main-orchestrator.md"},
+    {"name": "oracle", "description": "채널 결정 및 전략 자문", "prompt": "./agents/oracle.md"},
+    {"name": "curious-event-collector", "description": "신비한 이벤트/바이럴 소재 수집", "prompt": "./agents/curious-event-collector.md"},
+    {"name": "scenario-writer", "description": "도파민 트리거 시나리오 작성", "prompt": "./agents/scenario-writer.md"},
+    {"name": "script-writer", "description": "Shorts 스크립트 작성", "prompt": "./agents/script-writer.md"},
+    {"name": "neuroscientist", "description": "도파민 기반 hooking 검증", "prompt": "./agents/neuroscientist.md"},
+    {"name": "impatient-viewer", "description": "쇼츠 중독 시청자 리뷰", "prompt": "./agents/impatient-viewer.md"},
+    {"name": "translator", "description": "다국어 번역 + 로컬라이제이션", "prompt": "./agents/translator.md"},
+    {"name": "voice-selector", "description": "언어/채널 맞춤 ElevenLabs 음성 선택", "prompt": "./agents/voice-selector.md"},
+    {"name": "bgm-selector", "description": "저작권 무료 BGM 선택 (Pixabay)", "prompt": "./agents/bgm-selector.md"},
+    {"name": "shorts-video-generator", "description": "9:16 Shorts 영상 생성", "prompt": "./agents/shorts-video-generator.md"},
+    {"name": "subtitle-generator", "description": "2-3단어 Shorts 스타일 자막 생성", "prompt": "./agents/subtitle-generator.md"},
+    {"name": "video-uploader", "description": "YouTube 채널별 토큰 업로드", "prompt": "./agents/video-uploader.md"}
+  ]
 }
