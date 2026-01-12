@@ -43,12 +43,14 @@ claude /install youtube-shorts-orchestrator@gprecious-marketplace
 │       ├── script.md            ← 스크립트
 │       ├── final.mp4            ← 최종 영상
 │       └── metadata.json        ← 메타데이터
-└── history/             ← 영상 히스토리 (자동 생성)
-    ├── global-history.json       ← 전역 중복 방지
-    └── uploads/                  ← 채널별 업로드 기록
+└── history/             ← 영상 히스토리 (자동 생성, 재사용 가능)
+    ├── .upload.lock             ← 업로드 락 (순차 처리)
+    ├── global-history.json      ← 전역 중복 방지
+    ├── sessions/                ← 세션별 로그
+    │   └── session_20250113_120000.json
+    └── uploads/                 ← 채널별 업로드 기록
         ├── ko-young.json
         ├── ko-middle.json
-        ├── ko-senior.json
         └── ...
 ```
 
@@ -250,12 +252,15 @@ Phase 7: Oracle 채널 결정 (일괄)
 ├── 언어별 채널 배분
 └── 연령대 매칭
     |
-Phase 8: 업로드 (병렬)
-├── video-uploader × N
+Phase 8: 업로드 (순차 - 중복 방지)
+├── ⚠️ 병렬 업로드 금지 (레이스 컨디션 방지)
+├── video-uploader × N (락 파일 사용)
 └── history.json 업데이트 (채널별 + 전역)
     |
-Phase 9: 마무리
-├── wisdom.md 업데이트
+Phase 9: 결과 저장 + 마무리
+├── output/ 폴더에 최종 결과물 저장
+├── sessions/ 폴더에 세션 로그 저장
+├── wisdom.md 업데이트 (새 인사이트만)
 └── 최종 리포트 출력
 ```
 

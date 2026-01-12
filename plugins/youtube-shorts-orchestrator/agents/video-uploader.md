@@ -25,7 +25,18 @@ YouTube Data API v3를 사용하여 Shorts 영상을 업로드하는 에이전�
 
 ### 중복 검사 프로세스
 ```bash
-# 1. global-history.json 로드
+# ⚠️ 모든 경로는 프로젝트 루트 기준
+# {project}는 /shorts 명령어 실행 위치
+
+# 0. 락 획득 (순차 업로드 보장)
+LOCK_FILE="history/.upload.lock"
+while [ -f "${LOCK_FILE}" ]; do
+    echo "⏳ 다른 업로드 진행 중... 대기"
+    sleep 2
+done
+echo $$ > "${LOCK_FILE}"
+
+# 1. global-history.json 로드 (프로젝트 루트)
 HISTORY_FILE="history/global-history.json"
 
 # 2. event_id로 중복 검사
@@ -37,12 +48,17 @@ if [ -f "${HISTORY_FILE}" ]; then
     if [ -n "${EXISTING}" ]; then
         echo "⚠️ 중복 감지! event_id=${EVENT_ID}는 이미 업로드됨 (video_id=${EXISTING})"
         echo "업로드 스킵"
+        rm -f "${LOCK_FILE}"  # 락 해제
         exit 0  # 성공으로 종료 (이미 완료된 작업)
     fi
 fi
 
 # 3. 중복 아니면 업로드 진행
 echo "✅ 중복 없음, 업로드 진행"
+# ... 업로드 로직 ...
+
+# 4. 업로드 완료 후 락 해제
+rm -f "${LOCK_FILE}"
 ```
 
 ### 출력 (중복 감지 시)
@@ -307,13 +323,19 @@ curl -X POST \
 ## 히스토리 업데이트 (2곳)
 
 ⚠️ **중요**: 모든 히스토리 파일은 **사용자 프로젝트 루트**에 저장됩니다.
+⚠️ **플러그인 내부가 아닌 사용자 프로젝트에 저장해야 재사용 가능**
+
 ```
-{project_root}/history/              # /shorts 실행 폴더 기준
-├── global-history.json              # 전역 중복 방지
-└── uploads/                         # 채널별 업로드 기록
-    ├── ko-young.json
-    ├── ko-middle.json
-    └── ...
+{project_root}/                       # /shorts 실행 폴더 (사용자 프로젝트)
+└── history/
+    ├── .upload.lock                  # 업로드 락 파일
+    ├── global-history.json           # 전역 중복 방지
+    ├── sessions/                     # 세션별 로그
+    │   └── session_{YYYYMMDD}.json
+    └── uploads/                      # 채널별 업로드 기록
+        ├── ko-young.json
+        ├── ko-middle.json
+        └── ...
 ```
 
 ### 1. 채널별 업로드 기록

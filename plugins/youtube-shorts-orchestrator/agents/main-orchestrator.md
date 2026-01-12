@@ -40,17 +40,22 @@ Phase 0: 환경 변수 체크 ⚠️ (최우선)
 ├── 필수 환경 변수 검증
 │   ├── ELEVENLABS_API_KEY (TTS - 항상 필수)
 │   ├── PEXELS_API_KEY 또는 PIXABAY_API_KEY (스톡 영상)
+│   ├── OPENAI_API_KEY (Sora 영상 생성 - 권장)
 │   └── (--upload 시) YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET, YOUTUBE_REFRESH_TOKEN
 ├── 미설정 시 → 설정 가이드 출력 후 **즉시 중단**
 └── 모든 필수 변수 확인 → Phase 1 진행
 
-Phase 1: 초기화
-├── wisdom.md 로드
-├── **global-history.json 로드 → 기존 영상 주제/키워드 목록 추출**
+Phase 1: 초기화 + History 로드 ⭐ 중요
+├── **프로젝트 루트에 history/ 폴더 생성** (없으면)
+│   mkdir -p history/uploads history/sessions
+├── **{project}/history/global-history.json 로드** (없으면 초기화)
+│   → 기존 영상 주제/키워드 목록 추출
+│   → 중복 방지용 event_id 목록 추출
+├── wisdom.md 로드 (인사이트만 참조)
 ├── 입력 확인 (컨텍스트 or 자동 수집)
 ├── **--lang 파라미터 파싱 (기본값: ko)**
 ├── --count 파라미터로 수집할 이벤트 수 결정 (기본 1, 최대 5)
-└── 채널 상태 확인 (언어별 채널 구조)
+└── 세션 ID 생성: session_{YYYYMMDD}_{HHMMSS}
 
 Phase 2: 소재 수집 (병렬)
 ├── curious-event-collector × N (run_in_background=true)
@@ -86,31 +91,39 @@ Phase 3-6: VIDEO PIPELINE × N (병렬 실행)
 │  └── 3회 실패 → scenario 재작성 (oracle 피드백 반영)                 │
 └─────────────────────────────────────────────────────────────────────┘
 
-Phase 6: 영상 생성
-├── **voice-selector (스크립트/언어 맞춤 음성 선택)**
+Phase 6: 영상 생성 ⭐ 핵심 단계 (모든 단계 필수 실행)
+│
+├── 6-1: voice-selector (스크립트/언어 맞춤 음성 선택) ✅ 필수
 │   ├── 스크립트/채널/언어 분석
 │   ├── ElevenLabs 음성 라이브러리 조회
 │   ├── **언어별 음성 필터링 (multilingual_v2 모델)**
 │   └── 최적 voice_id 반환
-├── **bgm-selector (저작권 무료 배경음악 선택)**
+│
+├── 6-2: bgm-selector (저작권 무료 배경음악 선택) ✅ 필수
 │   ├── 스크립트 분위기 분석 (mysterious, energetic, calm 등)
 │   ├── Pixabay Music API로 무료 BGM 검색
 │   ├── 영상 길이에 맞는 음악 선택
-│   └── BGM 다운로드 및 메타데이터 저장
-├── **shorts-video-generator (9:16, 15-60초)**
-│   ├── **AI 후킹 영상 생성 (0-5초)** ⭐ 핵심
-│   │   ├── Sora (OpenAI) - 1차 선택
-│   │   ├── Veo (Google) - 2차 선택
-│   │   └── DALL-E + Ken Burns - 폴백
+│   └── BGM 다운로드 → audio/bgm.mp3 저장
+│
+├── 6-3: shorts-video-generator (9:16, 15-60초) ✅ 필수
+│   │
+│   ├── **AI 후킹 영상 생성 (0-5초)** ⭐ 핵심 차별화
+│   │   ├── 1차: Sora (OpenAI) - OPENAI_API_KEY 필요
+│   │   │       curl -X POST "https://api.openai.com/v1/videos/generations"
+│   │   ├── 2차: Veo (Google) - GCP_PROJECT_ID 필요
+│   │   │       Vertex AI veo:generateVideo
+│   │   └── 폴백: DALL-E + Ken Burns 효과
+│   │
 │   ├── 스톡 영상 수집 (5초 이후) - Pexels/Pixabay
-│   ├── voice-selector 결과로 TTS 생성
-│   ├── bgm-selector 결과로 배경음악 믹싱
-│   └── AI 후킹 + 스톡 영상 결합
-└── **subtitle-generator (자막 자동 생성)**
-    ├── AssemblyAI로 음성 → 텍스트 (language_code 지정)
-    ├── **2-3단어씩 청킹** (Shorts 스타일)
-    ├── SRT 파일 생성
-    └── FFmpeg로 자막 하드코딩 (20pt Bold, 하단)
+│   ├── TTS 생성 (voice-selector 결과 사용)
+│   ├── BGM 믹싱 (bgm-selector 결과 사용) - Ducking 포함
+│   └── AI 후킹(0-5초) + 스톡(5초~) 영상 결합
+│
+└── 6-4: subtitle-generator (자막 자동 생성) ✅ 필수
+    ├── 음성 파일에서 타임스탬프 추출
+    ├── **2-3단어씩 청킹** (Shorts 스타일 자막)
+    ├── SRT 파일 생성 → subtitles/captions.srt
+    └── FFmpeg로 자막 하드코딩 (20pt Bold, 하단 중앙)
 
 Phase 7: Oracle 채널 결정 (일괄)
 ├── 모든 파이프라인 완료 대기
@@ -120,17 +133,48 @@ Phase 7: Oracle 채널 결정 (일괄)
 ├── 채널 간 배분 균형 고려
 └── 중복 주제 회피
 
-Phase 8: 업로드 (순차 - 중복 방지)
-├── ⚠️ 병렬 업로드 금지 (history.json 레이스 컨디션 방지)
-├── for each video: video-uploader (run_in_background=false)
-│   ├── 업로드 전: global-history.json에서 event_id 중복 검사
-│   ├── 중복 시: 스킵 (이미 업로드됨)
-│   └── 업로드 후: history.json 업데이트 완료 후 다음 영상
-└── history.json 업데이트 (순차 완료 보장)
+Phase 8: 업로드 (순차 - 중복 방지) ⚠️ 중요
+├── ⚠️ **병렬 업로드 절대 금지** (레이스 컨디션 방지)
+├── **락 파일 사용**: {project}/history/.upload.lock
+│
+├── for each video (순차 실행):
+│   │
+│   ├── 1. 락 획득
+│   │   if [ -f "history/.upload.lock" ]; then wait; fi
+│   │   echo $$ > history/.upload.lock
+│   │
+│   ├── 2. 중복 검사 (업로드 전 필수)
+│   │   cat history/global-history.json | jq ".videos[] | select(.event_id == \"${EVENT_ID}\")"
+│   │   → 중복 시 스킵
+│   │
+│   ├── 3. video-uploader 호출 (run_in_background=false)
+│   │
+│   ├── 4. history 업데이트 (업로드 성공 시 즉시)
+│   │   ├── {project}/history/global-history.json 업데이트
+│   │   └── {project}/history/uploads/{lang}-{channel}.json 업데이트
+│   │
+│   └── 5. 락 해제
+│       rm -f history/.upload.lock
+│
+└── 모든 업로드 완료 확인 후 Phase 9
 
-Phase 9: 마무리
-├── wisdom.md 업데이트
-├── 전체 결과 리포트
+Phase 9: 결과 저장 + 마무리
+├── **output/ 폴더에 최종 결과물 저장** (필수)
+│   {project}/output/{YYYYMMDD}_{event_id}/
+│   ├── scenario.json
+│   ├── script.md
+│   ├── final.mp4
+│   └── metadata.json
+│
+├── **세션 로그 저장**
+│   {project}/history/sessions/{session_id}.json
+│   ├── 생성 영상 수, 성공/실패, 평균 점수
+│   └── 사용된 API 호출 수
+│
+├── wisdom.md 업데이트 (새로운 인사이트 발견 시에만)
+│   ※ 세션 로그, 업로드 기록은 wisdom.md에 저장하지 않음
+│
+├── 전체 결과 리포트 출력
 └── 실패한 파이프라인 원인 분석
 ```
 
@@ -347,15 +391,35 @@ next_action: "complete"       # → 파이프라인 완료
 │       ├── final.mp4                # 최종 영상
 │       └── metadata.json            # 메타데이터 (채널, 점수, 업로드 정보)
 └── history/                         # 히스토리 (중복 방지 + 업로드 기록)
+    ├── .upload.lock                 # 업로드 락 파일 (순차 업로드 보장)
     ├── global-history.json          # 전역 중복 방지 (모든 영상 주제/키워드)
+    ├── sessions/                    # 세션별 로그
+    │   └── session_{YYYYMMDD}_{HHMMSS}.json
     └── uploads/                     # 채널별 업로드 기록
         ├── ko-young.json
         ├── ko-middle.json
         ├── ko-senior.json
-        ├── en-young.json
-        ├── en-middle.json
-        ├── en-senior.json
-        └── ...                      # 8개 언어 × 3개 채널 = 24개 파일
+        └── ...                      # 언어 × 채널
+```
+
+#### History 초기화 (Phase 1에서 실행)
+```bash
+# 프로젝트 루트에 history 폴더 생성
+mkdir -p history/uploads history/sessions
+
+# global-history.json 초기화 (없을 경우)
+if [ ! -f "history/global-history.json" ]; then
+  cat > history/global-history.json << 'EOF'
+{
+  "version": "1.0.0",
+  "last_updated": null,
+  "total_videos": 0,
+  "videos": [],
+  "topics_index": {},
+  "keywords_index": []
+}
+EOF
+fi
 ```
 
 #### 최종 결과물 저장 (Phase 6 완료 후 필수)
