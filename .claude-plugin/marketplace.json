@@ -8,18 +8,6 @@
   },
   "plugins": [
     {
-      "name": "ultrawork",
-      "description": "Sisyphus/Ultrawork 패턴 기반 병렬 에이전트 오케스트레이션",
-      "source": "./plugins/ultrawork",
-      "category": "productivity"
-    },
-    {
-      "name": "youtube-assistant",
-      "description": "유튜브 영상 제작 도우미. 스크립트 첨삭, 트렌드 분석, 음악 추천.",
-      "source": "./plugins/youtube-assistant",
-      "category": "productivity"
-    },
-    {
       "name": "youtube-shorts-orchestrator",
       "description": "연령대별(10~70대) YouTube Shorts 채널 통합 관리. Sisyphus 패턴 오케스트레이션.",
       "source": "./plugins/youtube-shorts-orchestrator",
