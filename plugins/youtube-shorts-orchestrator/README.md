@@ -15,9 +15,11 @@ oh-my-opencode의 Sisyphus 패턴과 youtube-assistant의 피드백 루프 패�
 - 극단적 시청자 페르소나 검증
 - **스크립트 자동 번역** (문화적 로컬라이제이션)
 - **언어/채널 맞춤 음성 자동 선택** (ElevenLabs)
-- **자막 자동 생성** (AssemblyAI)
+- **AI 후킹 영상 생성** (Sora/Veo로 초반 3-5초 임팩트)
+- **저작권 무료 BGM 자동 선택** (Pixabay Music)
+- **Shorts 스타일 자막** (2-3단어씩, Bold, 하단)
 - 9:16 세로 영상 자동 생성 (15-60초)
-- 언어별 채널 자동 배분 및 업로드
+- **채널별 토큰 분리 업로드** (YouTube API 특성 반영)
 
 ## 설치
 
@@ -58,29 +60,68 @@ vi .env
 # ===== YouTube API (업로드용) =====
 YOUTUBE_CLIENT_ID=your_client_id
 YOUTUBE_CLIENT_SECRET=your_client_secret
-YOUTUBE_REFRESH_TOKEN=your_refresh_token
+
+# ⚠️ 채널별 Refresh Token (각 채널마다 별도 발급 필수!)
+YOUTUBE_REFRESH_TOKEN_YOUNG=token_for_young_channel
+YOUTUBE_REFRESH_TOKEN_MIDDLE=token_for_middle_channel
+YOUTUBE_REFRESH_TOKEN_SENIOR=token_for_senior_channel
 
 # ===== TTS (음성 생성) =====
 ELEVENLABS_API_KEY=your_elevenlabs_api_key
-ELEVENLABS_VOICE_ID=your_preferred_voice_id
 
 # ===== STT (자막 생성) =====
 ASSEMBLYAI_API_KEY=your_assemblyai_api_key
+
+# ===== AI 영상 생성 (초기 후킹용) =====
+OPENAI_API_KEY=your_openai_api_key  # Sora
 ```
 
-### 채널 ID 설정
+### ⚠️ YouTube 채널별 토큰 발급 (중요!)
+
+YouTube API는 **토큰 발급 시 선택한 채널에만** 업로드됩니다.
+단일 토큰으로 여러 채널에 업로드할 수 없습니다.
+
+**각 채널(young, middle, senior)마다 아래 과정을 반복하세요:**
+
+#### 1단계: Brand Account 채널로 전환
+1. [YouTube Studio](https://studio.youtube.com) 접속
+2. 우측 상단 프로필 클릭 → "채널 전환"
+3. **업로드할 채널 선택** (예: young 채널)
+
+#### 2단계: OAuth 인증 URL 접속
+```
+https://accounts.google.com/o/oauth2/v2/auth?
+  client_id=YOUR_CLIENT_ID&
+  redirect_uri=http://localhost:8080&
+  response_type=code&
+  scope=https://www.googleapis.com/auth/youtube.upload&
+  access_type=offline&
+  prompt=consent
+```
+
+#### 3단계: Authorization Code → Refresh Token
+```bash
+curl -X POST "https://oauth2.googleapis.com/token" \
+  -d "client_id=${YOUTUBE_CLIENT_ID}" \
+  -d "client_secret=${YOUTUBE_CLIENT_SECRET}" \
+  -d "code=${AUTHORIZATION_CODE}" \
+  -d "redirect_uri=http://localhost:8080" \
+  -d "grant_type=authorization_code"
+
+# 응답의 refresh_token을 YOUTUBE_REFRESH_TOKEN_YOUNG에 저장
+```
+
+#### 4단계: 다른 채널도 반복
+- middle 채널로 전환 → 인증 → `YOUTUBE_REFRESH_TOKEN_MIDDLE`
+- senior 채널로 전환 → 인증 → `YOUTUBE_REFRESH_TOKEN_SENIOR`
+
+### 채널 ID 설정 (검증용)
 
 ```bash
-# 언어별 × 연령대별 채널 구조
-# 한국어 채널
-CHANNEL_KO_YOUNG_ID=UC...
-CHANNEL_KO_MIDDLE_ID=UC...
-CHANNEL_KO_SENIOR_ID=UC...
-
-# 영어 채널 (확장 시)
-CHANNEL_EN_YOUNG_ID=UC...
-CHANNEL_EN_MIDDLE_ID=UC...
-CHANNEL_EN_SENIOR_ID=UC...
+# 업로드 전 채널 검증용
+YOUTUBE_CHANNEL_ID_YOUNG=UC...
+YOUTUBE_CHANNEL_ID_MIDDLE=UC...
+YOUTUBE_CHANNEL_ID_SENIOR=UC...
 ```
 
 ### API 키 발급 방법
@@ -90,9 +131,10 @@ CHANNEL_EN_SENIOR_ID=UC...
 | YouTube | [Google Cloud Console](https://console.cloud.google.com) | 영상 업로드 |
 | ElevenLabs | [elevenlabs.io](https://elevenlabs.io) | TTS 음성 |
 | AssemblyAI | [assemblyai.com](https://www.assemblyai.com) | 자막 생성 |
-| Pexels | [pexels.com/api](https://www.pexels.com/api/) | 스톡 영상 |
-| Pixabay | [pixabay.com/api](https://pixabay.com/api/docs/) | 스톡 영상 |
-| OpenAI | [platform.openai.com](https://platform.openai.com) | DALL-E 이미지 |
+| Pexels | [pexels.com/api](https://www.pexels.com/api/) | 스톡 영상/음악 |
+| Pixabay | [pixabay.com/api](https://pixabay.com/api/docs/) | 스톡 영상/음악 |
+| OpenAI | [platform.openai.com](https://platform.openai.com) | Sora AI 영상 |
+| Google Cloud | [console.cloud.google.com](https://console.cloud.google.com) | Veo AI 영상 |
 
 ## 사용법
 
@@ -198,7 +240,7 @@ Phase 9: 마무리
 
 ## 에이전트
 
-### 핵심 에이전트 (13개)
+### 핵심 에이전트 (14개)
 
 | 에이전트 | 역할 | 모델 |
 |----------|------|------|
@@ -211,9 +253,10 @@ Phase 9: 마무리
 | impatient-viewer | 쇼츠 중독 시청자 리뷰 | sonnet |
 | translator | 다국어 번역 + 로컬라이제이션 | sonnet |
 | voice-selector | 언어/채널 맞춤 음성 선택 | haiku |
-| shorts-video-generator | Shorts 영상 생성 | sonnet |
-| subtitle-generator | 자막 자동 생성 (AssemblyAI) | haiku |
-| video-uploader | YouTube 업로드 | haiku |
+| bgm-selector | 저작권 무료 BGM 선택 (Pixabay) | haiku |
+| shorts-video-generator | Shorts 영상 생성 (Sora/Veo + 스톡) | sonnet |
+| subtitle-generator | 자막 자동 생성 (2-3단어씩) | haiku |
+| video-uploader | YouTube 업로드 (채널별 토큰) | haiku |
 
 ### 채널 관리 에이전트 (3개)
 
