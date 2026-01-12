@@ -59,6 +59,9 @@ YOUTUBE_REFRESH_TOKEN=your_refresh_token
 # ===== TTS (음성 생성) =====
 ELEVENLABS_API_KEY=your_elevenlabs_api_key
 ELEVENLABS_VOICE_ID=your_preferred_voice_id
+
+# ===== STT (자막 생성) =====
+ASSEMBLYAI_API_KEY=your_assemblyai_api_key
 ```
 
 ### 선택 환경 변수
@@ -95,6 +98,7 @@ CHANNEL_70S_ID=UC...
 |--------|----------|------|
 | YouTube | [Google Cloud Console](https://console.cloud.google.com) | 영상 업로드 |
 | ElevenLabs | [elevenlabs.io](https://elevenlabs.io) | TTS 음성 |
+| AssemblyAI | [assemblyai.com](https://www.assemblyai.com) | 자막 생성 |
 | Pexels | [pexels.com/api](https://www.pexels.com/api/) | 스톡 영상 |
 | Pixabay | [pixabay.com/api](https://pixabay.com/api/docs/) | 스톡 영상 |
 | OpenAI | [platform.openai.com](https://platform.openai.com) | DALL-E 이미지 |
@@ -186,7 +190,8 @@ Phase 3-6: VIDEO PIPELINE × N (병렬)
 ├── scenario-writer → script-writer
 ├── neuroscientist 검증 (최대 3회)
 ├── impatient-viewer 검증 (최대 3회)
-└── shorts-video-generator
+├── shorts-video-generator
+└── subtitle-generator (자막 하드코딩)
     |
 Phase 7: Oracle 채널 결정 (일괄)
     |
@@ -232,7 +237,7 @@ API 안정성을 위해 병렬 실행이 제한됩니다.
 
 ## 에이전트
 
-### 핵심 에이전트 (9개)
+### 핵심 에이전트 (10개)
 | 에이전트 | 역할 | 모델 |
 |----------|------|------|
 | main-orchestrator | Sisyphus 패턴 전체 지휘 | opus |
@@ -243,6 +248,7 @@ API 안정성을 위해 병렬 실행이 제한됩니다.
 | neuroscientist | 도파민 기반 hooking 연구 | opus |
 | impatient-viewer | 쇼츠 중독 시청자 리뷰 | sonnet |
 | shorts-video-generator | Shorts 영상 생성 | sonnet |
+| subtitle-generator | 자막 자동 생성 (AssemblyAI) | haiku |
 | video-uploader | YouTube 업로드 | haiku |
 
 ### 채널 관리 에이전트 (7개)

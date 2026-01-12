@@ -70,7 +70,8 @@ Phase 3-6: VIDEO PIPELINE × N (병렬)
 ├── scenario-writer → script-writer
 ├── neuroscientist 검증 (최대 3회)
 ├── impatient-viewer 검증 (최대 3회)
-└── shorts-video-generator
+├── shorts-video-generator
+└── **subtitle-generator (자막 자동 생성)**
     │
     ▼
 Phase 7: Oracle 채널 결정

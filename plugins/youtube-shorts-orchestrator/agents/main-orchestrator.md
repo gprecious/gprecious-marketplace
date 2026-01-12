@@ -77,7 +77,11 @@ Phase 3-6: VIDEO PIPELINE × N (병렬 실행)
 └─────────────────────────────────────────────────────────────────────┘
 
 Phase 6: 영상 생성
-└── shorts-video-generator (9:16, 15-60초)
+├── shorts-video-generator (9:16, 15-60초)
+└── **subtitle-generator (자막 자동 생성)**
+    ├── AssemblyAI로 음성 → 텍스트
+    ├── SRT 파일 생성
+    └── FFmpeg로 자막 하드코딩
 
 Phase 7: Oracle 채널 결정 (일괄)
 ├── 모든 파이프라인 완료 대기
