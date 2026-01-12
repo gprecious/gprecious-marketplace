@@ -54,23 +54,50 @@ YouTube Shorts 제작 파이프라인 전체를 지휘하는 마스터 오케스
 ---
 
 ### Phase 0: 환경 변수 체크
-```bash
-# 스크립트로 직접 실행 (토큰 절약)
-Bash("scripts/env-check.sh" + (upload ? " --upload" : ""))
+
+**Read 도구로 .env 파일 직접 검증** (Bash 사용 안 함):
+
 ```
-- [ ] exit 0 → 통과, exit 1 → **즉시 중단**
+1. Read(".env") 또는 Read("{git_root}/.env") 시도
+2. 파일 내용에서 필수 변수 존재 확인:
+   - ELEVENLABS_API_KEY (TTS 필수)
+   - OPENAI_API_KEY 또는 GCP_PROJECT_ID (AI 영상)
+   - PEXELS_API_KEY 또는 PIXABAY_API_KEY (스톡 영상)
+   - upload 플래그 시: YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET
+3. 변수 형식: KEY=value (빈 값 아님 확인)
+```
+
+- [ ] 필수 변수 모두 존재 → 통과
+- [ ] 누락 시 → 누락 목록 출력 후 **즉시 중단**
 
 ---
 
 ### Phase 1: 초기화
-```bash
-# History 초기화 스크립트
-Bash("scripts/init-history.sh")
+
+**Read/Write 도구로 직접 초기화** (Bash 사용 안 함):
+
 ```
-- [ ] history/, output/ 폴더 생성
-- [ ] global-history.json 로드/초기화
-- [ ] 세션 ID 생성: `session_{YYYYMMDD}_{HHMMSS}`
-- [ ] 파라미터 파싱: `--lang`, `--count`, `--topic`, `--channel`
+1. 세션 ID 생성: session_{YYYYMMDD}_{HHMMSS}
+
+2. history/global-history.json 확인:
+   - Read("history/global-history.json") 시도
+   - 없으면 Write로 초기 구조 생성: {"events":[],"uploads":[]}
+
+3. 임시 폴더 구조 (메모리에 경로 저장):
+   - /tmp/shorts/{session_id}/pipelines/{event_id}/
+
+4. 파라미터 파싱 (사용자 입력에서):
+   - --lang (기본: ko)
+   - --count (기본: 1, 최대: 5)
+   - --topic (기본: 자동 수집)
+   - --channel (기본: 자동 결정)
+   - --upload (기본: false)
+   - --visibility (기본: private)
+```
+
+- [ ] 세션 ID 생성 완료
+- [ ] global-history.json 로드/초기화 완료
+- [ ] 파라미터 파싱 완료
 
 ---
 
@@ -169,16 +196,41 @@ Task(video-uploader, prompt="{video}, channel={channel}", run_in_background=fals
 ---
 
 ### Phase 9: 결과 저장 ✅ 필수
-```bash
-# 각 이벤트에 대해 스크립트 실행 (토큰 절약)
-Bash("scripts/save-output.sh {event_id} {session_id} {lang} {channel} {score} {source_dir}")
+
+**Read/Write 도구로 직접 저장** (Bash 사용 안 함):
+
+각 이벤트에 대해:
 ```
-- [ ] exit 0 확인 → 저장 성공
-- [ ] output/{YYYYMMDD}_{event_id}/ 에 저장됨:
+1. 출력 폴더 경로: output/{YYYYMMDD}_{event_id}/
+
+2. 파일 복사/저장:
+   - Read(임시경로/scenario.json) → Write(출력폴더/scenario.json)
+   - Read(임시경로/script.md) → Write(출력폴더/script.md)
+   - Read(임시경로/final.mp4) → Write(출력폴더/final.mp4)  ⭐ 핵심
+
+3. metadata.json 생성 (Write):
+   {
+     "event_id": "{event_id}",
+     "session_id": "{session_id}",
+     "lang": "{lang}",
+     "channel": "{channel}",
+     "score": {score},
+     "created_at": "{ISO8601}",
+     "uploaded": {uploaded}
+   }
+
+4. history 업데이트:
+   - Read(history/global-history.json)
+   - events 배열에 추가
+   - Write(history/global-history.json)
+```
+
+- [ ] output/{YYYYMMDD}_{event_id}/ 폴더에 저장됨:
   - scenario.json
   - script.md
   - **final.mp4** ⭐
   - metadata.json
+- [ ] history 업데이트 완료
 
 ---
 
@@ -191,13 +243,15 @@ MAX_FEEDBACK_ITERATIONS = 3
 MIN_SCORE = 7
 ```
 
-## 스크립트 (Bash 직접 실행 - 토큰 절약)
+## ⚠️ Bash 스크립트 사용 금지
 
-| 스크립트 | 역할 |
-|----------|------|
-| scripts/env-check.sh | 환경 변수 검증 |
-| scripts/init-history.sh | History 폴더 초기화 |
-| scripts/save-output.sh | 결과물 저장 |
+서브에이전트는 Bash 도구 접근이 제한됨. 모든 작업은 **Read/Write 도구**로 수행:
+
+| 기존 스크립트 | 대체 방법 |
+|--------------|-----------|
+| ~~env-check.sh~~ | Read(".env") + 텍스트 파싱 |
+| ~~init-history.sh~~ | Read/Write로 직접 초기화 |
+| ~~save-output.sh~~ | Write로 직접 저장 |
 
 ## 서브에이전트 목록
 
