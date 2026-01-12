@@ -5,9 +5,41 @@
 UPLOAD=false
 [ "$1" = "--upload" ] && UPLOAD=true
 
-# 1. .env 파일 확인
-if [ ! -f ".env" ]; then
-    echo "❌ FAIL: .env 파일이 없습니다"
+# 1. .env 파일 탐색 (현재 디렉토리 → git root → 스크립트 위치 기준)
+ENV_FILE=""
+
+# 현재 디렉토리
+if [ -f ".env" ]; then
+    ENV_FILE=".env"
+fi
+
+# git root 확인
+if [ -z "$ENV_FILE" ]; then
+    GIT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
+    if [ -n "$GIT_ROOT" ] && [ -f "$GIT_ROOT/.env" ]; then
+        ENV_FILE="$GIT_ROOT/.env"
+    fi
+fi
+
+# 스크립트 위치 기준 상위 탐색
+if [ -z "$ENV_FILE" ]; then
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    SEARCH_DIR="$SCRIPT_DIR"
+    for _ in 1 2 3 4 5; do
+        SEARCH_DIR="$(dirname "$SEARCH_DIR")"
+        if [ -f "$SEARCH_DIR/.env" ]; then
+            ENV_FILE="$SEARCH_DIR/.env"
+            break
+        fi
+    done
+fi
+
+if [ -z "$ENV_FILE" ]; then
+    echo "❌ FAIL: .env 파일을 찾을 수 없습니다"
+    echo ""
+    echo "📋 탐색 위치:"
+    echo "  - 현재 디렉토리: $(pwd)"
+    echo "  - Git root: ${GIT_ROOT:-없음}"
     echo ""
     echo "📋 설정 방법:"
     echo "  cp .env.example .env"
@@ -15,9 +47,11 @@ if [ ! -f ".env" ]; then
     exit 1
 fi
 
+echo "📂 .env 로드: $ENV_FILE"
+
 # 2. .env 로드
 set -a
-source .env
+source "$ENV_FILE"
 set +a
 
 MISSING=""
