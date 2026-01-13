@@ -1,0 +1,16 @@
+# Secrets
+.env
+
+# Output (generated videos)
+output/
+
+# Session logs
+history/sessions/
+history/uploads/
+history/.upload.lock
+
+# Temp files
+/tmp/shorts/
+
+# OS
+.DS_Store

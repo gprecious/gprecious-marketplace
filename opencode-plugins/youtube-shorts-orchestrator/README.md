@@ -1,0 +1,342 @@
+# YouTube Shorts Orchestrator
+
+다국어 YouTube Shorts 채널을 통합 관리하는 OpenCode 플러그인.
+
+## 개요
+
+OpenCode의 Sisyphus 오케스트레이터가 `/shorts` 스킬을 통해 다중 영상 병렬 파이프라인을 직접 지휘합니다.
+
+### 아키텍처 특징
+
+- **Sisyphus 직접 오케스트레이션**: 별도 main-orchestrator 없이 Sisyphus가 워크플로우 문서(SKILL.md)를 읽고 직접 실행
+- **Sisyphus 기본 에이전트 활용**: `librarian`(소재 수집), `oracle`(전략/채널 결정) 내장 에이전트 사용
+- **9개 전문 커스텀 에이전트**: 시나리오, 스크립트, 검증, 영상 생성, 업로드 등
+- **9-Phase 파이프라인**: 환경 체크 → 초기화 → 소재 수집 → 전략 → 영상 생성 → 채널 결정 → 업로드 → 저장
+
+## 주요 기능
+
+- **다국어 지원** (ko, en, ja, zh, es, pt, de, fr)
+- 연령대별 3개 채널 통합 관리 (young, middle, senior)
+- 신비한 이벤트 자동 수집
+- 뇌과학 기반 도파민 트리거 최적화
+- 극단적 시청자 페르소나 검증
+- **스크립트 자동 번역** (문화적 로컬라이제이션)
+- **언어/채널 맞춤 음성 자동 선택** (ElevenLabs)
+- **AI 후킹 영상 생성** (Sora/Veo로 초반 3-5초 임팩트)
+- **저작권 무료 BGM 자동 선택** (Pixabay Music)
+- **Shorts 스타일 자막** (2-3단어씩, Bold, 하단)
+- 9:16 세로 영상 자동 생성 (15-60초)
+- **채널별 토큰 분리 업로드** (YouTube API 특성 반영)
+
+## 설치
+
+```bash
+# 플러그인 설치
+claude /install youtube-shorts-orchestrator@gprecious-marketplace
+```
+
+## 환경 변수 설정
+
+**프로젝트 루트**에 `.env` 파일을 생성하고 API 키를 설정합니다.
+
+### 프로젝트 폴더 구조
+
+```
+/your-project/           ← /shorts 명령어를 실행하는 폴더
+├── .env                 ← API 키 설정
+├── output/              ← ⭐ 최종 결과물 (자동 저장)
+│   └── 20250113_evt_001/        ← 영상별 폴더
+│       ├── scenario.json        ← 시나리오
+│       ├── script.md            ← 스크립트
+│       ├── final.mp4            ← 최종 영상
+│       └── metadata.json        ← 메타데이터
+└── history/             ← 영상 히스토리 (자동 생성, 재사용 가능)
+    ├── .upload.lock             ← 업로드 락 (순차 처리)
+    ├── global-history.json      ← 전역 중복 방지
+    ├── sessions/                ← 세션별 로그
+    │   └── session_20250113_120000.json
+    └── uploads/                 ← 채널별 업로드 기록
+        ├── ko-young.json
+        ├── ko-middle.json
+        └── ...
+```
+
+### 설정 방법
+
+```bash
+# 1. 프로젝트 폴더로 이동
+cd /path/to/your-project
+
+# 2. .env.example 복사
+cp ~/.claude/plugins/cache/gprecious-marketplace/youtube-shorts-orchestrator/1.0.0/.env.example .env
+
+# 3. .env 파일 편집
+vi .env
+```
+
+### 필수 환경 변수
+
+```bash
+# ===== YouTube API (업로드용) =====
+YOUTUBE_CLIENT_ID=your_client_id
+YOUTUBE_CLIENT_SECRET=your_client_secret
+
+# ⚠️ 채널별 Refresh Token (언어 × 채널 = 24개)
+# 형식: YOUTUBE_REFRESH_TOKEN_{LANG}_{AGE}
+YOUTUBE_REFRESH_TOKEN_KO_YOUNG=token_for_ko_young
+YOUTUBE_REFRESH_TOKEN_KO_MIDDLE=token_for_ko_middle
+YOUTUBE_REFRESH_TOKEN_KO_SENIOR=token_for_ko_senior
+# ... 다른 언어도 동일 (전체 목록은 .env.example 참조)
+
+# ===== TTS (음성 생성) =====
+ELEVENLABS_API_KEY=your_elevenlabs_api_key
+
+# ===== STT (자막 생성) =====
+ASSEMBLYAI_API_KEY=your_assemblyai_api_key
+
+# ===== AI 영상 생성 (초기 후킹용) =====
+OPENAI_API_KEY=your_openai_api_key  # Sora
+```
+
+### ⚠️ YouTube 채널별 토큰 발급 (중요!)
+
+YouTube API는 **토큰 발급 시 선택한 채널에만** 업로드됩니다.
+단일 토큰으로 여러 채널에 업로드할 수 없습니다.
+
+**8개 언어 × 3개 채널 = 24개 토큰을 각각 발급해야 합니다.**
+
+#### 1단계: Brand Account 채널로 전환
+1. [YouTube Studio](https://studio.youtube.com) 접속
+2. 우측 상단 프로필 클릭 → "채널 전환"
+3. **업로드할 채널 선택** (예: ko-young 채널)
+
+#### 2단계: OAuth 인증 URL 접속
+```
+https://accounts.google.com/o/oauth2/v2/auth?
+  client_id=YOUR_CLIENT_ID&
+  redirect_uri=http://localhost:8080&
+  response_type=code&
+  scope=https://www.googleapis.com/auth/youtube.upload&
+  access_type=offline&
+  prompt=consent
+```
+
+#### 3단계: Authorization Code → Refresh Token
+```bash
+curl -X POST "https://oauth2.googleapis.com/token" \
+  -d "client_id=${YOUTUBE_CLIENT_ID}" \
+  -d "client_secret=${YOUTUBE_CLIENT_SECRET}" \
+  -d "code=${AUTHORIZATION_CODE}" \
+  -d "redirect_uri=http://localhost:8080" \
+  -d "grant_type=authorization_code"
+
+# 응답의 refresh_token을 해당 채널 변수에 저장
+# 예: YOUTUBE_REFRESH_TOKEN_KO_YOUNG
+```
+
+#### 4단계: 모든 채널 반복 (24개)
+```bash
+# 한국어 (ko)
+YOUTUBE_REFRESH_TOKEN_KO_YOUNG=...
+YOUTUBE_REFRESH_TOKEN_KO_MIDDLE=...
+YOUTUBE_REFRESH_TOKEN_KO_SENIOR=...
+
+# 영어 (en)
+YOUTUBE_REFRESH_TOKEN_EN_YOUNG=...
+YOUTUBE_REFRESH_TOKEN_EN_MIDDLE=...
+YOUTUBE_REFRESH_TOKEN_EN_SENIOR=...
+
+# ... ja, zh, es, pt, de, fr 도 동일
+```
+
+### API 키 발급 방법
+
+| 서비스 | 발급 URL | 용도 |
+|--------|----------|------|
+| YouTube | [Google Cloud Console](https://console.cloud.google.com) | 영상 업로드 |
+| ElevenLabs | [elevenlabs.io](https://elevenlabs.io) | TTS 음성 |
+| AssemblyAI | [assemblyai.com](https://www.assemblyai.com) | 자막 생성 |
+| Pexels | [pexels.com/api](https://www.pexels.com/api/) | 스톡 영상/음악 |
+| Pixabay | [pixabay.com/api](https://pixabay.com/api/docs/) | 스톡 영상/음악 |
+| OpenAI | [platform.openai.com](https://platform.openai.com) | Sora AI 영상 |
+| Google Cloud | [console.cloud.google.com](https://console.cloud.google.com) | Veo AI 영상 |
+
+## 사용법
+
+```bash
+# 기본 사용 (한국어, 자동 소재 수집)
+/shorts
+
+# 영어 버전 생성
+/shorts --lang en
+
+# 다중 영상 생성 (최대 5개)
+/shorts --count 5
+
+# 주제 지정
+/shorts --topic "우주의 미스터리"
+
+# 특정 채널 + 언어 지정
+/shorts --channel middle --lang en "Burnout prevention tips"
+
+# 업로드 포함 (비공개)
+/shorts --upload --visibility unlisted
+
+# 전체 옵션
+/shorts --topic "Moon secrets" --channel young --lang en --count 3 --upload
+```
+
+## 지원 언어
+
+| 코드 | 언어 | TTS 품질 | 상태 |
+|------|------|---------|------|
+| ko | 한국어 | ⭐⭐⭐⭐ | 기본 |
+| en | 영어 | ⭐⭐⭐⭐⭐ | 지원 |
+| ja | 일본어 | ⭐⭐⭐⭐ | 지원 |
+| zh | 중국어 | ⭐⭐⭐⭐ | 지원 |
+| es | 스페인어 | ⭐⭐⭐⭐⭐ | 지원 |
+| pt | 포르투갈어 | ⭐⭐⭐⭐ | 지원 |
+| de | 독일어 | ⭐⭐⭐⭐ | 지원 |
+| fr | 프랑스어 | ⭐⭐⭐⭐ | 지원 |
+
+## 채널 구조
+
+### 연령대별 (3개)
+
+| 채널 | 타겟 | 주요 관심사 |
+|------|------|------------|
+| channel-young | 10-20대 | 트렌드, 밈, 자기계발, 연애 |
+| channel-middle | 30-50대 | 직장, 건강, 육아, 재테크 |
+| channel-senior | 60-70대 | 건강, 추억, 가족, 여유 |
+
+### 언어별 채널 구조
+
+```
+channels/
+├── ko/                    # 한국어
+│   ├── channel-young/
+│   ├── channel-middle/
+│   └── channel-senior/
+├── en/                    # 영어
+│   ├── channel-young/
+│   ├── channel-middle/
+│   └── channel-senior/
+└── ja/                    # 일본어 (확장)
+    └── ...
+```
+
+## 아키텍처
+
+```
+/shorts 스킬 트리거
+    │
+    ▼
+┌─────────────────────────────────────────────┐
+│  Sisyphus (OpenCode 기본 오케스트레이터)     │
+│  ├── SKILL.md 워크플로우 문서 읽기           │
+│  ├── todowrite로 전체 계획 생성              │
+│  └── background_task/task로 서브에이전트 호출 │
+└─────────────────────────────────────────────┘
+    │
+    ▼
+Phase 0: 환경 변수 체크
+├── .env 파일 읽기
+└── 필수 API 키 확인
+    │
+Phase 1: 초기화
+├── 세션 ID 생성
+├── 히스토리 로드
+└── 디렉토리 설정
+    │
+Phase 2: 소재 수집
+├── librarian (Sisyphus 기본, websearch)
+└── 중복 체크 + 품질 필터링
+    │
+Phase 2.5: Oracle 초기 전략 (Sisyphus 내장)
+├── 이벤트별 채널 힌트
+└── 접근 전략 제시
+    │
+Phase 3-6: VIDEO PIPELINE × N (병렬)
+├── scenario-writer → script-writer
+├── neuroscientist 검증 (실패 시 Sisyphus oracle 자문)
+├── impatient-viewer 검증
+├── Sisyphus 직접 번역 (다국어)
+├── voice-selector + bgm-selector
+├── shorts-video-generator
+└── subtitle-generator
+    │
+Phase 7: Oracle 채널 결정 (Sisyphus 내장)
+├── 언어별 채널 배분
+└── 연령대 매칭
+    │
+Phase 8: 업로드 (순차)
+├── ⚠️ 병렬 금지 (락 파일 사용)
+└── video-uploader
+    │
+Phase 9: 결과 저장
+├── output/ 최종 결과물
+├── history/ 히스토리 업데이트
+└── 임시 파일 정리
+```
+
+## 에이전트
+
+### 오케스트레이션
+
+| 역할 | 담당 | 설명 |
+|------|------|------|
+| 전체 지휘 | **Sisyphus** (OpenCode 기본) | `/shorts` 스킬의 워크플로우 문서를 읽고 직접 오케스트레이션 |
+
+### Sisyphus 기본 에이전트 활용
+
+| 에이전트 | 역할 | 대체된 기존 에이전트 |
+|----------|------|---------------------|
+| **librarian** | 소재 수집 (websearch) | curious-event-collector |
+| **oracle** | 초기 전략 + 긴급 자문 + 채널 결정 | oracle.md |
+| (Sisyphus 직접) | 다국어 번역 + 로컬라이제이션 | translator.md |
+
+### 커스텀 서브에이전트 (9개)
+
+| 에이전트 | 역할 | 모델 | Temp |
+|----------|------|------|------|
+| scenario-writer | 시나리오 작성 | sonnet | 0.6 |
+| script-writer | 스크립트 작성 | sonnet | 0.5 |
+| neuroscientist | 도파민 기반 hooking 검증 | sonnet | 0.3 |
+| impatient-viewer | 쇼츠 중독 시청자 리뷰 | sonnet | 0.5 |
+| voice-selector | 언어/채널 맞춤 음성 선택 | haiku | 0.2 |
+| bgm-selector | 저작권 무료 BGM 선택 (Pixabay) | haiku | 0.2 |
+| shorts-video-generator | Shorts 영상 생성 (Sora/Veo + 스톡) | sonnet | 0.3 |
+| subtitle-generator | 자막 자동 생성 (2-3단어씩) | haiku | 0.2 |
+| video-uploader | YouTube 업로드 (채널별 토큰) | haiku | 0.1 |
+
+### 채널 관리 에이전트 (3개)
+
+| 채널 | 타겟 | 주요 관심사 |
+|------|------|------------|
+| channel-young | 10-20대 | 트렌드, 밈, 게임, 자기계발, 연애 |
+| channel-middle | 30-50대 | 직장, 건강, 육아, 재테크, 여행 |
+| channel-senior | 60-70대 | 건강, 추억, 가족, 취미, 여유 |
+
+## 병렬 실행 제한
+
+API 안정성을 위해 병렬 실행이 제한됩니다.
+
+| 항목 | 제한 |
+|------|------|
+| 최대 동시 파이프라인 | 5개 |
+| --count 최대값 | 5 |
+| 시나리오 재작성 | 최대 3회 |
+| 피드백 루프 | 최대 3회 |
+| 최소 품질 점수 | 7점 |
+
+## 토큰 최적화
+
+다중 파이프라인 실행 시 토큰 폭발 방지:
+- XML 구조화 출력 (에이전트별 300~400 토큰 제한)
+- 파일 기반 데이터 전달
+- Frontmatter 기반 의사결정
+- 5개 파이프라인 동시 실행: ~5,000 토큰 (기존 대비 90% 절감)
+
+## 라이선스
+
+MIT

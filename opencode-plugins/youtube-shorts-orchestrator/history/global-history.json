@@ -1,0 +1,72 @@
+{
+  "version": "1.1.0",
+  "last_updated": "2026-01-13T16:49:00+09:00",
+  "total_videos": 2,
+  "videos": [
+    {
+      "id": "upload_20260113_001",
+      "event_id": "evt_001",
+      "video_id": "lDn2DibxBb0",
+      "title": "화성에 생명체가 있었다? NASA 충격 발표",
+      "channel": "ko-young",
+      "language": "ko",
+      "topic": "우주/과학",
+      "keywords": ["NASA", "화성", "생명체", "외계생명체", "퍼서비어런스", "우주", "미스터리"],
+      "uploaded_at": "2026-01-13T15:46:07+09:00",
+      "url": "https://www.youtube.com/shorts/lDn2DibxBb0",
+      "visibility": "unlisted"
+    },
+    {
+      "id": "local_20260113_002",
+      "event_id": "evt_001",
+      "video_id": null,
+      "title": "KAIST, 암세포를 정상세포로 되돌리는 분자 스위치 발견",
+      "channel": "ko-middle",
+      "language": "ko",
+      "topic": "과학/의학",
+      "keywords": ["KAIST", "암세포", "분자스위치", "암치료", "정상세포", "세계최초"],
+      "created_at": "2026-01-13T16:49:00+09:00",
+      "uploaded": false,
+      "local_path": "./output/20260113_evt_001/"
+    }
+  ],
+  "channels_index": {
+    "ko-young": {
+      "topics": ["우주/과학"],
+      "keywords": ["NASA", "화성", "생명체", "외계생명체", "퍼서비어런스", "우주", "미스터리"],
+      "video_count": 1
+    },
+    "ko-middle": {
+      "topics": ["과학/의학"],
+      "keywords": ["KAIST", "암세포", "분자스위치", "암치료", "정상세포", "세계최초"],
+      "video_count": 1
+    },
+    "ko-senior": {
+      "topics": [],
+      "keywords": [],
+      "video_count": 0
+    },
+    "en-young": { "topics": [], "keywords": [], "video_count": 0 },
+    "en-middle": { "topics": [], "keywords": [], "video_count": 0 },
+    "en-senior": { "topics": [], "keywords": [], "video_count": 0 },
+    "ja-young": { "topics": [], "keywords": [], "video_count": 0 },
+    "ja-middle": { "topics": [], "keywords": [], "video_count": 0 },
+    "ja-senior": { "topics": [], "keywords": [], "video_count": 0 },
+    "zh-young": { "topics": [], "keywords": [], "video_count": 0 },
+    "zh-middle": { "topics": [], "keywords": [], "video_count": 0 },
+    "zh-senior": { "topics": [], "keywords": [], "video_count": 0 },
+    "es-young": { "topics": [], "keywords": [], "video_count": 0 },
+    "es-middle": { "topics": [], "keywords": [], "video_count": 0 },
+    "es-senior": { "topics": [], "keywords": [], "video_count": 0 },
+    "pt-young": { "topics": [], "keywords": [], "video_count": 0 },
+    "pt-middle": { "topics": [], "keywords": [], "video_count": 0 },
+    "pt-senior": { "topics": [], "keywords": [], "video_count": 0 },
+    "de-young": { "topics": [], "keywords": [], "video_count": 0 },
+    "de-middle": { "topics": [], "keywords": [], "video_count": 0 },
+    "de-senior": { "topics": [], "keywords": [], "video_count": 0 },
+    "fr-young": { "topics": [], "keywords": [], "video_count": 0 },
+    "fr-middle": { "topics": [], "keywords": [], "video_count": 0 },
+    "fr-senior": { "topics": [], "keywords": [], "video_count": 0 }
+  },
+  "_schema_note": "v1.1.0: channels_index 추가. 중복 체크는 같은 채널 내에서만 적용. 다른 언어/채널은 같은 주제 재사용 가능."
+}
