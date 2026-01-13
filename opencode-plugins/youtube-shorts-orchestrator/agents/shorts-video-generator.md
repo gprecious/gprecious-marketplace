@@ -49,8 +49,21 @@ ELEVENLABS_API_KEY=xxxx      # TTS용
    + 후킹 문구 오버레이 (ffmpeg drawtext)
    └── 첫 화면에 hook 텍스트 삽입
    
-2. 스톡 영상 (5초~)
-   └── Pexels Video API
+2. 스톡 영상 (5초~) - 저작권 무료 소스만 사용!
+   ├── [Tier 1] Pexels Video API (Primary) ⭐ 상업적 사용 안전
+   │   └── categories: animals, nature, people, technology
+   │   └── quality: 4K, HD
+   │   └── license: Pexels License (CC0-equivalent)
+   │
+   ├── [Tier 2] Pixabay Video API (Backup)
+   │   └── categories: animals, nature, abstract, technology
+   │   └── quality: 4K, HD
+   │   └── license: Pixabay License (commercial OK)
+   │
+   └── [NEVER USE] ⚠️ 저작권 위험 소스
+       ├── YouTube CC-BY 영상 (Content ID 위험)
+       ├── TikTok/Instagram 리포스트 (저작권 침해)
+       └── Archive.org (라이선스 검증 어려움)
    
 3. TTS 음성 (⚠️ 약어 전처리 필수)
    └── ElevenLabs API
@@ -129,10 +142,13 @@ def fallback_dalle_video(prompt: str, duration: int = 5) -> str:
 ffmpeg -i hook_video.mp4 -vf "
   drawtext=text='${HOOK_TEXT}':
     fontfile=/path/to/NotoSansKR-Bold.otf:
-    fontsize=72:
-    fontcolor=white:
-    borderw=4:
+    fontsize=108:
+    fontcolor=yellow:
+    borderw=8:
     bordercolor=black:
+    shadowcolor=black:
+    shadowx=4:
+    shadowy=4:
     x=(w-text_w)/2:
     y=h*0.15:
     enable='between(t,0,3)'
@@ -149,7 +165,7 @@ def add_hook_text_overlay(
     hook_text: str,
     output_video: str,
     duration: float = 3.0,
-    font_size: int = 72
+    font_size: int = 108
 ) -> str:
     """
     영상 첫 화면에 후킹 문구 오버레이 추가
@@ -172,14 +188,17 @@ def add_hook_text_overlay(
     ]
     font_path = next((f for f in font_paths if os.path.exists(f)), font_paths[0])
     
-    # ffmpeg 필터
+    # ffmpeg 필터 (타이틀: 크고 눈에 띄게, 하단 자막보다 강조)
     filter_complex = (
         f"drawtext=text='{escaped_text}':"
         f"fontfile={font_path}:"
         f"fontsize={font_size}:"
-        f"fontcolor=white:"
-        f"borderw=4:"
+        f"fontcolor=yellow:"
+        f"borderw=8:"
         f"bordercolor=black:"
+        f"shadowcolor=black:"
+        f"shadowx=4:"
+        f"shadowy=4:"
         f"x=(w-text_w)/2:"
         f"y=h*0.12:"
         f"enable='between(t,0,{duration})'"
@@ -197,15 +216,17 @@ def add_hook_text_overlay(
     return output_video
 ```
 
-### 후킹 문구 스타일
+### 후킹 문구 스타일 (하단 자막보다 강조!)
 
 | 위치 | 설정 | 설명 |
 |------|------|------|
 | 수직 위치 | `y=h*0.12` | 상단 12% (세이프 존) |
 | 수평 위치 | `x=(w-text_w)/2` | 중앙 정렬 |
 | 표시 시간 | 0-3초 | 첫 3초간 표시 |
-| 폰트 크기 | 72px | 모바일에서 잘 보임 |
-| 테두리 | 4px 검정 | 가독성 확보 |
+| 폰트 크기 | **108px** | 하단 자막(24px)보다 4.5배 크게 |
+| 폰트 색상 | **노란색** | 흰색 자막과 차별화 |
+| 테두리 | **8px 검정** | 두꺼운 테두리로 강조 |
+| 그림자 | **4px 오프셋** | 입체감으로 눈에 띄게 |
 
 ## 전체 파이프라인 코드
 
@@ -270,15 +291,18 @@ class ShortsVideoGenerator:
         return output_path
     
     def _add_hook_text(self, input_video: str, hook_text: str, output_video: str):
-        """ffmpeg로 후킹 문구 오버레이"""
+        """ffmpeg로 후킹 문구 오버레이 (하단 자막보다 강조)"""
         escaped_text = hook_text.replace("'", "'\\''").replace(":", "\\:")
         
         filter_complex = (
             f"drawtext=text='{escaped_text}':"
-            f"fontsize=72:"
-            f"fontcolor=white:"
-            f"borderw=4:"
+            f"fontsize=108:"
+            f"fontcolor=yellow:"
+            f"borderw=8:"
             f"bordercolor=black:"
+            f"shadowcolor=black:"
+            f"shadowx=4:"
+            f"shadowy=4:"
             f"x=(w-text_w)/2:"
             f"y=h*0.12:"
             f"enable='between(t,0,3)'"
@@ -322,3 +346,42 @@ class ShortsVideoGenerator:
   <file_ref>/tmp/shorts/{session}/pipelines/evt_001/output/final.mp4</file_ref>
 </task_result>
 ```
+
+## 저작권 안전 가이드라인
+
+### 영상 소스 안전 매트릭스
+
+| 소스 | 수익화 | Content ID 위험 | 권장 |
+|------|--------|-----------------|------|
+| **Pexels** | ✅ 안전 | ⚪ 없음 | ✅ Primary |
+| **Pixabay** | ✅ 안전 | ⚪ 없음 | ✅ Backup |
+| **AI 생성 (Replicate)** | ✅ 안전 | ⚪ 없음 | ✅ 훅 영상용 |
+| **NASA/정부** | ✅ 안전 | ⚪ 없음 | ⚠️ 우주 주제만 |
+| **YouTube CC-BY** | ⚠️ 위험 | 🔴 높음 | ❌ 사용 금지 |
+| **TikTok/Instagram** | ❌ 침해 | 🔴 최고 | ❌ 절대 금지 |
+| **컴필레이션** | ⚠️ 위험 | 🔴 높음 | ❌ 사용 금지 |
+
+### Content ID 회피 (선택적 후처리)
+
+스톡 영상도 드물게 Content ID에 걸릴 수 있습니다. 보험용 후처리:
+
+```python
+# ffmpeg 후처리 (선택적)
+post_processing = {
+    "color_grade": "colorbalance=rs=0.05:gs=-0.03:bs=0.02",  # 미세 색상 조정
+    "speed": "setpts=0.98*PTS",  # 2% 속도 변경
+    "crop": "crop=in_w*0.98:in_h*0.98"  # 2% 크롭
+}
+```
+
+### 안전한 컨텐츠 검색 키워드
+
+| 카테고리 | Pexels/Pixabay 검색어 |
+|----------|----------------------|
+| 귀여운 동물 | cute cat, puppy, kitten, baby animals, wildlife |
+| 감동 | family hug, helping, community, heartwarming |
+| 자연 | nature, ocean, mountains, sunset, forest |
+| 만족감 | satisfying, organization, cleaning, craft |
+| 우주 | space, galaxy, stars, nebula, earth |
+
+**Golden Rule**: Pexels + Pixabay + AI 생성 = 100% 안전

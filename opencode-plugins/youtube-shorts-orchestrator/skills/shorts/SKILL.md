@@ -242,12 +242,42 @@ IF 필수 변수 누락:
 **Agent**: `librarian` (Sisyphus 기본 에이전트)
 **Dependencies**: Phase 1 complete
 **Pattern**: 병렬 실행 (count > 1 시)
-**Goal**: 바이럴 소재 수집
+**Goal**: 트렌딩 기반 바이럴 소재 수집
 
 > **Note**: 기존 `curious-event-collector`는 Sisyphus 내장 `librarian`으로 대체됨.
 > librarian은 websearch, context7, GitHub 검색 기능을 통합 제공.
 
+> **참조 파일**: 
+> - `content-bank/trending-config.json` - 국가/연령 API 매핑
+> - `content-bank/content-strategy.md` - 연령별/국가별 전략
+
 ### Steps
+
+#### Step 2a: 트렌딩 데이터 로드 (NEW!)
+
+1. **설정 로드**:
+   ```
+   Read("content-bank/trending-config.json")
+   
+   region = trending_config.regions[lang]
+   age_prefs = trending_config.age_preferences[channel]
+   country_prefs = trending_config.country_preferences[lang]
+   ```
+
+2. **트렌딩 키워드 수집** (librarian에게 위임):
+   ```
+   트렌딩 소스:
+   - YouTube Data API: mostPopular videos in {region.youtube_region}
+   - Google Trends: trending_searches(pn='{region.google_trends_geo}')
+   - NewsAPI (선택): top-headlines?country={region.newsapi_country}
+   
+   연령별 카테고리 필터:
+   - young: Gaming(20), Entertainment(24), Music(10)
+   - middle: Howto(26), People(22), Science(28)
+   - senior: People(22), Pets(15), Howto(26)
+   ```
+
+#### Step 2b: 타겟 채널 결정
 
 1. **타겟 채널 결정** (현재 파라미터 기준):
    ```
@@ -269,23 +299,55 @@ IF 필수 변수 누락:
    - 같은 채널에 이미 있는 주제만 제외
    - 다른 언어 채널은 같은 주제 재사용 가능
 
-3. **librarian 호출** (exclude_topics 전달):
+#### Step 2c: librarian 호출 (트렌딩 + 카테고리 통합)
+
+3. **librarian 호출** (exclude_topics + 트렌딩 키워드 전달):
    ```
    background_task(
      agent="librarian",
      prompt="""
      YouTube Shorts용 바이럴 소재를 {count}개 수집하세요.
      
-     [수집 카테고리]
+     [트렌딩 수집 - 우선순위 1]
+     YouTube Data API로 현재 트렌딩 확인:
+     - Region: {region.youtube_region}
+     - Categories: {age_categories[channel]}  # 연령별 카테고리
+     
+     Google Trends로 실시간 검색어 확인:
+     - Geo: {region.google_trends_geo}
+     
+     [국가별 선호 컨텐츠 - content-bank/content-strategy.md 참조]
+     {country_prefs.top_content}
+     
+     [연령별 감정 트리거]
+     {age_prefs.emotional_triggers}
+     
+     [수집 카테고리 - 우선순위 2]
      - 미스터리: 미해결 사건, UFO, 초자연
      - 과학: 새로운 발견, 반직관적 사실
      - 역사: 숨겨진 역사, 흥미로운 사실
      - 심리: 인간 행동, 뇌과학
-     - 트렌드: 현재 화제
+     - 귀여운 동물: 펫, 야생동물, 감동 스토리 (Pexels/Pixabay 영상 활용 가능)
+     - 만족감: ASMR, 정리정돈, 크래프트
+     - 감동: 따뜻한 스토리, 가족, 커뮤니티
      
      [제외 주제]: {exclude_topics}
      [언어]: {lang}
-     [출력 형식]: XML (event id, title, category, hook, viral_potential)
+     [타겟 연령]: {channel} ({age_prefs.age_range})
+     
+     [출력 형식]: XML
+     <event id="evt_001">
+       <title>제목</title>
+       <category>카테고리</category>
+       <hook>훅 문장</hook>
+       <viral_potential>7-10</viral_potential>
+       <viral_score>
+         <trend_velocity>트렌딩 속도 1-10</trend_velocity>
+         <demographic_fit>연령 적합도 1-10</demographic_fit>
+         <emotional_intensity>감정 강도 1-10</emotional_intensity>
+       </viral_score>
+       <suggested_visuals>Pexels/Pixabay 검색 키워드</suggested_visuals>
+     </event>
      """
    )
    ```

@@ -1,0 +1,228 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "트렌딩 주제 수집 및 국가/연령별 컨텐츠 전략 설정",
+  "version": "1.0.0",
+  
+  "regions": {
+    "ko": {
+      "youtube_region": "KR",
+      "google_trends_geo": "KR",
+      "newsapi_country": "kr",
+      "language": "한국어",
+      "timezone": "Asia/Seoul"
+    },
+    "en": {
+      "youtube_region": "US",
+      "google_trends_geo": "US",
+      "newsapi_country": "us",
+      "language": "English",
+      "timezone": "America/New_York"
+    },
+    "ja": {
+      "youtube_region": "JP",
+      "google_trends_geo": "JP",
+      "newsapi_country": "jp",
+      "language": "日本語",
+      "timezone": "Asia/Tokyo"
+    },
+    "zh": {
+      "youtube_region": "TW",
+      "google_trends_geo": "TW",
+      "newsapi_country": "tw",
+      "language": "中文",
+      "timezone": "Asia/Taipei"
+    },
+    "es": {
+      "youtube_region": "ES",
+      "google_trends_geo": "ES",
+      "newsapi_country": "es",
+      "language": "Español",
+      "timezone": "Europe/Madrid"
+    },
+    "pt": {
+      "youtube_region": "BR",
+      "google_trends_geo": "BR",
+      "newsapi_country": "br",
+      "language": "Português",
+      "timezone": "America/Sao_Paulo"
+    },
+    "de": {
+      "youtube_region": "DE",
+      "google_trends_geo": "DE",
+      "newsapi_country": "de",
+      "language": "Deutsch",
+      "timezone": "Europe/Berlin"
+    },
+    "fr": {
+      "youtube_region": "FR",
+      "google_trends_geo": "FR",
+      "newsapi_country": "fr",
+      "language": "Français",
+      "timezone": "Europe/Paris"
+    }
+  },
+  
+  "youtube_categories": {
+    "young": [20, 24, 10, 25, 22],
+    "middle": [26, 22, 28, 27, 19],
+    "senior": [22, 15, 26, 24, 10]
+  },
+  
+  "youtube_category_names": {
+    "10": "Music",
+    "15": "Pets & Animals",
+    "19": "Travel & Events",
+    "20": "Gaming",
+    "22": "People & Blogs",
+    "24": "Entertainment",
+    "25": "News & Politics",
+    "26": "Howto & Style",
+    "27": "Education",
+    "28": "Science & Technology"
+  },
+  
+  "age_preferences": {
+    "young": {
+      "age_range": "10-20",
+      "primary_content": ["comedy", "memes", "trends", "gaming", "music"],
+      "secondary_content": ["self_improvement", "educational", "vlogs"],
+      "emotional_triggers": ["surprise", "fomo", "social_currency", "humor"],
+      "pace": "fast",
+      "hook_time_seconds": 1.5,
+      "tone": ["energetic", "trendy", "authentic", "relatable"]
+    },
+    "middle": {
+      "age_range": "30-50",
+      "primary_content": ["howto", "lifestyle", "finance", "health", "parenting"],
+      "secondary_content": ["food", "travel", "entertainment"],
+      "emotional_triggers": ["achievement", "practical_value", "nostalgia", "relief"],
+      "pace": "medium",
+      "hook_time_seconds": 3.0,
+      "tone": ["professional", "practical", "trustworthy", "efficient"]
+    },
+    "senior": {
+      "age_range": "60-70",
+      "primary_content": ["diy", "hobbies", "news", "music", "health"],
+      "secondary_content": ["family", "pets", "travel", "nostalgia"],
+      "emotional_triggers": ["nostalgia", "warmth", "clarity", "comfort"],
+      "pace": "slow",
+      "hook_time_seconds": 5.0,
+      "tone": ["warm", "clear", "gentle", "trustworthy"]
+    }
+  },
+  
+  "country_preferences": {
+    "ko": {
+      "top_content": ["humor", "entertainment", "pets", "food", "celebrity"],
+      "humor_style": "collective_cute",
+      "emotional_preference": ["cute", "dramatic", "food_culture"],
+      "avoid": ["aggressive_humor", "controversial"],
+      "special_notes": "K-Pop influence strong, mukbang popular"
+    },
+    "en": {
+      "top_content": ["comedy", "memes", "howto", "gaming", "self_improvement"],
+      "humor_style": "ironic_direct",
+      "emotional_preference": ["awe", "surprise", "sarcasm"],
+      "avoid": ["overly_sentimental", "slow_pace"],
+      "special_notes": "Fast trends, authenticity over polish"
+    },
+    "ja": {
+      "top_content": ["kawaii", "satisfying", "craftsmanship", "anime", "food"],
+      "humor_style": "subtle_gentle",
+      "emotional_preference": ["cuteness", "harmony", "precision"],
+      "avoid": ["aggressive", "confrontational", "loud"],
+      "special_notes": "Kawaii culture dominant, ASMR popular"
+    },
+    "zh": {
+      "top_content": ["educational", "practical", "family", "food", "lifestyle"],
+      "humor_style": "positive_collective",
+      "emotional_preference": ["family", "achievement", "harmony"],
+      "avoid": ["aggressive_humor", "controversial", "political"],
+      "special_notes": "Educational content valued, family themes"
+    },
+    "es": {
+      "top_content": ["emotional", "music", "dance", "family", "comedy"],
+      "humor_style": "sentimental_physical",
+      "emotional_preference": ["warmth", "passion", "resilience"],
+      "avoid": ["cold_irony", "overly_intellectual"],
+      "special_notes": "Physical comedy works, music/dance important"
+    },
+    "pt": {
+      "top_content": ["music", "dance", "sports", "celebration", "comedy"],
+      "humor_style": "festive_warm",
+      "emotional_preference": ["joy", "celebration", "community"],
+      "avoid": ["cold_content", "overly_serious"],
+      "special_notes": "Volume strategy (low RPM, high views), localization critical"
+    },
+    "de": {
+      "top_content": ["howto", "practical", "quality", "efficiency", "wit"],
+      "humor_style": "witty_intellectual",
+      "emotional_preference": ["achievement", "precision", "efficiency"],
+      "avoid": ["slapstick", "overly_emotional", "ambiguous"],
+      "special_notes": "High production quality expected, direct messaging"
+    },
+    "fr": {
+      "top_content": ["culture", "food", "aesthetic", "fashion", "wit"],
+      "humor_style": "sophisticated_wordplay",
+      "emotional_preference": ["beauty", "sophistication", "culture"],
+      "avoid": ["crude_humor", "low_quality_visuals"],
+      "special_notes": "Aesthetic quality important, food/wine content"
+    }
+  },
+  
+  "viral_scoring": {
+    "weights": {
+      "trend_velocity": 0.25,
+      "engagement_ratio": 0.25,
+      "demographic_fit": 0.20,
+      "freshness": 0.15,
+      "emotional_intensity": 0.15
+    },
+    "minimum_score": 7,
+    "freshness_decay_days": 7
+  },
+  
+  "refresh_settings": {
+    "trending_refresh_hours": 24,
+    "evergreen_check_days": 30,
+    "topic_cooldown_days": 7,
+    "cross_language_reuse": true
+  },
+  
+  "api_limits": {
+    "youtube_quota_daily": 10000,
+    "youtube_mostpopular_cost": 1,
+    "youtube_max_calls_daily": 200,
+    "google_trends_daily": 100,
+    "newsapi_daily": 100
+  },
+  
+  "video_sources": {
+    "tier_1": {
+      "name": "Pexels",
+      "api": true,
+      "commercial_safe": true,
+      "categories": ["animals", "nature", "people", "technology"],
+      "priority": 1
+    },
+    "tier_2": {
+      "name": "Pixabay",
+      "api": true,
+      "commercial_safe": true,
+      "categories": ["animals", "nature", "abstract", "technology"],
+      "priority": 2
+    },
+    "tier_3": {
+      "name": "AI Generated (Replicate)",
+      "api": true,
+      "commercial_safe": true,
+      "categories": ["custom", "hook_videos"],
+      "priority": 3
+    },
+    "never_use": [
+      "YouTube CC-BY (Content ID risk)",
+      "TikTok/Instagram reposts",
+      "Archive.org (license verification overhead)"
+    ]
+  }
+}
