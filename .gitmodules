@@ -4,3 +4,6 @@
 [submodule "claude-plugins/youtube-assistant"]
 	path = claude-plugins/youtube-assistant
 	url = https://github.com/gprecious/youtube-assistant.git
+[submodule "claude-plugins/harness"]
+	path = claude-plugins/harness
+	url = https://github.com/gprecious/harness.git

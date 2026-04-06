@@ -25,6 +25,12 @@
       "description": "연령대별(10~70대) YouTube Shorts 채널 통합 관리. Sisyphus 패턴 오케스트레이션.",
       "source": "./plugins/youtube-shorts-orchestrator",
       "category": "productivity"
+    },
+    {
+      "name": "harness",
+      "description": "TDD Generator-Evaluator harness. Plan-Contract-Test-Build-Evaluate-Integrate-Learn 자동화 파이프라인.",
+      "source": "./claude-plugins/harness",
+      "category": "productivity"
     }
   ]
 }
