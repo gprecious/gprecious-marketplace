@@ -20,8 +20,13 @@ function pickAdapter(name: string): StackAdapter {
 
 async function main() {
   const args = process.argv.slice(2);
-  const platform = (args.find((a) => ["ios", "android", "all"].includes(a)) ?? "all") as Platform;
+  const platformArg =
+    args.find((a) => a.startsWith("--platform="))?.split("=")[1] ??
+    args.find((a) => ["ios", "android", "all"].includes(a)) ??
+    "all";
+  const platform = platformArg as Platform;
   const noSubmit = args.includes("--no-submit");
+  const cloud = args.includes("--cloud");
 
   const cfg = loadConfig();
   const adapter = pickAdapter(cfg.stack);
@@ -29,7 +34,7 @@ async function main() {
   const version = await adapter.detectVersion();
   emitJson({ phase: "detect", stack: adapter.name, ...version });
 
-  const build = await adapter.build(platform, { autoSubmit: !noSubmit });
+  const build = await adapter.build(platform, { autoSubmit: !noSubmit, local: !cloud });
   emitJson({ phase: "build", ...build });
 }
 

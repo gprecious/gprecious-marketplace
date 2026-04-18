@@ -5,6 +5,8 @@ export interface BuildOpts {
   autoSubmit?: boolean;
   nonInteractive?: boolean;
   noWait?: boolean;
+  /** Build locally on this machine instead of remote cloud builder. */
+  local?: boolean;
 }
 
 export interface BuildResult {
