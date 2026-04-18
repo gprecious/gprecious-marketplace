@@ -36,8 +36,8 @@
       "name": "research-engine",
       "description": "Deep research engine — YouTube/arXiv/GitHub/blog/topic 키워드 심층 분석. 병렬 adapter fanout으로 마크다운 리포트 생성, Notion 데이터베이스에 자동 미러링.",
       "source": {
-        "source": "github",
-        "repo": "gprecious/research-engine"
+        "source": "url",
+        "url": "https://github.com/gprecious/research-engine.git"
       },
       "homepage": "https://github.com/gprecious/research-engine",
       "category": "productivity"
