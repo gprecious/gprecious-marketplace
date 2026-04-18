@@ -1,5 +1,5 @@
 import { readFileSync } from "fs";
-import { sign } from "jsonwebtoken";
+import jwt from "jsonwebtoken";
 import { loadConfig } from "./config";
 
 const ASC_BASE = "https://api.appstoreconnect.apple.com/v1";
@@ -12,7 +12,7 @@ function generateJwt(): string {
   const c = cfg();
   const privateKey = readFileSync(c.ios.ascKeyPath, "utf-8");
   const now = Math.floor(Date.now() / 1000);
-  return sign(
+  return jwt.sign(
     { iss: c.ios.ascIssuerId, iat: now, exp: now + 20 * 60, aud: "appstoreconnect-v1" },
     privateKey,
     { algorithm: "ES256", header: { alg: "ES256", kid: c.ios.ascKeyId, typ: "JWT" } }
