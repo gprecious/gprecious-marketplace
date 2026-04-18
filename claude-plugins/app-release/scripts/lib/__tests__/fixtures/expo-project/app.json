@@ -1,0 +1,8 @@
+{
+  "expo": {
+    "name": "TestAppFromAppJson",
+    "version": "2.0.0",
+    "ios": { "bundleIdentifier": "com.test.app.fromappjson" },
+    "android": { "package": "com.test.app.fromappjson" }
+  }
+}
