@@ -1,0 +1,7 @@
+{
+  "name": "app-release",
+  "version": "0.1.0",
+  "description": "크로스 스택 모바일 앱 스토어 릴리즈 파이프라인. Expo/Capacitor 지원, App Store Connect + Google Play 자동화.",
+  "author": { "name": "gprecious" },
+  "keywords": ["release", "app-store", "google-play", "expo", "capacitor", "fastlane"]
+}
