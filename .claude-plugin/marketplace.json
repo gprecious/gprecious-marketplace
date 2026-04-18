@@ -41,6 +41,12 @@
       },
       "homepage": "https://github.com/gprecious/research-engine",
       "category": "productivity"
+    },
+    {
+      "name": "app-release",
+      "description": "크로스 스택 모바일 앱 스토어 릴리즈 파이프라인 (Expo/Capacitor)",
+      "source": "./claude-plugins/app-release",
+      "category": "productivity"
     }
   ]
 }
