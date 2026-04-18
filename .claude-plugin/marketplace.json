@@ -31,6 +31,16 @@
       "description": "TDD Generator-Evaluator harness. Plan-Contract-Test-Build-Evaluate-Integrate-Learn 자동화 파이프라인.",
       "source": "./claude-plugins/harness",
       "category": "productivity"
+    },
+    {
+      "name": "research-engine",
+      "description": "Deep research engine — YouTube/arXiv/GitHub/blog/topic 키워드 심층 분석. 병렬 adapter fanout으로 마크다운 리포트 생성, Notion 데이터베이스에 자동 미러링.",
+      "source": {
+        "source": "github",
+        "repo": "gprecious/research-engine"
+      },
+      "homepage": "https://github.com/gprecious/research-engine",
+      "category": "productivity"
     }
   ]
 }
