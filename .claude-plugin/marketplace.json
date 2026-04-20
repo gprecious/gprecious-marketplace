@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "gprecious-marketplace",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "gprecious Claude Code 플러그인 마켓플레이스",
   "owner": {
     "name": "gprecious",
@@ -34,7 +34,7 @@
     },
     {
       "name": "research-engine",
-      "description": "Deep research engine — YouTube/arXiv/GitHub/blog/topic 키워드 심층 분석. 병렬 adapter fanout으로 마크다운 리포트 생성, Notion 데이터베이스에 자동 미러링.",
+      "description": "Deep research engine — YouTube/arXiv/GitHub/blog/topic 키워드 심층 분석. 병렬 adapter fanout으로 마크다운 리포트 생성, Notion 자동 미러링 + /research-visualize 로 차트·Mermaid·PPT 슬라이드 덱까지 한 번에.",
       "source": {
         "source": "url",
         "url": "https://github.com/gprecious/research-engine.git"
