@@ -47,6 +47,12 @@
       "description": "크로스 스택 모바일 앱 스토어 릴리즈 파이프라인 (Expo/Capacitor)",
       "source": "./claude-plugins/app-release",
       "category": "productivity"
+    },
+    {
+      "name": "cmux",
+      "description": "cmux 멀티페인 터미널 위에서 Claude Code/Codex 세션을 역할별 페인(plan/design/test/dev/review)으로 자동 오케스트레이션. 패널 간 메시지 송수신 skill 포함.",
+      "source": "./claude-plugins/cmux",
+      "category": "productivity"
     }
   ]
 }

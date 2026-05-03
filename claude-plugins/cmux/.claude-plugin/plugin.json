@@ -1,0 +1,14 @@
+{
+  "name": "cmux",
+  "version": "0.1.0",
+  "description": "cmux 멀티페인 터미널 위에서 Claude Code/Codex 세션을 역할별 페인으로 자동 오케스트레이션. 패널 간 메시지 송수신 + plan/design/test/dev/review 분리 파이프라인.",
+  "author": { "name": "gprecious" },
+  "keywords": [
+    "cmux",
+    "orchestration",
+    "multi-agent",
+    "tdd",
+    "claude-code",
+    "codex"
+  ]
+}

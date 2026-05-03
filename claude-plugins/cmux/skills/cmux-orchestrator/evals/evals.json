@@ -1,0 +1,54 @@
+{
+  "skill_name": "cmux-orchestrator",
+  "trigger_evals": [
+    {
+      "query": "feature/startup-api-bulk 에서 신청서 폼이랑 검증 로직 한 번에 만들어줘. plan, test, 구현, 리뷰 다 거쳐서.",
+      "should_trigger": true
+    },
+    {
+      "query": "claude 랑 codex 같이 띄워서 이 PR 작업해",
+      "should_trigger": true
+    },
+    {
+      "query": "여러 역할로 나눠서 결제 모듈 한 번에 만들어줘",
+      "should_trigger": true
+    },
+    {
+      "query": "오케스트레이션 한 번 해줘 — 회원 가입 플로우 전체",
+      "should_trigger": true
+    },
+    {
+      "query": "이 한 줄만 고쳐줘 — userName -> user_name",
+      "should_trigger": false
+    },
+    { "query": "이 함수 어떻게 동작해?", "should_trigger": false },
+    {
+      "query": "옆 페인 codex 한테 이거 한 번 봐달라고 해줘",
+      "should_trigger": false
+    },
+    {
+      "query": "dispatch parallel agents 로 테스트 3개 동시에 고쳐줘",
+      "should_trigger": false
+    }
+  ],
+  "behavior_evals": [
+    {
+      "id": 1,
+      "name": "bugfix-no-ui",
+      "prompt": "src/util/parsePhone.ts 의 한국 번호 파싱 버그 수정. 010-1234-5678 같은 표준 포맷이 fail. AC 정의 → RED 테스트 → fix → review 거쳐서.",
+      "expected_output": "manifest.json 에 plan/test-code/dev/review 4단계 done, 06-review.md 통과, AC ≥ 1 ✓"
+    },
+    {
+      "id": 2,
+      "name": "new-feature-with-figma",
+      "prompt": "Figma frame X 기반 신청서 폼 구현. design-system 컴포넌트 사용. plan-design-test-dev-review 풀 파이프라인.",
+      "expected_output": "07-design-verify.md match_status=pass 또는 partial(이슈 ≤ 2), 모든 AC ✓"
+    },
+    {
+      "id": 3,
+      "name": "resume",
+      "prompt": "(eval-1 의 manifest 가 plan done, test-code paused 상태에서) 재개해줘",
+      "expected_output": "plan skip, test-code 부터 이어감, 최종 manifest done"
+    }
+  ]
+}
