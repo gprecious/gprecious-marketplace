@@ -37,6 +37,17 @@ which cmux                  # /Applications/cmux.app/.../bin/cmux 가 떠야 함
 
 **중요한 함정**: `send-panel --panel pane:N` 형태는 `Surface is not a terminal` 에러를 낸다. 반드시 **`--surface surface:N`** 으로 surface ID 를 직접 지정해야 한다. `cmux tree` 출력에서 `surface surface:8 [terminal]` 처럼 보이는 ID 를 그대로 쓴다.
 
+## Workspace / Pane 식별 검증 (필수)
+
+이 skill 은 옆 패널과 단발 통신용이지만, 같은 window 안에 비슷한 surface 가 여러 개 있어 **잘못된 패널에 메시지를 보내는 사고가 자주 난다**. 매 send 직전에 다음 4단계를 반드시 통과한다.
+
+1. **`cmux tree` 로 대상 식별**: focused (`◀ here`) pane 은 절대 send 대상이 아니다. 사용자가 지칭한 패널의 surface ID 를 정확히 골라낸다. 후보가 여러 개면 capture 로 한 번 더 식별.
+2. **`cmux capture-pane --surface surface:N --lines 5` 로 sanity 확인**: 그 surface 가 정말 사용자가 말한 agent (codex/claude/shell) 인지 화면 단서로 검증. 단서가 모호하면 **send 중단** 후 사용자에게 어떤 surface 인지 확인.
+3. **`--workspace workspace:M --surface surface:N` 풀 명시**: workspace 옵션 생략 시 cmux 가 ambiguity 로 silent 하게 다른 workspace 에 메시지를 흘릴 수 있다. 새 workspace 가 여러 개 떠 있는 환경(`cmux-orchestrator` 와 병행)에서 특히 위험.
+4. **send 직전 한 줄 trace**: `send: workspace:M surface:N — captured tag: '<짧은 화면 단서>'` 를 본인 출력에 남긴다. 사고 발생 시 이 로그로 송신 기록 추적 가능.
+
+검증 실패(focused pane 이거나 화면 단서가 다름) 시 send 를 중단하고 사용자 확인. 잘못 보내진 메시지는 상대 패널의 컨텍스트를 오염시킨다는 점을 잊지 말 것.
+
 ## 표준 워크플로우
 
 ### 1단계 — 대상 패널 식별

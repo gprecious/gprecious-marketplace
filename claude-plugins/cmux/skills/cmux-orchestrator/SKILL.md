@@ -28,6 +28,21 @@ cmux 워크스페이스 위에서 Claude Code 와 Codex 세션을 역할별 페�
 
 orchestrator 도, 스폰된 페인도 anthropic / openai SDK 를 직접 import 하거나 `api.anthropic.com` 같은 엔드포인트로 직접 HTTP 호출을 보내지 않는다. 향후 이 skill 을 수정할 때 이 정책을 어기는 코드는 commit 거부 대상이다.
 
+## Workspace / Pane Isolation Hard Rule (불변)
+
+cmux-orchestrator 는 **사용자가 이미 떠 있는 workspace 에 절대 worker pane 을 만들거나 메시지를 보내지 않는다.** 같은 workspace 의 다른 pane 으로 메시지가 잘못 흘러들어가는 사고가 자주 발생하므로, 매 send 직전에 다음 절차를 강제한다.
+
+1. **새 workspace 강제 생성**: 새 task 시작 시 반드시 `cmux new-workspace --cwd <repo> --command "claude --dangerously-skip-permissions"` 로 신규 workspace 를 띄우고, plan/design/test-scenario/test-code/dev/review 페인은 모두 그 workspace 안에만 spawn 한다. `--here` 옵션은 사용자가 명시적으로 요청했을 때만 허용 — 그 경우에도 launcher pane 의 workspace ref 를 `LAUNCHER_WORKSPACE_REF` 로 별도 보존한다.
+2. **launcher / orchestrator workspace 분리 기록**: orchestrator manifest 의 `workspace_id` 와 launcher pane 의 workspace ref 를 모두 기록. 두 값이 같으면 abort.
+3. **모든 cmux 호출에 `--workspace --surface` 풀 명시**: `cmux send --surface surface:N` 만 쓰면 ambiguity 로 silent 하게 잘못된 workspace 의 pane 에 들어간다. 항상 `--workspace workspace:M --surface surface:N` 짝으로 호출.
+4. **메시지 송신 직전 pane ID 재검증** (모든 send 마다):
+   - `cmux tree` 또는 manifest 로 대상 surface 의 workspace ref 를 다시 확인 → 의도한 새 workspace 인지 검증
+   - 송신자(orchestrator pane) ↔ 수신자(역할 pane) 매핑이 manifest 의 role→surface 테이블과 일치하는지 대조
+   - 직전 한 줄 trace: `send: from=orchestrator(surface:X workspace:N) to=<role>(surface:Y workspace:N)` 를 본인 stdout 에 남긴다
+5. **검증 실패 처리**: 위 어느 단계라도 실패하면 send 를 중단하고 manifest 의 `stages.<role>.failures` 에 pane mismatch 사실을 기록한 뒤 사용자에게 critical 보고. 사용자 본 workspace 에 잘못된 메시지가 들어가면 그 컨텍스트는 오염된 것으로 간주하고 해당 task 는 paused 처리.
+
+이 규칙은 [[feedback-cmux-pane-isolation]] 운영 규칙의 skill-side enforcement 다.
+
 ## 워크플로우
 
 ### 0. 사전 점검 + resume 감지
