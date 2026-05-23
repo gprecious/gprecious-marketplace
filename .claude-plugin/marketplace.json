@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "gprecious-marketplace",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "gprecious Claude Code 플러그인 마켓플레이스",
   "owner": {
     "name": "gprecious",
@@ -28,6 +28,12 @@
       "name": "cmux",
       "description": "cmux 멀티페인 터미널 위에서 Claude Code/Codex 세션을 역할별 페인(plan/design/test/dev/review)으로 자동 오케스트레이션. 패널 간 메시지 송수신 skill 포함.",
       "source": "./claude-plugins/cmux",
+      "category": "productivity"
+    },
+    {
+      "name": "herdr",
+      "description": "herdr 위에서 Claude Code + Codex 워커를 병렬 spawn / prompt 주입 / 완료 대기 / 결과 회수 / 자동 정리 하는 경량 orchestrator. 한 tab 당 3x3 grid + 9개 초과 시 새 tab spillover.",
+      "source": "./claude-plugins/herdr",
       "category": "productivity"
     }
   ]

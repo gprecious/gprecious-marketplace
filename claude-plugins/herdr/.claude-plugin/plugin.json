@@ -1,0 +1,16 @@
+{
+  "name": "herdr",
+  "version": "0.1.0",
+  "description": "herdr 위에서 Claude Code + Codex 워커를 병렬 spawn / prompt 주입 / 완료 대기 / 결과 회수 / 자동 정리 하는 경량 orchestrator. 한 tab 당 3x3 grid + 9개 초과 시 새 tab spillover.",
+  "author": {
+    "name": "gprecious"
+  },
+  "keywords": [
+    "herdr",
+    "orchestration",
+    "multi-agent",
+    "parallel",
+    "claude-code",
+    "codex"
+  ]
+}
