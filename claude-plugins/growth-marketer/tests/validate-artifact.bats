@@ -27,3 +27,14 @@ FIX="$ROOT/tests/fixtures"
   run "$VALIDATE" no-such-schema "$FIX/service-profile.valid.json"
   [ "$status" -eq 2 ]
 }
+
+@test "channel-scores valid fixture passes" {
+  run "$VALIDATE" channel-scores "$FIX/channel-scores.valid.json"
+  [ "$status" -eq 0 ]
+}
+
+@test "channel-scores invalid fixture fails" {
+  run "$VALIDATE" channel-scores "$FIX/channel-scores.invalid.json"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"recommendation"* ]]
+}

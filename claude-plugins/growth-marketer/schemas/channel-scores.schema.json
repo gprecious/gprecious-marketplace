@@ -1,0 +1,31 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "channel-scores",
+  "type": "object",
+  "x-required": ["service_slug", "scored_at", "scores", "recommendation"],
+  "properties": {
+    "service_slug": { "type": "string" },
+    "scored_at": { "type": "string" },
+    "scores": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "x-required-item": ["channel", "score", "rationale"],
+        "properties": {
+          "channel": { "type": "string", "enum": ["meta", "google-ads", "naver", "aso", "seo", "retargeting"] },
+          "score": { "type": "number" },
+          "rationale": { "type": "string" }
+        }
+      }
+    },
+    "recommendation": {
+      "type": "object",
+      "x-required": ["primary", "why"],
+      "properties": {
+        "primary": { "type": "string" },
+        "secondary": { "type": "array", "items": { "type": "string" } },
+        "why": { "type": "string" }
+      }
+    }
+  }
+}
