@@ -10,8 +10,8 @@
 
 ## 동작 원리
 - skill-first / MCP-driven (무빌드). 브라우저 자동화는 연결된 Claude-in-Chrome MCP.
-- 산출물은 `schemas/` 의 데이터 계약을 따르고 `scripts/validate-artifact.sh` 로 검증.
-- 채널 추천 근거는 `references/channel-fit-rubric.md`.
+- 산출물은 `skills/analyze-service/schemas/` 의 데이터 계약을 따르고 `skills/analyze-service/scripts/validate-artifact.sh` 로 검증.
+- 채널 추천 근거는 `skills/analyze-service/references/channel-fit-rubric.md`.
 
 ## 안전
 - 모델 호출은 OAuth/구독 CLI 만(과금 API 키 금지).
@@ -19,7 +19,7 @@
 
 ## 테스트
 ```bash
-bats claude-plugins/growth-marketer/tests/validate-artifact.bats
+bats claude-plugins/growth-marketer/skills/analyze-service/tests/validate-artifact.bats
 ```
 
 ## 로드맵

@@ -1,0 +1,39 @@
+{
+  "name": "growth-marketer",
+  "version": "0.1.0",
+  "description": "Analyze your mobile app or web/SaaS service with Claude-in-Chrome to extract ICP, VOC, and positioning, then receive scored marketing channel recommendations.",
+  "author": {
+    "name": "gprecious",
+    "email": "gprecious@users.noreply.github.com",
+    "url": "https://github.com/gprecious"
+  },
+  "repository": "https://github.com/gprecious/gprecious-marketplace",
+  "keywords": [
+    "growth",
+    "marketing",
+    "icp",
+    "voc",
+    "channel-scoring",
+    "claude-code",
+    "codex"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "growth-marketer",
+    "shortDescription": "ICP + VOC analysis and marketing channel scoring for your app or SaaS.",
+    "longDescription": "Point growth-marketer at your App Store listing or SaaS landing page. It reads the page and reviews via Claude-in-Chrome, extracts your ICP, VOC quotes, and positioning, then scores each marketing channel (0–5) with a rationale. All outputs are saved as structured JSON artifacts validated against data-contract schemas. Requires a connected Claude-in-Chrome MCP session.",
+    "developerName": "gprecious",
+    "category": "Productivity",
+    "capabilities": [
+      "Analysis",
+      "Research",
+      "Scoring"
+    ],
+    "defaultPrompt": [
+      "Analyze my app and recommend marketing channels.",
+      "Extract ICP and VOC from my landing page.",
+      "Score channels for my SaaS product."
+    ],
+    "brandColor": "#16A34A"
+  }
+}
