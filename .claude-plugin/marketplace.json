@@ -1,11 +1,11 @@
 {
-  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "gprecious-marketplace",
-  "version": "1.2.0",
-  "description": "gprecious Claude Code 플러그인 마켓플레이스",
   "owner": {
     "name": "gprecious",
     "email": "gprecious@users.noreply.github.com"
+  },
+  "metadata": {
+    "description": "gprecious Claude Code plugin marketplace"
   },
   "plugins": [
     {
@@ -34,6 +34,16 @@
       "name": "herdr",
       "description": "herdr 위에서 Claude Code + Codex 워커를 병렬 spawn / prompt 주입 / 완료 대기 / 결과 회수 / 자동 정리 하는 경량 orchestrator. 한 tab 당 3x3 grid + 9개 초과 시 새 tab spillover.",
       "source": "./claude-plugins/herdr",
+      "category": "productivity"
+    },
+    {
+      "name": "hetzner-master",
+      "description": "Hetzner Proxmox VE 8 lab 배포·운영 runbook. LXC, Terraform state safety, Ansible rollout, Tailscale, monitoring, firewall smoke gate를 포함한 hetzner-proxmox-deploy skill.",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/gprecious/hetzner-master.git"
+      },
+      "homepage": "https://github.com/gprecious/hetzner-master",
       "category": "productivity"
     }
   ]

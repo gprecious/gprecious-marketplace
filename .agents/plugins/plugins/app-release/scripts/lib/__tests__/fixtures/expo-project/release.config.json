@@ -1,0 +1,23 @@
+{
+  "stack": "expo",
+  "appName": "TestApp",
+  "ios": {
+    "bundleId": "com.test.app",
+    "ascAppId": "1234567890",
+    "ascKeyId": "ABCDEFG",
+    "ascIssuerId": "iss-1",
+    "ascKeyPath": "./keys/asc-api-key.p8"
+  },
+  "android": {
+    "packageName": "com.test.app",
+    "serviceAccountPath": "./keys/play.json",
+    "track": "internal"
+  },
+  "paths": {
+    "fastlane": "./fastlane",
+    "screenshotsSource": "./screenshots/raw",
+    "screenshotsOutput": "./fastlane/screenshots",
+    "screenshotTemplates": "./screenshots/templates"
+  },
+  "store": { "locales": {} }
+}

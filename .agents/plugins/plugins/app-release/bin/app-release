@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PLUGIN_ROOT="$(dirname "$SCRIPT_DIR")"
+
+if [ $# -lt 1 ]; then
+  echo "usage: app-release <subcommand> [args...]" >&2
+  echo "  subcommands: store-status store-metadata screenshots store-promote rejection-analyzer release-orchestrator" >&2
+  exit 2
+fi
+
+SUB="$1"; shift
+
+if [ ! -d "$PLUGIN_ROOT/node_modules" ]; then
+  echo "[app-release] node_modules missing. Run: cd \"$PLUGIN_ROOT\" && npm install" >&2
+  exit 1
+fi
+
+SCRIPT="$PLUGIN_ROOT/scripts/${SUB}.ts"
+if [ ! -f "$SCRIPT" ]; then
+  echo "[app-release] unknown subcommand: $SUB" >&2
+  exit 2
+fi
+
+exec "$PLUGIN_ROOT/node_modules/.bin/tsx" "$SCRIPT" "$@"

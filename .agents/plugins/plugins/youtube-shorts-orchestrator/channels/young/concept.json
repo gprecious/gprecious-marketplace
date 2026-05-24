@@ -1,0 +1,21 @@
+{
+  "channel_id": "channel-young",
+  "target_demographics": {
+    "age_range": [10, 29],
+    "primary_interests": ["트렌드", "밈", "자기계발", "연애", "취업", "재테크입문"],
+    "viewing_context": ["출퇴근", "점심시간", "자기 전", "휴식"]
+  },
+  "content_pillars": [
+    {"name": "트렌드", "description": "밈, 바이럴, 챌린지", "weight": 25},
+    {"name": "자기계발", "description": "공부법, 습관, 동기부여", "weight": 25},
+    {"name": "연애/관계", "description": "연애 심리, 소개팅, 고민", "weight": 20},
+    {"name": "취업/진로", "description": "면접, 이력서, 직업탐색", "weight": 15},
+    {"name": "재테크입문", "description": "저축, 주식 기초", "weight": 15}
+  ],
+  "tone_and_manner": {
+    "style": "빠르고 자극적",
+    "language": "친근한 반말, 밈 활용",
+    "energy": "높음"
+  },
+  "forbidden_topics": ["확정되지 않은 투자 조언", "불법 재테크", "혐오 콘텐츠"]
+}

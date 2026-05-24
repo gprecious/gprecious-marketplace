@@ -1,0 +1,80 @@
+{
+  "name": "gprecious-marketplace",
+  "interface": {
+    "displayName": "Gprecious Marketplace"
+  },
+  "plugins": [
+    {
+      "name": "app-release",
+      "source": {
+        "source": "local",
+        "path": "./.agents/plugins/plugins/app-release"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "cmux",
+      "source": {
+        "source": "local",
+        "path": "./.agents/plugins/plugins/cmux"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "herdr",
+      "source": {
+        "source": "local",
+        "path": "./.agents/plugins/plugins/herdr"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "youtube-shorts-orchestrator",
+      "source": {
+        "source": "local",
+        "path": "./.agents/plugins/plugins/youtube-shorts-orchestrator"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "research-engine",
+      "source": {
+        "source": "local",
+        "path": "./.agents/plugins/plugins/research-engine"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "hetzner-master",
+      "source": {
+        "source": "local",
+        "path": "./.agents/plugins/plugins/hetzner-master"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

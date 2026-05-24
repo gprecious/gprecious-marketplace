@@ -1,0 +1,36 @@
+{
+  "name": "herdr",
+  "version": "0.1.0",
+  "description": "herdr workspace, tab, pane, and agent orchestration skills.",
+  "author": {
+    "name": "gprecious",
+    "email": "gprecious@users.noreply.github.com",
+    "url": "https://github.com/gprecious"
+  },
+  "repository": "https://github.com/gprecious/gprecious-marketplace",
+  "keywords": [
+    "herdr",
+    "orchestration",
+    "multi-agent",
+    "claude-code",
+    "codex"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "herdr",
+    "shortDescription": "Control herdr multi-pane agent workflows.",
+    "longDescription": "Use herdr to create isolated workspaces, split panes, spawn Claude Code or Codex workers, inject prompts, wait for agent status, and collect verification output.",
+    "developerName": "gprecious",
+    "category": "Productivity",
+    "capabilities": [
+      "Orchestration",
+      "Interactive"
+    ],
+    "defaultPrompt": [
+      "Open a herdr worker pane for verification.",
+      "Run Claude and Codex cross-checks.",
+      "Read the output from a herdr pane."
+    ],
+    "brandColor": "#0F766E"
+  }
+}

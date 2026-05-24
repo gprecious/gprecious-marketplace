@@ -1,0 +1,36 @@
+{
+  "name": "cmux",
+  "version": "0.1.0",
+  "description": "cmux multi-pane orchestration skills for Claude Code and Codex sessions.",
+  "author": {
+    "name": "gprecious",
+    "email": "gprecious@users.noreply.github.com",
+    "url": "https://github.com/gprecious"
+  },
+  "repository": "https://github.com/gprecious/gprecious-marketplace",
+  "keywords": [
+    "cmux",
+    "orchestration",
+    "multi-agent",
+    "claude-code",
+    "codex"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "cmux",
+    "shortDescription": "Orchestrate multi-pane agent workflows.",
+    "longDescription": "Run cmux-based multi-agent workflows that split planning, design, test, implementation, and review across Claude Code and Codex panes.",
+    "developerName": "gprecious",
+    "category": "Productivity",
+    "capabilities": [
+      "Orchestration",
+      "Interactive"
+    ],
+    "defaultPrompt": [
+      "Use cmux to split this task across agents.",
+      "Run a plan/dev/review orchestration.",
+      "Ask another pane for a focused review."
+    ],
+    "brandColor": "#0891B2"
+  }
+}

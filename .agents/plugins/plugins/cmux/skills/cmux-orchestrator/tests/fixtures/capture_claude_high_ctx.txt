@@ -1,0 +1,4 @@
+이전 컨텍스트가 많습니다.
+
+❯
+claude opus 4.7  ·  ~/repo  ·  72% context used

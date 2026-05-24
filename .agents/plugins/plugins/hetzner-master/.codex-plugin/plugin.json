@@ -1,0 +1,37 @@
+{
+  "name": "hetzner-master",
+  "version": "0.1.0",
+  "description": "Hetzner Proxmox lab deployment and operations runbook for Codex.",
+  "author": {
+    "name": "gprecious",
+    "email": "gprecious@users.noreply.github.com",
+    "url": "https://github.com/gprecious"
+  },
+  "repository": "https://github.com/gprecious/hetzner-master",
+  "keywords": [
+    "hetzner",
+    "proxmox",
+    "lxc",
+    "terraform",
+    "ansible",
+    "tailscale"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Hetzner Master",
+    "shortDescription": "Deploy and operate the Hetzner Proxmox lab.",
+    "longDescription": "Use the hetzner-proxmox-deploy skill for the gprecious Hetzner Proxmox lab: LXC provisioning, Terraform state safety, Ansible workload rollout, Tailscale access, monitoring, firewall, and smoke-test gates.",
+    "developerName": "gprecious",
+    "category": "Productivity",
+    "capabilities": [
+      "Infrastructure",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Deploy a new LXC workload in the lab.",
+      "Check the Hetzner Proxmox deployment state.",
+      "Use the Proxmox deploy runbook safely."
+    ],
+    "brandColor": "#0F766E"
+  }
+}

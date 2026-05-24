@@ -1,0 +1,36 @@
+{
+  "name": "youtube-shorts-orchestrator",
+  "version": "0.1.0",
+  "description": "YouTube Shorts production workflow adapted from the OpenCode plugin for Codex.",
+  "author": {
+    "name": "gprecious",
+    "email": "gprecious@users.noreply.github.com",
+    "url": "https://github.com/gprecious"
+  },
+  "repository": "https://github.com/gprecious/gprecious-marketplace",
+  "keywords": [
+    "youtube",
+    "shorts",
+    "content",
+    "video",
+    "orchestration"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "YouTube Shorts Orchestrator",
+    "shortDescription": "Plan and run YouTube Shorts workflows.",
+    "longDescription": "Expose the YouTube Shorts production pipeline to Codex with bundled agents, channel policies, history files, scripts, and the shorts skill adapted from the OpenCode plugin.",
+    "developerName": "gprecious",
+    "category": "Productivity",
+    "capabilities": [
+      "Content",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Create a YouTube Shorts workflow plan.",
+      "Generate one Shorts concept for Korea.",
+      "Review a Shorts production session."
+    ],
+    "brandColor": "#DC2626"
+  }
+}

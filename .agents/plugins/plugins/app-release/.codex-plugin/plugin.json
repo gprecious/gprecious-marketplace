@@ -1,0 +1,37 @@
+{
+  "name": "app-release",
+  "version": "0.1.0",
+  "description": "Cross-stack mobile app store release pipeline for Expo, Capacitor, and Flutter projects.",
+  "author": {
+    "name": "gprecious",
+    "email": "gprecious@users.noreply.github.com",
+    "url": "https://github.com/gprecious"
+  },
+  "repository": "https://github.com/gprecious/gprecious-marketplace",
+  "keywords": [
+    "app-store",
+    "google-play",
+    "expo",
+    "capacitor",
+    "flutter",
+    "release"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "App Release",
+    "shortDescription": "Run mobile app store release workflows.",
+    "longDescription": "Use Codex skills and bundled scripts to check release readiness, sync App Store and Google Play metadata, generate screenshots, submit builds, inspect status, promote releases, and respond to review rejections.",
+    "developerName": "gprecious",
+    "category": "Productivity",
+    "capabilities": [
+      "Release",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Run the release readiness check.",
+      "Prepare app store metadata.",
+      "Check the latest store review status."
+    ],
+    "brandColor": "#7C3AED"
+  }
+}
