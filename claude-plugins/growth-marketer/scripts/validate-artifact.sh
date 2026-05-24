@@ -13,6 +13,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SCHEMA="$ROOT/schemas/${SCHEMA_NAME}.schema.json"
 
 [ -f "$SCHEMA" ]   || { echo "schema not found: $SCHEMA"; exit 2; }
+[ -f "$ARTIFACT" ] || { echo "artifact file not found: $ARTIFACT"; exit 2; }
 jq -e . "$ARTIFACT" >/dev/null 2>&1 || { echo "artifact is not valid JSON: $ARTIFACT"; exit 2; }
 jq -e 'type == "object"' "$ARTIFACT" >/dev/null 2>&1 || { echo "artifact root must be a JSON object: $ARTIFACT"; exit 2; }
 

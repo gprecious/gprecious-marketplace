@@ -20,7 +20,7 @@ description: |
 
 ## 절차
 1. **slug 결정** — 서비스명에서 kebab-case slug. 산출 루트:
-   `<repo-root>/.growth-marketer/<slug>/` (.growth-marketer/ 는 repo 루트 기준; .gitignore 처리됨). `runs/<ISO8601>/` 스냅샷 디렉토리도 만든다 (UTC·초단위, 예: 2026-05-25T09:00:00Z).
+   `<repo-root>/.growth-marketer/<slug>/` (.growth-marketer/ 는 repo 루트 기준; 사용자 프로젝트 .gitignore 에 .growth-marketer/ 가 없으면 추가한다). `runs/<ISO8601>/` 스냅샷 디렉토리도 만든다 (UTC·초단위, 예: 2026-05-25T09:00:00Z).
 2. **페이지 읽기 (chrome MCP)** — `mcp__claude-in-chrome__*` 로:
    - 메인 리스팅/랜딩: 가치제안·카테고리·기능·가격.
    - 리뷰/소셜: 실제 사용자 문장(VOC) 인용을 source URL 과 함께 수집.
@@ -38,8 +38,8 @@ description: |
 6. **service-brief.md 작성** — 사람이 읽는 요약(프로파일 핵심 + 추천 채널 + 근거).
 7. **검증 (필수 게이트)** — 두 산출물을 검증한다. 실패하면 누락 필드를 채워 다시 저장:
    ```bash
-   bash <growth-marketer-plugin-root>/scripts/validate-artifact.sh service-profile <slug-dir>/service-profile.json
-   bash <growth-marketer-plugin-root>/scripts/validate-artifact.sh channel-scores  <slug-dir>/channel-scores.json
+   bash "${CLAUDE_PLUGIN_ROOT}/scripts/validate-artifact.sh" service-profile <slug-dir>/service-profile.json
+   bash "${CLAUDE_PLUGIN_ROOT}/scripts/validate-artifact.sh" channel-scores  <slug-dir>/channel-scores.json
    ```
 8. **보고** — 추천 채널과 근거를 자연어로 요약하고, 저장된 파일 경로를 알린다.
 

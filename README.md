@@ -14,6 +14,7 @@ gprecious-marketplace/
 ├── claude-plugins/          # Claude Code 플러그인
 │   ├── app-release/
 │   ├── cmux/
+│   ├── growth-marketer/
 │   └── herdr/
 └── opencode-plugins/        # OpenCode 플러그인
     └── youtube-shorts-orchestrator/
@@ -56,6 +57,7 @@ Claude marketplace에 있는 플러그인은 모두 Codex marketplace에도 노�
 | herdr | herdr 기반 worker pane orchestration | `.agents/plugins/plugins/herdr` |
 | youtube-shorts-orchestrator | YouTube Shorts 제작 workflow | `.agents/plugins/plugins/youtube-shorts-orchestrator` |
 | hetzner-master | Hetzner Proxmox lab deploy/ops runbook | `.agents/plugins/plugins/hetzner-master` |
+| growth-marketer | 모바일 앱·웹/SaaS 마케팅 자동화. 서비스 분석 → 채널 추천 → 카피·플레이북 | `.agents/plugins/plugins/growth-marketer` |
 
 ### 설치 방법
 
@@ -69,6 +71,7 @@ codex plugin add cmux@gprecious-marketplace
 codex plugin add herdr@gprecious-marketplace
 codex plugin add youtube-shorts-orchestrator@gprecious-marketplace
 codex plugin add hetzner-master@gprecious-marketplace
+codex plugin add growth-marketer@gprecious-marketplace
 ```
 
 GitHub에서 직접 추가할 때는 repo root 아래 `.agents/plugins`만 sparse checkout하면 된다:

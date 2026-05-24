@@ -14,6 +14,13 @@ FIX="$ROOT/tests/fixtures"
   [ "$status" -eq 1 ]
   [[ "$output" == *"positioning"* ]]
   [[ "$output" == *"source_url"* ]]
+  [[ "$output" == *"channel_signals"* ]]
+}
+
+@test "missing artifact file exits 2" {
+  run "$VALIDATE" service-profile "$FIX/does-not-exist.json"
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"not found"* ]]
 }
 
 @test "non-JSON artifact exits 2" {
