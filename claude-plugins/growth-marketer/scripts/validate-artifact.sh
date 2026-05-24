@@ -3,13 +3,18 @@
 # Usage: validate-artifact.sh <schema-name> <artifact.json>
 set -euo pipefail
 
-SCHEMA_NAME="${1:?usage: validate-artifact.sh <schema-name> <artifact.json>}"
-ARTIFACT="${2:?usage: validate-artifact.sh <schema-name> <artifact.json>}"
+if [ "$#" -lt 2 ]; then
+  echo "usage: validate-artifact.sh <schema-name> <artifact.json>"
+  exit 2
+fi
+SCHEMA_NAME="$1"
+ARTIFACT="$2"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SCHEMA="$ROOT/schemas/${SCHEMA_NAME}.schema.json"
 
 [ -f "$SCHEMA" ]   || { echo "schema not found: $SCHEMA"; exit 2; }
 jq -e . "$ARTIFACT" >/dev/null 2>&1 || { echo "artifact is not valid JSON: $ARTIFACT"; exit 2; }
+jq -e 'type == "object"' "$ARTIFACT" >/dev/null 2>&1 || { echo "artifact root must be a JSON object: $ARTIFACT"; exit 2; }
 
 errors=0
 

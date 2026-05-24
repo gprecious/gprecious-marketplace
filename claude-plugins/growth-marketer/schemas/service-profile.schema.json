@@ -1,6 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "service-profile",
+  "description": "validated by scripts/validate-artifact.sh via x-required / x-required-item hints (not standard JSON Schema 'required'), so generic validators ignore these constraints.",
   "type": "object",
   "x-required": ["source_urls", "captured_at", "icp", "voc", "positioning", "evidence"],
   "properties": {
