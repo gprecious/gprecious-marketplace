@@ -42,6 +42,24 @@ orchestrator. 협업 패턴 (fan-out / split / 역할 분담) 은 호출자가 p
   직접 HTTP 호출 금지.
 - 이 정책을 어기는 PR/commit 은 거부 대상.
 
+## 워커 실행 모드 (불변): 인터랙티브 TUI only
+
+worker pane 에는 **항상 인터랙티브 TUI 세션**을 띄운다. prompt 는 CLI 인자로 붙이지
+않고, 세션이 시작된 뒤 `send-text` / `send-keys` 로 주입한다. 그래야 사용자가 pane
+에서 에이전트가 실시간으로 일하는 모습을 직접 볼 수 있다.
+
+올바름 (인터랙티브 — 세션 유지, 사용자 관찰 가능):
+- `claude --dangerously-skip-permissions`  → 이후 `send-text` 로 prompt 주입
+- `codex --dangerously-bypass-approvals-and-sandbox`  → 이후 `send-text` 로 prompt 주입
+
+**금지** (headless one-shot — 사용자 눈에 안 보이고 즉시 종료해 백그라운드처럼 느껴짐):
+- `claude -p "..."` / `claude --print "..."`
+- `codex exec "..."`
+- prompt 를 CLI 인자로 직접 붙여 한 번에 실행하는 모든 형태
+
+즉 `pane run` 으로 띄우는 명령에는 **prompt 가 절대 포함되지 않는다**. 명령은 TUI 를
+띄우기만 하고, prompt 는 반드시 별도 prompt 주입 단계(4)에서 넣는다.
+
 ## 위계 매핑
 
 | herdr 개념 | 용도 |
@@ -99,6 +117,7 @@ LAUNCHER_WS=$(herdr pane list | jq -r '.result.focused.workspace_id')
 호출자(Claude Code 또는 Codex)는 skill body 진입 전에 두 배열을 정의한다.
 
 ```bash
+# WORKER_CMDS = TUI 를 띄우는 명령만. prompt 절대 포함 금지 (-p / exec 금지 — 위 불변 규칙).
 WORKER_CMDS=(
   "claude --dangerously-skip-permissions"
   "codex --dangerously-bypass-approvals-and-sandbox"
@@ -114,7 +133,7 @@ N=${#WORKER_CMDS[@]}
 [ "$N" -ge 1 ] || { echo "N must be >= 1"; exit 1; }
 
 # 옵션
-: "${KEEP_WS:=0}"          # 1 이면 결과 회수 후 workspace 닫지 않음
+: "${KEEP_WS:=0}"          # 1 이면 close 확인 절차 생략하고 항상 workspace 유지
 : "${TIMEOUT_MS:=600000}"  # worker 당 대기 타임아웃 (ms)
 ```
 
@@ -196,11 +215,14 @@ while [ "$remaining" -gt 0 ]; do
   remaining=$(( remaining - this_count ))
 done
 
-# 각 slot 에 worker CLI 띄우기
+# 각 slot 에 worker TUI 띄우기 (prompt 없이 — 인터랙티브 세션만 시작)
 for ((i=0; i<N; i++)); do
   herdr pane run "${PANES[$i]}" "${WORKER_CMDS[$i]}"
 done
 ```
+
+`WORKER_CMDS` 에는 prompt 가 없다 (불변 규칙). `claude -p` / `codex exec` 같은
+headless one-shot 으로 띄우지 말 것 — 사용자가 못 보고 즉시 끝난다.
 
 CLI 가 prompt 입력 가능 상태가 되도록 잠깐 대기 (claude / codex 시작 대기). 안전한
 방법은 각 worker pane 에서 "ready" 신호를 `wait output` 으로 받는 것:
@@ -210,6 +232,16 @@ for ((i=0; i<N; i++)); do
   # claude/codex 둘 다 ">" 또는 prompt 마커가 뜰 때까지 대기 (단순 휴리스틱)
   herdr wait output "${PANES[$i]}" --match ">" --timeout 30000 || true
 done
+```
+
+### 3.5 worker workspace 보이기 (focus — 필수)
+
+worker TUI 가 다 떴으면 사용자가 실시간으로 볼 수 있도록 worker workspace 로 focus
+를 전환한다. orchestrator 본인 pane 은 launcher workspace 에서 백그라운드로 계속
+동작하므로 focus 를 옮겨도 조율은 멈추지 않는다.
+
+```bash
+herdr workspace focus "$WS_ID"
 ```
 
 ### 4. prompt 주입 (격리 가드)
@@ -258,12 +290,26 @@ for ((i=0; i<N; i++)); do
   OUTPUTS+=( "$(herdr pane read "${PANES[$i]}" \
                 --source recent-unwrapped --lines 300)" )
 done
+
+# 결과를 보고하기 전에 orchestrator pane 으로 focus 복귀 — 사용자가 요약 보고 +
+# close 확인 질문을 자기 화면(launcher workspace)에서 보게 한다.
+herdr workspace focus "$LAUNCHER_WS"
 ```
 
 orchestrator (호출자) 가 `${OUTPUTS[@]}` 를 자연어로 사용자에게 정리 보고. 집계
 포맷은 호출자 재량 — 비교 / 합치기 / 요약 자유.
 
-### 7. Cleanup (default 자동)
+### 7. Cleanup (사용자 확인 후 close)
+
+worker workspace 는 **자동으로 닫지 않는다**. 사용자가 직접 worker pane 의 최종
+상태를 확인할 수 있어야 하므로, 성공해도 바로 close 하지 않는다.
+
+절차:
+
+1. orchestrator 가 `${OUTPUTS[@]}` 를 자연어로 사용자에게 보고한다.
+2. 실패한 slot 이 있으면 (`WAIT_RCS` 에 비-0) tabs / panes / rcs 를 안내하고 보존.
+3. 사용자에게 worker workspace 를 닫아도 되는지 확인한다 (`WS_ID` 안내).
+4. 사용자가 확인하면 **그때** close:
 
 ```bash
 all_ok=1
@@ -271,20 +317,21 @@ for rc in "${WAIT_RCS[@]}"; do
   [ "$rc" = "0" ] || { all_ok=0; break; }
 done
 
-if [ "$all_ok" = "1" ] && [ "${KEEP_WS:-0}" != "1" ]; then
-  herdr workspace close "$WS_ID"
-  echo "cleanup: workspace $WS_ID closed (tabs ${TAB_IDS[*]} + ${#PANES[@]} panes 통째 정리)"
-else
-  echo "cleanup skipped — workspace $WS_ID kept for inspection"
+if [ "$all_ok" != "1" ]; then
+  echo "일부 worker 실패 — workspace $WS_ID 보존 (확인용)"
   echo "  tabs:  ${TAB_IDS[*]}"
   echo "  panes: ${PANES[*]}"
   echo "  rcs:   ${WAIT_RCS[*]}"
 fi
+
+# 아래 close 는 사용자가 "닫아도 된다" 고 확인한 뒤에만 실행한다.
+# (orchestrator 가 다음 턴에서 사용자 응답을 받고 호출)
+#   herdr workspace close "$WS_ID"
+#   echo "cleanup: workspace $WS_ID closed (tabs ${TAB_IDS[*]} + ${#PANES[@]} panes 통째 정리)"
 ```
 
-- default: 모든 worker 정상 종료 시 `workspace close` 한 번으로 worker pane /
-  tab / workspace 통째 정리.
-- 실패 시 (`WAIT_RCS` 에 비-0 존재) 또는 `KEEP_WS=1` 설정 시 workspace 유지.
+- default: 성공/실패와 무관하게 workspace 를 유지하고 사용자 확인을 기다린 뒤 close.
+- `KEEP_WS=1`: 확인 절차도 생략하고 항상 유지 (사용자가 수동 정리).
 
 ## 호출자별 진입점
 
@@ -314,9 +361,12 @@ Codex 호출자도 본인은 orchestrator 로 남고, worker pane (claude/codex 
    새 workspace.
 3. **send 직전 workspace_id 검증** — pane 의 workspace_id 가 `WS_ID` 와 일치할
    때만 송신.
-4. **타임아웃 + 실패 보존** — 실패 시 workspace 닫지 않음. tabs / panes / rcs
-   사용자에게 안내.
+4. **타임아웃 + 확인 후 정리** — 성공/실패 무관하게 자동 close 금지. 결과 보고 후
+   사용자 확인을 받고 close. 실패 시 tabs / panes / rcs 안내.
 5. **인증 정책 불변** — API 키 사용 금지. OAuth CLI 만.
+6. **인터랙티브 TUI only** — worker 는 항상 TUI 로 띄우고 prompt 는 `send-text` 로
+   주입. `claude -p` / `codex exec` 등 headless one-shot 금지. spawn 후 worker
+   workspace 로 focus 전환해 사용자가 실시간 관찰 가능하게 함.
 
 ## 비기능 / 미구현 (v0.1.0 YAGNI)
 
