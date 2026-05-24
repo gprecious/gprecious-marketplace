@@ -3,7 +3,7 @@
   "title": "service-profile",
   "description": "validated by scripts/validate-artifact.sh via x-required / x-required-item hints (not standard JSON Schema 'required'), so generic validators ignore these constraints.",
   "type": "object",
-  "x-required": ["source_urls", "captured_at", "icp", "voc", "positioning", "evidence"],
+  "x-required": ["source_urls", "captured_at", "icp", "voc", "positioning", "evidence", "channel_signals"],
   "properties": {
     "source_urls": { "type": "array", "items": { "type": "string" } },
     "captured_at": { "type": "string", "description": "ISO-8601 timestamp" },
@@ -48,6 +48,17 @@
           "claim": { "type": "string" },
           "source_url": { "type": "string" }
         }
+      }
+    },
+    "channel_signals": {
+      "type": "object",
+      "x-required": ["product_type", "market", "price_model", "target", "discovery_intent"],
+      "properties": {
+        "product_type": { "type": "string", "enum": ["mobile_app", "web_saas"] },
+        "market": { "type": "string", "enum": ["kr", "global", "both"] },
+        "price_model": { "type": "string", "enum": ["free", "freemium", "paid", "subscription"] },
+        "target": { "type": "string", "enum": ["b2c", "b2b"] },
+        "discovery_intent": { "type": "string", "enum": ["high", "low"] }
       }
     }
   }

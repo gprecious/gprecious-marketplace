@@ -14,6 +14,13 @@
     "category": "productivity/habit",
     "differentiators": ["맥락 알림"]
   },
+  "channel_signals": {
+    "product_type": "mobile_app",
+    "market": "both",
+    "price_model": "freemium",
+    "target": "b2c",
+    "discovery_intent": "low"
+  },
   "evidence": [
     { "claim": "리뷰 4.6점", "source_url": "https://apps.apple.com/app/id000" }
   ]

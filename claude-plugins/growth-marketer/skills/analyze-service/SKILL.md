@@ -20,26 +20,26 @@ description: |
 
 ## 절차
 1. **slug 결정** — 서비스명에서 kebab-case slug. 산출 루트:
-   `<project>/.growth-marketer/<slug>/`. `runs/<ISO8601>/` 스냅샷 디렉토리도 만든다.
+   `<repo-root>/.growth-marketer/<slug>/` (.growth-marketer/ 는 repo 루트 기준; .gitignore 처리됨). `runs/<ISO8601>/` 스냅샷 디렉토리도 만든다 (UTC·초단위, 예: 2026-05-25T09:00:00Z).
 2. **페이지 읽기 (chrome MCP)** — `mcp__claude-in-chrome__*` 로:
    - 메인 리스팅/랜딩: 가치제안·카테고리·기능·가격.
    - 리뷰/소셜: 실제 사용자 문장(VOC) 인용을 source URL 과 함께 수집.
    봇 차단 회피를 위해 사용자의 실제 로그인 세션을 그대로 사용(headless 금지).
 3. **경쟁사 (선택, live)** — 경쟁사 URL 이 있으면 동일하게 읽고, 더 깊은 시장
    스캔이 필요하면 research-engine `/research` 를 호출한다.
+   경쟁사에서 얻은 사실은 service-profile.json 의 evidence[](source_url 포함) 와 positioning.differentiators 에 반영한다(별도 파일 없음).
 4. **service-profile.json 작성** — `schemas/service-profile.schema.json` 스키마대로:
    icp(segment/pains/goals), voc[](quote+source_url), positioning(value_prop/
    category/differentiators), evidence[](claim+source_url). 모든 주장에 출처 부착.
-   추가로 채널 스코어링에 쓸 신호(product_type/market/price_model/target/
-   discovery_intent)를 positioning 또는 별도 필드로 기록.
+   추가로 채널 스코어링 입력인 `channel_signals` 객체(product_type/market/price_model/target/discovery_intent)를 schema 의 `channel_signals` 필드로 기록한다.
 5. **채널 스코어링** — `references/channel-fit-rubric.md` 규칙으로 각 채널 0~5 점 +
    rationale, recommendation(primary/secondary/why) 산출 →
    `channel-scores.json` (`schemas/channel-scores.schema.json` 준수).
 6. **service-brief.md 작성** — 사람이 읽는 요약(프로파일 핵심 + 추천 채널 + 근거).
 7. **검증 (필수 게이트)** — 두 산출물을 검증한다. 실패하면 누락 필드를 채워 다시 저장:
    ```bash
-   bash <plugin>/scripts/validate-artifact.sh service-profile <slug-dir>/service-profile.json
-   bash <plugin>/scripts/validate-artifact.sh channel-scores  <slug-dir>/channel-scores.json
+   bash <growth-marketer-plugin-root>/scripts/validate-artifact.sh service-profile <slug-dir>/service-profile.json
+   bash <growth-marketer-plugin-root>/scripts/validate-artifact.sh channel-scores  <slug-dir>/channel-scores.json
    ```
 8. **보고** — 추천 채널과 근거를 자연어로 요약하고, 저장된 파일 경로를 알린다.
 
