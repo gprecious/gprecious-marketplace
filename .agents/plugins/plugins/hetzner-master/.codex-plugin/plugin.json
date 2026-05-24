@@ -1,6 +1,6 @@
 {
   "name": "hetzner-master",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Hetzner Proxmox lab deployment and operations runbook for Codex.",
   "author": {
     "name": "gprecious",

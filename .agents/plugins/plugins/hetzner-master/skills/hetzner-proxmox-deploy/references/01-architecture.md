@@ -102,11 +102,10 @@ CTID 규약:
 - 200~ — 임시/실험 (절대 prod 워크로드 두지 말 것 — W1 에서 CT 200 가 IP 충돌로 사장된 사례 있음, `docs/ops-w1-bootstrap.md`)
 
 예약:
-- CT 150 `postgres-backup-relay` → 10.10.10.105 (shared PostgreSQL appliance backup relay)
-  - ⚠️ **COLLISION (2026-05-18, unresolved)**: CT 150 is currently live as `ops` (TF-drift, other-session work). Decision pending — see `docs/wisdom/06-ctid-reservation-discipline.md`. Implementation of `postgres-backup-relay` must wait until this is resolved (reassign reservation, or reclaim CT 150).
-- VM 160 `shared-postgres-prod-primary` → 10.10.10.110
-- VM 161 `shared-postgres-prod-standby` → 10.10.10.111
-- CT 162 `shared-postgres-prod-router` → 10.10.10.112
+- CT 170 `postgres-backup-relay` → 10.10.10.105 (shared PostgreSQL appliance backup relay)
+- VM 171 `shared-postgres-prod-primary` → 10.10.10.110
+- VM 172 `shared-postgres-prod-standby` → 10.10.10.111
+- CT 173 `shared-postgres-prod-router` → 10.10.10.112
 
 ## RESERVATION RULE — 새 ID 를 doc 에 예약하기 전 필수 검증
 
@@ -156,11 +155,13 @@ ssh root@10.10.10.1 'for ip in <후보들>; do ping -W 1 -c 1 10.10.10.$ip >/dev
 
 | CTID | hostname | IP | OS | Memory | 역할 |
 |------|----------|-----|----|--------|------|
-| 100 | ts-router | 10.10.10.10 | Debian 12 | 256MB | Tailscale subnet router |
+| 100 | ts-router | 10.10.10.10 | Debian 12 | 256MB | Tailscale subnet router. Bootstrap-managed by `bootstrap/06-tailscale-router-lxc.sh`; intentionally not imported into Terraform because it is the route required to reach the lab. |
 | 101 | monitor | 10.10.10.20 | Debian 12 | 4GB | Prometheus + Grafana + Alertmanager |
-| 109 | ingress | 10.10.10.5 | Debian 12 | — | Caddy 공개 진입점 (TLS termination, vhost routing). 호스트 외부 관리 — Terraform 미사용. `ansible/playbooks/ingress.yml` 가 ops vhost 만 blockinfile 으로 추가. |
+| 109 | ingress | 10.10.10.5 | Debian 12 | 512MB | Caddy 공개 진입점 (TLS termination, vhost routing). LXC envelope is Terraform-managed; Caddy vhosts are managed by `ansible/playbooks/ingress.yml` / `ansible/roles/ops-ingress`. |
 | 110 | officetel-analyzer | 10.10.10.30 | Debian 12 | — | Docker 워크로드 (외부 운영). **건드리지 말 것** — W1 에서 충돌로 cleanup 한 적 있음. |
+| 111 | ladder | 10.10.10.34 | Alpine | 128MB | Legacy static app. LXC envelope is Terraform-managed; app contents are external until a dedicated role exists. |
 | 150 | ops | 10.10.10.50 | Debian 12 | 8GB | **운영 평면**: Postgres 16 (port 5433, DB `app`) + Redis 7 + Caddy + web-app (Bun/Hono, port 3001) + worker. `terraform/modules/ops/` + `ansible/roles/ops/`. 상세: [`09-ops-plane.md`](09-ops-plane.md). |
+| 210 | neonnovel-stack | 10.10.10.31 | Debian 12 | 16GB | Legacy Docker/Supabase stack. LXC envelope is Terraform-managed; app deploy remains external. |
 
 ## 접근 패턴
 

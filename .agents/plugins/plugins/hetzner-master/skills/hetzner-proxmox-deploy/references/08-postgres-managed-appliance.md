@@ -124,7 +124,7 @@ Dedicated appliance를 새로 만들기 전에 먼저 shared appliance 안의 lo
 | `instance_name` | `shared-postgres-prod` |
 | primary VMID / IP | `160` / `10.10.10.110` |
 | standby VMID / IP | `161` / `10.10.10.111` |
-| router CTID / IP | `162` / `10.10.10.112` |
+| router CTID / IP | `173` / `10.10.10.112` |
 | pooled endpoint | `10.10.10.112:6432` |
 | raw endpoint | `10.10.10.112:5432` |
 
@@ -351,7 +351,7 @@ v1은 appliance마다 relay를 만들지 않는다. `postgres-backup-relay` shar
 
 | 항목 | 값 |
 |---|---|
-| CTID | `150` |
+| CTID | `170` |
 | hostname | `postgres-backup-relay` |
 | IP | `10.10.10.105` |
 | pool | `infra` |

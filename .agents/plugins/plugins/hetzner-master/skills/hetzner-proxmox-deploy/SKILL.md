@@ -69,23 +69,29 @@ cd <hetzner-master 레포 경로>
 
 ### CT 130 `agent-host` 에서 실행할 때
 
-`agent-host` 의 checkout 은 Mac checkout 과 gitignored `secrets/` 상태가 다를 수 있다. LXC 배포/변경을 CT 130에서 수행한다면, Terraform 전에 반드시 아래 preflight 를 먼저 통과시킨다:
+Terraform state는 CT 130 `agent-host` 의 HTTP backend (`http://10.10.10.40:8800/state/prod`)가 canonical이다. backend 파일은 CT 130의 `/var/lib/terraform-http-backend` 에 있고 Basic auth credential은 gitignored `secrets/terraform-backend.env` 에 둔다. LXC 배포/변경을 수행한다면 Terraform 전에 반드시 아래 preflight 를 먼저 통과시킨다:
 
 ```bash
 test -f secrets/proxmox-api.env
-tailscale ping -c 1 10.10.10.1
+test -f secrets/terraform-backend.env
+. secrets/proxmox-api.env
+curl -kfsS --max-time 5 \
+  -H "Authorization: PVEAPIToken=${PROXMOX_VE_API_TOKEN}" \
+  "${PROXMOX_VE_ENDPOINT%/}/api2/json/version" >/dev/null
 ```
 
-이후 raw `terraform plan/apply` 대신 `just tf-plan` / `just tf-apply` 를 사용한다. `Justfile` 이 `secrets/proxmox-api.env` 를 source 하기 때문이다. 파일이 없거나 토큰이 stale 해서 401/permission denied 가 나면 토큰을 추측·재발급하지 말고 사용자에게 provisioning 을 요청한다.
+이후 raw `terraform plan/apply` 대신 `just tf-plan` / `just tf-apply` 를 사용한다. `Justfile` 이 Proxmox API credential과 HTTP backend credential을 source 하기 때문이다. 파일이 없거나 토큰이 stale 해서 401/permission denied 가 나면 토큰을 추측·재발급하지 말고 사용자에게 provisioning 을 요청한다. plan은 secret이 있는 어떤 checkout에서도 가능하지만, apply는 운영 로그와 context 집중을 위해 CT 130에서 수행하는 것을 기본으로 한다.
 
 ## Terraform state safety (HARD GATE)
 
-현재 state는 remote backend가 아니라 `terraform/environments/prod/terraform.tfstate` local file이다. 이 파일은 gitignored 이므로 다른 머신/checkout/agent-host가 같은 config를 보더라도 같은 state를 본다는 보장이 없다. 장기 목표는 shared remote backend로 이전하는 것이지만, 그 전까지는 아래 규칙이 canonical이다:
+현재 state는 CT 130 `agent-host` 에서 실행되는 Terraform HTTP backend가 보관한다. local `terraform.tfstate` 파일은 legacy backup/diagnostic artifact일 뿐 canonical이 아니다. 모든 운영자는 `git pull --ff-only` 후 `just tf-plan` / `just tf-apply` wrapper를 사용해 같은 remote state를 읽는다.
+
+아래 규칙이 canonical이다:
 
 1. raw `terraform plan/apply` 금지. 항상 `just tf-plan` / `just tf-apply`.
 2. wrapper는 plan JSON을 검사해서 "live에 이미 존재하는 VMID/CTID를 Terraform이 create하려는" 경우 실패한다.
 3. 이 실패는 stop condition이다. guard를 우회하지 말고 live 리소스를 state에 import 하거나 stale config를 제거한다.
-4. live CT/VM을 IaC에 흡수하는 경우에는 먼저 state 백업 → `terraform import '<resource address>' pve-master/<vmid>` → `just tf-plan` clean 확인 순서로 진행한다.
+4. live CT/VM을 IaC에 흡수하는 경우에는 remote backend가 initialized 된 checkout에서 `terraform import '<resource address>' pve-master/<vmid>` → `just tf-plan` clean 확인 순서로 진행한다.
 5. 새 workload는 baseline `just tf-plan` 이 기존 fleet에 대해 clean 한 상태에서만 추가한다.
 
 자세한 incident 기록: `docs/wisdom/07-terraform-state-split-brain.md`.
