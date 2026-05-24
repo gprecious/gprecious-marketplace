@@ -1,0 +1,20 @@
+{
+  "source_urls": ["https://apps.apple.com/app/id000"],
+  "captured_at": "2026-05-25T09:00:00Z",
+  "icp": {
+    "segment": "20-30대 자기계발 관심 직장인",
+    "pains": ["습관 유지 실패"],
+    "goals": ["꾸준한 루틴 형성"]
+  },
+  "voc": [
+    { "quote": "알림이 딱 맞는 타이밍에 와서 좋아요", "source_url": "https://apps.apple.com/app/id000#review1", "sentiment": "positive" }
+  ],
+  "positioning": {
+    "value_prop": "행동심리 기반 습관 코치",
+    "category": "productivity/habit",
+    "differentiators": ["맥락 알림"]
+  },
+  "evidence": [
+    { "claim": "리뷰 4.6점", "source_url": "https://apps.apple.com/app/id000" }
+  ]
+}
