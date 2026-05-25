@@ -21,7 +21,7 @@
   "interface": {
     "displayName": "growth-marketer",
     "shortDescription": "ICP + VOC analysis and marketing channel scoring for your app or SaaS.",
-    "longDescription": "Point growth-marketer at your App Store listing or SaaS landing page. It reads the page and reviews via Claude-in-Chrome, extracts your ICP, VOC quotes, and positioning, then scores each marketing channel (0–5) with a rationale. All outputs are saved as structured JSON artifacts validated against data-contract schemas. Requires a connected Claude-in-Chrome MCP session.",
+    "longDescription": "Point growth-marketer at your App Store listing or SaaS landing page (a service URL) — or at a local codebase directory. For URLs it reads the page and reviews via Claude-in-Chrome; for a local directory it reads README/manifest/docs from the filesystem. It extracts your ICP, VOC quotes, and positioning, then scores each marketing channel (0–5) with a rationale. The input type is auto-detected and recorded as source_type (web|local_dir); VOC is required only for web input. All outputs are saved as structured JSON artifacts validated against data-contract schemas. A connected Claude-in-Chrome MCP session is required only for the web (URL) input.",
     "developerName": "gprecious",
     "category": "Productivity",
     "capabilities": [

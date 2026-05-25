@@ -1,0 +1,25 @@
+{
+  "source_urls": ["./README.md", "./package.json"],
+  "captured_at": "2026-05-25T09:00:00Z",
+  "source_type": "local_dir",
+  "icp": {
+    "segment": "인디 개발자·소규모 팀",
+    "pains": ["스토어 릴리즈 수작업"],
+    "goals": ["빠른 배포"]
+  },
+  "positioning": {
+    "value_prop": "크로스스택 앱 릴리즈 자동화",
+    "category": "devtools/release",
+    "differentiators": ["Expo·Capacitor 어댑터"]
+  },
+  "channel_signals": {
+    "product_type": "web_saas",
+    "market": "global",
+    "price_model": "free",
+    "target": "b2b",
+    "discovery_intent": "high"
+  },
+  "evidence": [
+    { "claim": "package.json 에 expo 의존성 존재", "source_url": "./package.json" }
+  ]
+}
