@@ -1,0 +1,9 @@
+{
+  "service_slug": "habit-coach",
+  "scored_at": "2026-05-25T09:10:00Z",
+  "scores": [
+    { "channel": "aso", "score": 5, "rationale": "mobile_app 주채널" },
+    { "channel": "meta", "score": 4, "rationale": "b2c 시각 소구" }
+  ],
+  "recommendation": { "primary": "aso", "secondary": ["meta"], "why": "모바일 앱 + b2c" }
+}

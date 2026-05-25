@@ -14,6 +14,7 @@ gprecious-marketplace/
 ├── claude-plugins/          # Claude Code 플러그인
 │   ├── app-release/
 │   ├── cmux/
+│   ├── growth-marketer/
 │   └── herdr/
 └── opencode-plugins/        # OpenCode 플러그인
     └── youtube-shorts-orchestrator/
@@ -28,6 +29,7 @@ gprecious-marketplace/
 | cmux | cmux 멀티페인 위에서 Claude Code/Codex 세션을 역할별 페인(plan/design/test/dev/review)으로 자동 오케스트레이션. 패널 간 메시지 송수신 skill 포함 | `claude-plugins/cmux` |
 | herdr | herdr 위에서 Claude Code + Codex 워커 N개를 3×3 grid (한 탭 최대 9개) + 탭 spillover 로 병렬 spawn / 대기 / 결과 회수 / 자동 정리 | `claude-plugins/herdr` |
 | hetzner-master | Hetzner Proxmox VE 8 lab 배포·운영 runbook. LXC, Terraform state safety, Ansible rollout, Tailscale, monitoring 포함 | 외부 repo (`github.com/gprecious/hetzner-master`) |
+| growth-marketer | 모바일 앱·웹/SaaS 마케팅 자동화. 서비스 분석(ICP·VOC) → 채널 추천 → 카피·플레이북·CRO·draft 캠페인 | `claude-plugins/growth-marketer` |
 
 ### 설치 방법
 
@@ -37,6 +39,7 @@ claude /install app-release@gprecious-marketplace
 claude /install cmux@gprecious-marketplace
 claude /install herdr@gprecious-marketplace
 claude /install hetzner-master@gprecious-marketplace
+claude /install growth-marketer@gprecious-marketplace
 
 # app-release 는 최초 설치 후 한 번:
 cd ~/.claude/plugins/marketplaces/gprecious-marketplace/claude-plugins/app-release && npm install
@@ -54,6 +57,7 @@ Claude marketplace에 있는 플러그인은 모두 Codex marketplace에도 노�
 | herdr | herdr 기반 worker pane orchestration | `.agents/plugins/plugins/herdr` |
 | youtube-shorts-orchestrator | YouTube Shorts 제작 workflow | `.agents/plugins/plugins/youtube-shorts-orchestrator` |
 | hetzner-master | Hetzner Proxmox lab deploy/ops runbook | `.agents/plugins/plugins/hetzner-master` |
+| growth-marketer | 모바일 앱·웹/SaaS 마케팅 자동화. 서비스 분석 → 채널 추천 → 카피·플레이북 | `.agents/plugins/plugins/growth-marketer` |
 
 ### 설치 방법
 
@@ -67,6 +71,7 @@ codex plugin add cmux@gprecious-marketplace
 codex plugin add herdr@gprecious-marketplace
 codex plugin add youtube-shorts-orchestrator@gprecious-marketplace
 codex plugin add hetzner-master@gprecious-marketplace
+codex plugin add growth-marketer@gprecious-marketplace
 ```
 
 GitHub에서 직접 추가할 때는 repo root 아래 `.agents/plugins`만 sparse checkout하면 된다:
