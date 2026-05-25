@@ -1,0 +1,11 @@
+{
+  "source_urls": ["https://example.com"],
+  "captured_at": "2026-05-25T09:00:00Z",
+  "source_type": "web",
+  "icp": { "segment": "x", "pains": ["p"], "goals": ["g"] },
+  "positioning": { "value_prop": "v", "category": "c" },
+  "channel_signals": {
+    "product_type": "web_saas", "market": "kr", "price_model": "paid", "target": "b2c", "discovery_intent": "high"
+  },
+  "evidence": [ { "claim": "c", "source_url": "https://example.com" } ]
+}

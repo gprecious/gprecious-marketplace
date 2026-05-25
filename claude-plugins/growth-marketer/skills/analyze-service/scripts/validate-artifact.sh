@@ -55,6 +55,21 @@ while IFS= read -r arrkey; do
   done < <(jq -r --arg p "$arrkey" '.properties[$p].items."x-required-item" // [] | .[]' "$SCHEMA")
 done < <(jq -r '.properties | to_entries[] | select(.value.items | type=="object" and has("x-required-item")) | .key' "$SCHEMA")
 
+# conditional required keys (schema .x-required-when):
+# field required when every key/value in `when` matches the artifact.
+while IFS= read -r rule; do
+  [ -z "$rule" ] && continue
+  field=$(jq -r '.field' <<<"$rule")
+  when_all=$(jq --argjson rule "$rule" '. as $a | [ ($rule.when // {}) | to_entries[] | ($a[.key] == .value) ] | all' "$ARTIFACT")
+  if [ "$when_all" = "true" ]; then
+    if ! jq -e --arg f "$field" 'has($f) and (.[$f] != null)' "$ARTIFACT" >/dev/null; then
+      cond=$(jq -rc '.when' <<<"$rule")
+      echo "missing conditionally-required field: $field (when $cond)"
+      errors=$((errors+1))
+    fi
+  fi
+done < <(jq -c '(."x-required-when" // [])[]' "$SCHEMA")
+
 if [ "$errors" -gt 0 ]; then
   echo "FAIL: $errors contract violation(s) in $ARTIFACT"
   exit 1

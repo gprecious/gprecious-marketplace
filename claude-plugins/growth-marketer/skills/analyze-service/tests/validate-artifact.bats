@@ -45,3 +45,14 @@ FIX="$ROOT/tests/fixtures"
   [ "$status" -ne 0 ]
   [[ "$output" == *"recommendation"* ]]
 }
+
+@test "service-profile local_dir without voc passes" {
+  run "$VALIDATE" service-profile "$FIX/service-profile.localdir.valid.json"
+  [ "$status" -eq 0 ]
+}
+
+@test "service-profile web without voc fails (conditional)" {
+  run "$VALIDATE" service-profile "$FIX/service-profile.web-novoc.invalid.json"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"voc"* ]]
+}

@@ -1,6 +1,7 @@
 {
   "source_urls": ["https://apps.apple.com/app/id000"],
   "captured_at": "2026-05-25T09:00:00Z",
+  "source_type": "web",
   "icp": {
     "segment": "20-30대 자기계발 관심 직장인",
     "pains": ["습관 유지 실패"],

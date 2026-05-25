@@ -1,12 +1,16 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "service-profile",
-  "description": "validated by scripts/validate-artifact.sh via x-required / x-required-item hints (not standard JSON Schema 'required'), so generic validators ignore these constraints.",
+  "description": "validated by scripts/validate-artifact.sh via x-required / x-required-item / x-required-when hints (not standard JSON Schema 'required'). source_urls and *.source_url hold a URL (web) or a local file path (local_dir).",
   "type": "object",
-  "x-required": ["source_urls", "captured_at", "icp", "voc", "positioning", "evidence", "channel_signals"],
+  "x-required": ["source_urls", "captured_at", "source_type", "icp", "positioning", "evidence", "channel_signals"],
+  "x-required-when": [
+    { "field": "voc", "when": { "source_type": "web" } }
+  ],
   "properties": {
     "source_urls": { "type": "array", "items": { "type": "string" } },
     "captured_at": { "type": "string", "description": "ISO-8601 timestamp" },
+    "source_type": { "type": "string", "enum": ["web", "local_dir"] },
     "icp": {
       "type": "object",
       "x-required": ["segment", "pains", "goals"],
@@ -18,7 +22,7 @@
     },
     "voc": {
       "type": "array",
-      "description": "voice-of-customer quotes mined from reviews/social",
+      "description": "voice-of-customer quotes from reviews/social (web only; required when source_type=web)",
       "items": {
         "type": "object",
         "x-required-item": ["quote", "source_url"],
