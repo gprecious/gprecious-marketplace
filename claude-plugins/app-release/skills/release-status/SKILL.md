@@ -36,3 +36,7 @@ allowed_tools:
 
 - `release.config.json not found`: 프로젝트 루트에 `release.config.json`을 만들라고 안내
 - `node_modules missing`: `cd ~/.claude/plugins/marketplaces/gprecious-marketplace/claude-plugins/app-release && npm install`
+
+## 교훈 / 함정
+
+- **상태 ≠ 거절 사유.** 이 명령이 보여주는 iOS `reviewState`(REJECTED 등)는 **상태일 뿐**이고, **거절 사유 원문은 API에 없다.** 사유는 ASC Resolution Center(웹, 로그인 필요)에만 있다. REJECTED가 보이면 `/release-fix`로 넘어가되, 사유 확인은 Resolution Center에서 해야 한다. 상세: `../../LESSONS.md` L1.
