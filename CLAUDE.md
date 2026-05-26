@@ -14,6 +14,15 @@ gprecious-marketplace/
 └── README.md                # 사용자용 안내 (marketplace.json 변경 시 동기화 필요)
 ```
 
+## 원격 동기화 (필수 — HARD RULE)
+
+이 marketplace 는 **다른 머신·다른 사용자가 GitHub origin(`gprecious/gprecious-marketplace`)에서 받아 쓰는 공유 카탈로그**다. 로컬 commit 만 해두면 다른 머신에서 `marketplace update` 해도 안 보인다 (실제로 발생한 사고: plugin 등록 19 커밋이 push 안 돼 다른 머신에서 안 보임).
+
+- **marketplace.json / plugin 소스 / README 를 바꿔 commit 했으면, 작업 마무리 전에 반드시 `git push origin main` 까지 한다.** "commit 완료 = 작업 끝" 이 아니다. "push 완료 = 작업 끝".
+- 완료 보고 전 `git status -sb` 로 `ahead` 가 남아있지 않은지 확인한다. `[ahead N]` 이 보이면 아직 안 끝난 것.
+- push 는 공유 원격을 바꾸는 행위이므로 진행 직전 사용자에게 한 번 알리되, marketplace 변경 작업의 정상 종료 단계로 취급한다 (빠뜨리지 말 것).
+- push 전 `gh auth status` + `git remote -v` 로 owner 가 `gprecious` 계정인지 확인 (글로벌 규칙).
+
 ## 절대 금지 사항
 
 - **plugin.json에 없다고 폴더/파일 삭제 금지** - agents, channels 등 핵심 로직 폴더는 plugin.json과 무관하게 존재
@@ -117,11 +126,11 @@ gprecious-marketplace/
 **B. 로컬 submodule (이 repo 와 라이프사이클 묶고 싶을 때):**
 1. `git submodule add <url> claude-plugins/<name>`
 2. `marketplace.json` 에 `./claude-plugins/<name>` source 로 등록
-3. `version` bump + commit
+3. `version` bump + commit + **push (origin main)**
 
 **C. 로컬 일반 폴더 (이 repo 안에서 직접 개발):**
 1. `claude-plugins/<name>/` 디렉토리 생성, `.claude-plugin/plugin.json` 작성
-2. `marketplace.json` 등록 + version bump + commit
+2. `marketplace.json` 등록 + version bump + commit + **push (origin main)**
 
 ## Plugin 제거 워크플로
 
@@ -152,4 +161,4 @@ git rm -rf claude-plugins/<name>
 
 ## README.md 동기화
 
-`marketplace.json` 변경 시 `README.md` 의 plugin 표·설치 명령도 함께 업데이트. 두 파일이 다르면 사용자가 어느 쪽을 믿을지 모름.
+`marketplace.json` 변경 시 `README.md` 의 plugin 표·설치 명령도 함께 업데이트. 두 파일이 다르면 사용자가 어느 쪽을 믿을지 모름. 업데이트 후 commit + **push (origin main)** 까지 — push 안 하면 다른 머신에 안 반영됨 (위 "원격 동기화" HARD RULE).
