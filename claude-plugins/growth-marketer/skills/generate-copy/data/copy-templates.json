@@ -1,0 +1,98 @@
+{
+  "version": "1.0.0",
+  "templates": [
+    {
+      "asset_type": "ad-cta",
+      "channel": "meta",
+      "format": "primary_text, headline, description, cta, annotation",
+      "constraints": [
+        "lead with one ICP-specific pain or desired outcome",
+        "use one primary persuasion technique per variant",
+        "CTA must ask for a low-friction next step",
+        "no fake urgency, fake social proof, or fabricated scarcity"
+      ],
+      "variant_count": 2
+    },
+    {
+      "asset_type": "ad-cta",
+      "channel": "google-ads",
+      "format": "headline set, description set, path, cta, annotation",
+      "constraints": [
+        "match search intent and market category",
+        "avoid unsupported superlatives",
+        "include source-backed proof only when service-profile evidence supports it",
+        "write variants around one hypothesis"
+      ],
+      "variant_count": 2
+    },
+    {
+      "asset_type": "ad-cta",
+      "channel": "naver",
+      "format": "headline, body, cta, local proof cue, annotation",
+      "constraints": [
+        "localize category and benefit language",
+        "keep claims concrete and evidence-backed",
+        "avoid pressure tactics and invented popularity cues"
+      ],
+      "variant_count": 2
+    },
+    {
+      "asset_type": "landing-page",
+      "channel": "seo",
+      "format": "hero headline, subhead, proof block, feature-benefit blocks, primary CTA, objection FAQ, annotation",
+      "constraints": [
+        "state market category and value in the hero",
+        "map ICP pains and goals to benefits",
+        "place proof near claims it supports",
+        "include measurement hypothesis for headline or CTA variants"
+      ],
+      "variant_count": 2
+    },
+    {
+      "asset_type": "landing-page",
+      "channel": "retargeting",
+      "format": "returning-visitor headline, objection handler, proof cue, CTA, annotation",
+      "constraints": [
+        "assume prior awareness",
+        "address the strongest known objection from service-profile evidence",
+        "use risk reversal only when the offer truly supports it"
+      ],
+      "variant_count": 2
+    },
+    {
+      "asset_type": "email-sequence",
+      "channel": "email",
+      "format": "sequence with timing, segment, subject, preview, body, single CTA, suppression rule, annotation",
+      "constraints": [
+        "one product action per email",
+        "branch or suppress messages after activation behavior",
+        "include consent and unsubscribe context for promotional lifecycle sends",
+        "optimize for downstream activation or retention, not open rate alone"
+      ],
+      "variant_count": 2
+    },
+    {
+      "asset_type": "organic-social",
+      "channel": "organic-social",
+      "format": "hook, body, proof or story, CTA, annotation",
+      "constraints": [
+        "make the first line a segment-specific hook",
+        "use proof only when verifiable",
+        "avoid engagement bait and fear-based manipulation",
+        "adapt tone to the platform named by the user"
+      ],
+      "variant_count": 2
+    },
+    {
+      "asset_type": "ad-cta",
+      "channel": "aso",
+      "format": "subtitle, short promotional text, screenshot-caption CTA, annotation",
+      "constraints": [
+        "match mobile app store category intent",
+        "translate features into outcomes",
+        "avoid unsupported ranking or review claims"
+      ],
+      "variant_count": 2
+    }
+  ]
+}
