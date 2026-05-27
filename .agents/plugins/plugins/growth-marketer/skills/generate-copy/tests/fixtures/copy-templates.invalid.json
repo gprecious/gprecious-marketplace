@@ -1,0 +1,11 @@
+{
+  "version": "1.0.0",
+  "templates": [
+    {
+      "asset_type": "landing-page",
+      "channel": "seo",
+      "constraints": ["hero, proof, CTA"],
+      "variant_count": 2
+    }
+  ]
+}

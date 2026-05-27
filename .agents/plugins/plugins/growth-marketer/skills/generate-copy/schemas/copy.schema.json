@@ -1,0 +1,59 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "copy",
+  "description": "Annotated generate-copy artifact companion. Markdown output uses the same fields as sections; this JSON contract is validated by scripts/validate-artifact.sh via x-required / x-required-item hints.",
+  "type": "object",
+  "x-required": ["service_slug", "generated_at", "source_profile", "asset_type", "channel", "variants", "technique_refs", "measurement"],
+  "properties": {
+    "service_slug": { "type": "string" },
+    "generated_at": { "type": "string", "description": "UTC ISO8601 timestamp" },
+    "source_profile": { "type": "string", "description": "Path to .growth-marketer/<slug>/service-profile.json" },
+    "asset_type": { "type": "string", "enum": ["ad-cta", "landing-page", "email-sequence", "organic-social"] },
+    "channel": { "type": "string", "enum": ["meta", "google-ads", "naver", "aso", "seo", "retargeting", "email", "organic-social"] },
+    "audience": { "type": "string" },
+    "variants": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "x-required-item": ["id", "label", "text", "techniques"],
+        "properties": {
+          "id": { "type": "string" },
+          "label": { "type": "string" },
+          "text": { "type": "string" },
+          "techniques": {
+            "type": "array",
+            "description": "Each technique reference must carry id and source_ref; repeated in technique_refs for validator coverage.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "string" },
+                "source_ref": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "technique_refs": {
+      "type": "array",
+      "description": "Flat index of every variant technique annotation, used to enforce id + source_ref with the generic validator.",
+      "items": {
+        "type": "object",
+        "x-required-item": ["id", "source_ref"],
+        "properties": {
+          "id": { "type": "string" },
+          "source_ref": { "type": "string" }
+        }
+      }
+    },
+    "measurement": {
+      "type": "object",
+      "x-required": ["hypothesis", "primary_metric", "guardrail_metric"],
+      "properties": {
+        "hypothesis": { "type": "string" },
+        "primary_metric": { "type": "string" },
+        "guardrail_metric": { "type": "string" }
+      }
+    }
+  }
+}
