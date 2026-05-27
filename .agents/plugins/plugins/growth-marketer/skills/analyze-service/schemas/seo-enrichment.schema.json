@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "seo-enrichment",
+  "description": "DataForSEO-derived market evidence for analyze-service. All source_url values are DataForSEO endpoint URLs.",
+  "type": "object",
+  "x-required": ["query", "markets", "search_volume", "serp_competitors", "captured_at"],
+  "properties": {
+    "query": { "type": "string", "description": "The category keyword queried." },
+    "markets": {
+      "type": "array",
+      "items": { "type": "string", "enum": ["kr", "global"] },
+      "description": "Geo markets queried."
+    },
+    "search_volume": {
+      "type": "object",
+      "x-required": ["value", "source_url"],
+      "properties": {
+        "value": { "type": "number", "description": "Monthly search volume (Google Ads)." },
+        "source_url": { "type": "string" }
+      }
+    },
+    "serp_competitors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "x-required-item": ["domain", "rank", "source_url"],
+        "properties": {
+          "domain": { "type": "string" },
+          "rank": { "type": "number" },
+          "url": { "type": "string" },
+          "market": { "type": "string", "description": "SERP engine: google | naver." },
+          "source_url": { "type": "string" }
+        }
+      }
+    },
+    "serp_features": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Distinct SERP item types observed (organic, video, local_pack, ...)."
+    },
+    "captured_at": { "type": "string", "description": "UTC ISO8601." }
+  }
+}

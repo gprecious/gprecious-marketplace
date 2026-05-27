@@ -1,0 +1,11 @@
+{
+  "status_code": 20000,
+  "tasks": [
+    {
+      "status_code": 20000,
+      "result": [
+        { "keyword": "헬스 트래킹 앱", "search_volume": 8100, "cpc": 0.42, "competition": "LOW" }
+      ]
+    }
+  ]
+}

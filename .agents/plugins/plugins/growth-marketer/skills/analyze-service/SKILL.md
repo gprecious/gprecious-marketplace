@@ -6,6 +6,7 @@ description: |
   또는 (2) 로컬 코드베이스 디렉토리 경로(README·manifest·docs 를 읽음) 둘 다 가능 — 자동 감지.
   "내 서비스 분석", "마케팅 채널 추천해줘", "이 앱 어디에 광고하지", "ICP 뽑아줘",
   "이 코드베이스/레포 분석해서 마케팅", "로컬 프로젝트 분석" 같은 요청에 발동.
+  "검색량·SERP 로 채널 근거 보강" 류 요청에도 DataForSEO enrichment 로 대응한다.
   결과는 .growth-marketer/<slug>/ 아래 구조화 파일로 저장된다.
 ---
 
@@ -36,22 +37,36 @@ description: |
 3. **경쟁사 (선택, live)** — 경쟁사 URL 이 있으면 동일하게 읽고, 더 깊은 시장 스캔이 필요하면
    research-engine `/research` 를 호출한다. 경쟁사에서 얻은 사실은 service-profile.json 의
    evidence[](source_url 포함) 와 positioning.differentiators 에 반영한다(별도 파일 없음).
-4. **service-profile.json 작성** — `schemas/service-profile.schema.json` 스키마대로:
+4. **SEO enrichment (선택, DataForSEO — graceful)** — `op` CLI 가 있고 1Password 에
+   `op://Employee/DataForSEO/{username,password}` 가 있으면 실행한다. positioning.category
+   또는 핵심 카테고리 키워드를 쿼리로, market(kr|global|both)을 골라:
+   ```bash
+   bash skills/analyze-service/scripts/dataforseo.sh "<카테고리 키워드>" <kr|global|both> <slug-dir>/seo-enrichment.json
+   ```
+   - exit 0: `bash skills/analyze-service/scripts/validate-artifact.sh seo-enrichment <slug-dir>/seo-enrichment.json` 로 검증한 뒤
+     `references/serp-to-channel.md` 규칙으로 `discovery_intent`(검색량)·`market`(Google vs Naver 우세)를
+     **실측 기반 재산정**하고, 경쟁사 SERP 도메인을 evidence/differentiators 비교에 반영한다.
+   - exit 3(자격증명/op 없음) 또는 exit 4(네트워크/API 오류): **skip** — 기존 추론값을 그대로 둔다.
+     skill 은 키 없이도 완주한다.
+5. **service-profile.json 작성** — `schemas/service-profile.schema.json` 스키마대로:
    `source_type`, icp(segment/pains/goals), positioning(value_prop/category/differentiators),
-   evidence[](claim+source_url — URL 또는 로컬 파일 경로), channel_signals(product_type/market/
+   evidence[](claim+source_url — URL·로컬 파일 경로·DataForSEO endpoint), channel_signals(product_type/market/
    price_model/target/discovery_intent). `voc[]`(quote+source_url)는 **source_type=web 일 때만
-   필수**, local_dir 이면 비운다. 모든 주장에 출처(URL 또는 파일 경로)를 부착한다.
-5. **채널 스코어링** — `references/channel-fit-rubric.md` 규칙으로 각 채널 0~5 점 + rationale,
-   recommendation(primary/secondary/why) 산출 → `channel-scores.json`
+   필수**, local_dir 이면 비운다. enrichment 가 있었으면 그 사실은 evidence 의 DataForSEO source_url 로 표현한다.
+6. **채널 스코어링** — `references/channel-fit-rubric.md` + (enrichment 있으면) `references/serp-to-channel.md`
+   규칙으로 각 채널 0~5 점 + rationale, recommendation(primary/secondary/why) 산출 → `channel-scores.json`
    (`schemas/channel-scores.schema.json` 준수).
-6. **service-brief.md 작성** — 사람이 읽는 요약(프로파일 핵심 + 추천 채널 + 근거).
-7. **검증 (필수 게이트)** — 두 산출물을 검증한다. 실패하면 누락 필드를 채워 다시 저장:
+7. **service-brief.md 작성** — 사람이 읽는 요약(프로파일 핵심 + 추천 채널 + 근거 + enrichment 사용 여부).
+8. **검증 (필수 게이트)** — 산출물을 검증한다. 실패하면 누락 필드를 채워 다시 저장.
    검증기·스키마·rubric 은 이 skill 폴더(skills/analyze-service/) 안에 있다 — Claude/Codex 양쪽 동일 상대경로.
    ```bash
    bash skills/analyze-service/scripts/validate-artifact.sh service-profile <slug-dir>/service-profile.json
    bash skills/analyze-service/scripts/validate-artifact.sh channel-scores  <slug-dir>/channel-scores.json
+   # enrichment 을 수행했으면 그것도:
+   bash skills/analyze-service/scripts/validate-artifact.sh seo-enrichment  <slug-dir>/seo-enrichment.json
    ```
-8. **보고** — 추천 채널과 근거를 자연어로 요약하고, 저장된 파일 경로를 알린다.
+9. **보고** — 추천 채널과 근거를 자연어로 요약하고, 저장된 파일 경로를 알린다.
+   enrichment 을 skip 했으면 그 사실(자격증명 없음 등)을 명시한다.
 
 ## 데이터 계약 / drift 규칙
 - `service-profile.json` 이 단일 진실 공급원(SoT). 재분석 시 통째 덮어쓰지 말고
@@ -62,9 +77,12 @@ description: |
 - `.growth-marketer/<slug>/service-profile.json` (SoT)
 - `.growth-marketer/<slug>/service-brief.md`
 - `.growth-marketer/<slug>/channel-scores.json`
+- `.growth-marketer/<slug>/seo-enrichment.json` (DataForSEO enrichment 수행 시에만)
 - `.growth-marketer/<slug>/runs/<ts>/` 스냅샷
 
 ## 안전
-- web 은 chrome 읽기 전용, local_dir 은 파일시스템 읽기 전용(이 skill 은 입력/발행 없음).
-- 모델 호출은 OAuth/구독 CLI 만, 과금 API 키 금지(마켓 정책).
+- web 은 chrome 읽기 전용, local_dir 은 파일시스템 읽기 전용, DataForSEO 는 읽기 전용 데이터 조회
+  (이 skill 은 외부에 입력/발행하지 않음).
+- DataForSEO 자격증명은 `op read` 런타임 조회만 — 평문 저장/커밋/로그 금지. 키가 없으면 enrichment 만 skip.
+- 모델 호출은 OAuth/구독 CLI 만, 과금 API 키 금지(마켓 정책). SEO 데이터 API 키는 별개 범주의 사용자 시크릿.
 - 다음 단계(generate-copy/channel-playbook/cro-audit)는 이 산출물을 입력으로 받는다.

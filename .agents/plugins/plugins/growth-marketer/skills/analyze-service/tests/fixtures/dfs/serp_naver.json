@@ -1,0 +1,17 @@
+{
+  "status_code": 20000,
+  "tasks": [
+    {
+      "status_code": 20000,
+      "result": [
+        {
+          "keyword": "헬스 트래킹 앱",
+          "items": [
+            { "type": "organic", "rank_absolute": 1, "domain": "blog.naver.com", "url": "https://blog.naver.com/x" },
+            { "type": "organic", "rank_absolute": 2, "domain": "cafe.naver.com", "url": "https://cafe.naver.com/y" }
+          ]
+        }
+      ]
+    }
+  ]
+}
