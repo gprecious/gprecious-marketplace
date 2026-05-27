@@ -1,0 +1,61 @@
+{
+  "service_slug": "habit-loop",
+  "created_at": "2026-05-27T00:00:00Z",
+  "channel": "meta",
+  "source_copy_ref": {
+    "path": ".growth-marketer/habit-loop/copy/ad-cta-meta.md",
+    "asset_type": "ad-cta"
+  },
+  "creative_specs_ref": {
+    "path": ".growth-marketer/habit-loop/playbook-meta.md",
+    "summary": "1:1 image, primary text, headline, CTA"
+  },
+  "draft_status": "entered",
+  "review_checklist_ref": {
+    "path": ".growth-marketer/habit-loop/review-checklist.json",
+    "gate_status": "pass"
+  },
+  "field_map": [
+    {
+      "field": "Campaign name",
+      "value_intended": "Habit Loop - Meta - Prospecting",
+      "value_entered": "Habit Loop - Meta - Prospecting",
+      "confirmed": true
+    },
+    {
+      "field": "Daily budget",
+      "value_intended": "KRW 20000",
+      "value_entered": "KRW 20000",
+      "requires_individual_confirmation": true,
+      "confirmed": true
+    }
+  ],
+  "screenshots": {
+    "before": ".growth-marketer/habit-loop/screenshots/meta-before.png",
+    "after": ".growth-marketer/habit-loop/screenshots/meta-after.png"
+  },
+  "draft_diff": [
+    {
+      "field": "Campaign name",
+      "before": "",
+      "after": "Habit Loop - Meta - Prospecting",
+      "matches_intended": true
+    }
+  ],
+  "confirmation_checklist": [
+    {
+      "item": "Review-assets gate passed",
+      "status": "checked"
+    },
+    {
+      "item": "Budget field individually confirmed",
+      "status": "checked"
+    },
+    {
+      "item": "Draft saved without publishing",
+      "status": "checked"
+    }
+  ],
+  "publish_action_taken": false,
+  "notes": "Draft saved only. No publish action was taken."
+}

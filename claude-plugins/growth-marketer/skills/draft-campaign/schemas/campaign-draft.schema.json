@@ -1,0 +1,112 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "campaign-draft",
+  "description": "Draft-only ad platform entry artifact. Validated by scripts/validate-artifact.sh via x-required / x-required-item / x-required-when hints. published is intentionally not a valid draft_status.",
+  "type": "object",
+  "x-required": ["service_slug", "created_at", "channel", "source_copy_ref", "creative_specs_ref", "draft_status", "review_checklist_ref", "field_map", "screenshots"],
+  "x-required-when": [
+    { "field": "review_checklist_ref", "when": { "draft_status": "entered" } },
+    { "field": "screenshots", "when": { "draft_status": "entered" } },
+    { "field": "draft_diff", "when": { "draft_status": "entered" } },
+    { "field": "confirmation_checklist", "when": { "draft_status": "entered" } },
+    { "field": "PUBLISH_FORBIDDEN_draft_status_must_never_be_published", "when": { "draft_status": "published" } }
+  ],
+  "properties": {
+    "service_slug": { "type": "string" },
+    "created_at": { "type": "string", "description": "UTC ISO8601 timestamp." },
+    "channel": {
+      "type": "string",
+      "enum": ["meta", "google-ads", "naver"]
+    },
+    "source_copy_ref": {
+      "type": "object",
+      "description": "Input from generate-copy, normally .growth-marketer/<slug>/copy/<asset>-<channel>.md.",
+      "x-required": ["path"],
+      "properties": {
+        "path": { "type": "string" },
+        "json_companion_path": { "type": "string" },
+        "asset_type": { "type": "string", "enum": ["ad-cta", "landing-page", "email-sequence", "organic-social"] }
+      }
+    },
+    "creative_specs_ref": {
+      "type": "object",
+      "description": "Creative specs or playbook source used to decide ad-platform field values.",
+      "x-required": ["path"],
+      "properties": {
+        "path": { "type": "string" },
+        "summary": { "type": "string" }
+      }
+    },
+    "draft_status": {
+      "type": "string",
+      "enum": ["planned", "entered", "blocked"],
+      "description": "Draft lifecycle. published is never allowed."
+    },
+    "review_checklist_ref": {
+      "type": "object",
+      "description": "review-assets publish gate. draft-campaign may enter fields only when gate_status is pass; otherwise draft_status must be blocked.",
+      "x-required": ["path", "gate_status"],
+      "properties": {
+        "path": { "type": "string" },
+        "gate_status": { "type": "string", "enum": ["pass", "fail"] },
+        "checked_at": { "type": "string" }
+      }
+    },
+    "field_map": {
+      "type": "array",
+      "description": "Dry-run map of intended platform fields and, after entry, read-back values.",
+      "items": {
+        "type": "object",
+        "x-required-item": ["field", "value_intended"],
+        "properties": {
+          "field": { "type": "string" },
+          "value_intended": { "type": "string" },
+          "value_entered": { "type": "string" },
+          "requires_individual_confirmation": { "type": "boolean" },
+          "confirmed": { "type": "boolean" },
+          "read_back_note": { "type": "string" }
+        }
+      }
+    },
+    "screenshots": {
+      "type": "object",
+      "description": "Before/after screenshot refs used for read-back comparison.",
+      "x-required": ["before", "after"],
+      "properties": {
+        "before": { "type": "string" },
+        "after": { "type": "string" }
+      }
+    },
+    "draft_diff": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "x-required-item": ["field", "before", "after", "matches_intended"],
+        "properties": {
+          "field": { "type": "string" },
+          "before": { "type": "string" },
+          "after": { "type": "string" },
+          "matches_intended": { "type": "boolean" }
+        }
+      }
+    },
+    "confirmation_checklist": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "x-required-item": ["item", "status"],
+        "properties": {
+          "item": { "type": "string" },
+          "status": { "type": "string", "enum": ["checked", "blocked", "not_applicable"] },
+          "note": { "type": "string" }
+        }
+      }
+    },
+    "publish_action_taken": {
+      "type": "boolean",
+      "description": "Must remain false. The validator records this field but the skill procedure enforces it."
+    },
+    "blocked_reason": { "type": "string" },
+    "notes": { "type": "string" }
+  }
+}

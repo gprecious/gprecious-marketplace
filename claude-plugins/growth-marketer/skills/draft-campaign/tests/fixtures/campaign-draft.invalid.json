@@ -1,0 +1,11 @@
+{
+  "service_slug": "habit-loop",
+  "created_at": "2026-05-27T00:00:00Z",
+  "source_copy_ref": {
+    "path": ".growth-marketer/habit-loop/copy/ad-cta-meta.md"
+  },
+  "creative_specs_ref": {
+    "path": ".growth-marketer/habit-loop/playbook-meta.md"
+  },
+  "draft_status": "planned"
+}
