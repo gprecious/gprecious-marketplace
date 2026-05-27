@@ -1,0 +1,37 @@
+{
+  "service_slug": "habit-coach",
+  "generated_at": "2026-05-27T09:00:00Z",
+  "source_profile": ".growth-marketer/habit-coach/service-profile.json",
+  "asset_type": "ad-cta",
+  "channel": "meta",
+  "audience": "20-30대 자기계발 관심 직장인",
+  "variants": [
+    {
+      "id": "A",
+      "label": "Loss-framed CTA",
+      "text": "매주 루틴을 놓치는 시간을 줄이세요. 오늘 3분 진단으로 내 반복 패턴을 확인하세요.",
+      "techniques": [
+        { "id": "loss-aversion", "source_ref": "cognitive-psychology:loss-aversion" },
+        { "id": "micro-commitment", "source_ref": "cognitive-psychology:cialdini-commitment" }
+      ]
+    },
+    {
+      "id": "B",
+      "label": "Social proof CTA",
+      "text": "비슷한 목표의 사용자가 알림 타이밍을 맞춰 루틴을 이어갑니다. 내 첫 루틴 만들기.",
+      "techniques": [
+        { "id": "social-proof", "source_ref": "cognitive-psychology:social-proof" }
+      ]
+    }
+  ],
+  "technique_refs": [
+    { "id": "loss-aversion", "source_ref": "cognitive-psychology:loss-aversion" },
+    { "id": "micro-commitment", "source_ref": "cognitive-psychology:cialdini-commitment" },
+    { "id": "social-proof", "source_ref": "cognitive-psychology:social-proof" }
+  ],
+  "measurement": {
+    "hypothesis": "Loss framing will increase cold Meta CTR for routine-loss-aware users.",
+    "primary_metric": "ctr",
+    "guardrail_metric": "signup_start"
+  }
+}

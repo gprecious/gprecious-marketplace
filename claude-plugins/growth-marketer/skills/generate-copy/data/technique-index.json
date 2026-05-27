@@ -1,0 +1,85 @@
+{
+  "version": "1.0.0",
+  "techniques": [
+    {
+      "id": "reciprocity",
+      "name": "Reciprocity",
+      "source_ref": "cognitive-psychology:cialdini-reciprocity",
+      "applicable_channels": ["meta", "google-ads", "naver", "email", "organic-social"],
+      "applicable_asset_types": ["ad-cta", "landing-page", "email-sequence", "organic-social"],
+      "bounds": "Offer real upfront value such as a checklist, template, or audit insight before asking for a higher-friction action."
+    },
+    {
+      "id": "micro-commitment",
+      "name": "Commitment and consistency",
+      "source_ref": "cognitive-psychology:cialdini-commitment",
+      "applicable_channels": ["meta", "google-ads", "naver", "aso", "seo", "email", "organic-social"],
+      "applicable_asset_types": ["ad-cta", "landing-page", "email-sequence", "organic-social"],
+      "bounds": "Ask for a small honest next step; do not hide costs or escalate commitments without clarity."
+    },
+    {
+      "id": "social-proof",
+      "name": "Social proof",
+      "source_ref": "cognitive-psychology:social-proof",
+      "applicable_channels": ["meta", "google-ads", "naver", "aso", "seo", "retargeting", "email", "organic-social"],
+      "applicable_asset_types": ["ad-cta", "landing-page", "email-sequence", "organic-social"],
+      "bounds": "Use only verified customer counts, reviews, testimonials, or behavior; fake reviews and invented popularity are out of bounds."
+    },
+    {
+      "id": "authority",
+      "name": "Authority",
+      "source_ref": "cognitive-psychology:cialdini-authority",
+      "applicable_channels": ["google-ads", "naver", "seo", "retargeting", "email"],
+      "applicable_asset_types": ["ad-cta", "landing-page", "email-sequence"],
+      "bounds": "Name the real credential, source, benchmark, or audit evidence; vague expert claims are insufficient."
+    },
+    {
+      "id": "loss-aversion",
+      "name": "Loss aversion",
+      "source_ref": "cognitive-psychology:loss-aversion",
+      "applicable_channels": ["meta", "google-ads", "naver", "retargeting", "email"],
+      "applicable_asset_types": ["ad-cta", "landing-page", "email-sequence"],
+      "bounds": "Frame only real time, money, risk, or opportunity costs supported by service-profile evidence; fearmongering is out of bounds."
+    },
+    {
+      "id": "anchoring",
+      "name": "Anchoring",
+      "source_ref": "cognitive-psychology:anchoring",
+      "applicable_channels": ["google-ads", "seo", "retargeting", "email"],
+      "applicable_asset_types": ["landing-page", "email-sequence", "ad-cta"],
+      "bounds": "Use truthful prices, benchmarks, time savings, or current-alternative costs; fabricated list prices and arbitrary ROI are out of bounds."
+    },
+    {
+      "id": "scarcity",
+      "name": "Scarcity and FOMO",
+      "source_ref": "cognitive-psychology:scarcity-fomo",
+      "applicable_channels": ["meta", "email", "organic-social", "retargeting"],
+      "applicable_asset_types": ["ad-cta", "landing-page", "email-sequence", "organic-social"],
+      "bounds": "Only real capacity, cohort, deadline, inventory, or beta-access limits may be used; false urgency and fake countdowns are out of bounds."
+    },
+    {
+      "id": "aida-pas-fab",
+      "name": "Copy structure: AIDA, PAS, FAB",
+      "source_ref": "cognitive-psychology:copywriting-formulas",
+      "applicable_channels": ["meta", "google-ads", "naver", "aso", "seo", "retargeting", "email", "organic-social"],
+      "applicable_asset_types": ["ad-cta", "landing-page", "email-sequence", "organic-social"],
+      "bounds": "Use formulas as structure, not as proof of performance; keep pain agitation truthful and proportional."
+    },
+    {
+      "id": "value-proposition-fit",
+      "name": "Value proposition fit",
+      "source_ref": "frameworks:value-proposition-canvas",
+      "applicable_channels": ["meta", "google-ads", "naver", "aso", "seo", "retargeting", "email", "organic-social"],
+      "applicable_asset_types": ["ad-cta", "landing-page", "email-sequence", "organic-social"],
+      "bounds": "Map jobs, pains, and gains from the service profile to explicit pain relievers and gain creators."
+    },
+    {
+      "id": "lifecycle-next-action",
+      "name": "Lifecycle next action",
+      "source_ref": "frameworks:lifecycle-email",
+      "applicable_channels": ["email"],
+      "applicable_asset_types": ["email-sequence"],
+      "bounds": "Each email should ask for one behavior-based next action and suppress messages that no longer match the user's state."
+    }
+  ]
+}

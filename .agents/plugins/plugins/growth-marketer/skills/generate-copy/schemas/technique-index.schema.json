@@ -1,0 +1,31 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "technique-index",
+  "description": "Technique applicability index for generate-copy.",
+  "type": "object",
+  "x-required": ["version", "techniques"],
+  "properties": {
+    "version": { "type": "string" },
+    "techniques": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "x-required-item": ["id", "name", "source_ref", "applicable_channels", "applicable_asset_types", "bounds"],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "source_ref": { "type": "string" },
+          "applicable_channels": {
+            "type": "array",
+            "items": { "type": "string", "enum": ["meta", "google-ads", "naver", "aso", "seo", "retargeting", "email", "organic-social"] }
+          },
+          "applicable_asset_types": {
+            "type": "array",
+            "items": { "type": "string", "enum": ["ad-cta", "landing-page", "email-sequence", "organic-social"] }
+          },
+          "bounds": { "type": "string" }
+        }
+      }
+    }
+  }
+}

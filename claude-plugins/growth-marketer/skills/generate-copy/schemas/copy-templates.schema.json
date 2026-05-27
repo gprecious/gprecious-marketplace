@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "copy-templates",
+  "description": "Channel by asset-type format constraints for generate-copy.",
+  "type": "object",
+  "x-required": ["version", "templates"],
+  "properties": {
+    "version": { "type": "string" },
+    "templates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "x-required-item": ["asset_type", "channel", "format", "constraints", "variant_count"],
+        "properties": {
+          "asset_type": { "type": "string", "enum": ["ad-cta", "landing-page", "email-sequence", "organic-social"] },
+          "channel": { "type": "string", "enum": ["meta", "google-ads", "naver", "aso", "seo", "retargeting", "email", "organic-social"] },
+          "format": { "type": "string" },
+          "constraints": { "type": "array", "items": { "type": "string" } },
+          "variant_count": { "type": "number" }
+        }
+      }
+    }
+  }
+}

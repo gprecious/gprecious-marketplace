@@ -1,0 +1,12 @@
+{
+  "version": "1.0.0",
+  "techniques": [
+    {
+      "id": "scarcity",
+      "name": "Scarcity",
+      "applicable_channels": ["email"],
+      "applicable_asset_types": ["email-sequence"],
+      "bounds": "Only real capacity, deadline, or availability limits."
+    }
+  ]
+}

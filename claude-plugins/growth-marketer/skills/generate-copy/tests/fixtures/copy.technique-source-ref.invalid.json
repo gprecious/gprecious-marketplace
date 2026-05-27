@@ -1,0 +1,25 @@
+{
+  "service_slug": "habit-coach",
+  "generated_at": "2026-05-27T09:00:00Z",
+  "source_profile": ".growth-marketer/habit-coach/service-profile.json",
+  "asset_type": "ad-cta",
+  "channel": "meta",
+  "variants": [
+    {
+      "id": "A",
+      "label": "Missing technique source",
+      "text": "오늘 3분 진단으로 내 반복 패턴을 확인하세요.",
+      "techniques": [
+        { "id": "loss-aversion" }
+      ]
+    }
+  ],
+  "technique_refs": [
+    { "id": "loss-aversion" }
+  ],
+  "measurement": {
+    "hypothesis": "Loss framing will increase CTR.",
+    "primary_metric": "ctr",
+    "guardrail_metric": "signup_start"
+  }
+}

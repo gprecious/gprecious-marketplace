@@ -1,0 +1,19 @@
+{
+  "version": "1.0.0",
+  "templates": [
+    {
+      "asset_type": "ad-cta",
+      "channel": "meta",
+      "format": "headline, primary_text, description, cta",
+      "constraints": ["single promise", "one primary CTA", "no false urgency"],
+      "variant_count": 2
+    },
+    {
+      "asset_type": "email-sequence",
+      "channel": "email",
+      "format": "sequence with subject, preview, body, cta per email",
+      "constraints": ["one action per email", "include unsubscribe context for promotional sends"],
+      "variant_count": 2
+    }
+  ]
+}

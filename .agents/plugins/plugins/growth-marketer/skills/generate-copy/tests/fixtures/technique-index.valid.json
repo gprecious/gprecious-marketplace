@@ -1,0 +1,21 @@
+{
+  "version": "1.0.0",
+  "techniques": [
+    {
+      "id": "loss-aversion",
+      "name": "Loss aversion",
+      "source_ref": "cognitive-psychology:loss-aversion",
+      "applicable_channels": ["meta", "google-ads", "email"],
+      "applicable_asset_types": ["ad-cta", "landing-page", "email-sequence"],
+      "bounds": "Use only for real, evidenced losses."
+    },
+    {
+      "id": "social-proof",
+      "name": "Social proof",
+      "source_ref": "cognitive-psychology:social-proof",
+      "applicable_channels": ["meta", "landing-page", "email", "organic-social"],
+      "applicable_asset_types": ["ad-cta", "landing-page", "email-sequence", "organic-social"],
+      "bounds": "Use only verified reviews, customer counts, and endorsements."
+    }
+  ]
+}

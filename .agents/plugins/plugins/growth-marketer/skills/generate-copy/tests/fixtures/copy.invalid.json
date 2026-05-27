@@ -1,0 +1,23 @@
+{
+  "service_slug": "habit-coach",
+  "generated_at": "2026-05-27T09:00:00Z",
+  "source_profile": ".growth-marketer/habit-coach/service-profile.json",
+  "asset_type": "ad-cta",
+  "variants": [
+    {
+      "id": "A",
+      "label": "Incomplete variant",
+      "techniques": [
+        { "id": "loss-aversion", "source_ref": "cognitive-psychology:loss-aversion" }
+      ]
+    }
+  ],
+  "technique_refs": [
+    { "id": "loss-aversion", "source_ref": "cognitive-psychology:loss-aversion" }
+  ],
+  "measurement": {
+    "hypothesis": "Loss framing will increase CTR.",
+    "primary_metric": "ctr",
+    "guardrail_metric": "signup_start"
+  }
+}
