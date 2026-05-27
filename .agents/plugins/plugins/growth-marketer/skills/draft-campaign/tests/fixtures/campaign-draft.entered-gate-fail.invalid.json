@@ -1,0 +1,41 @@
+{
+  "service_slug": "habit-loop",
+  "created_at": "2026-05-27T00:00:00Z",
+  "channel": "meta",
+  "source_copy_ref": {
+    "path": ".growth-marketer/habit-loop/copy/ad-cta-meta.md"
+  },
+  "creative_specs_ref": {
+    "path": ".growth-marketer/habit-loop/playbook-meta.md"
+  },
+  "draft_status": "entered",
+  "review_checklist_ref": {
+    "path": ".growth-marketer/habit-loop/review-checklist.json",
+    "gate_status": "fail"
+  },
+  "field_map": [
+    {
+      "field": "Campaign name",
+      "value_intended": "Habit Loop - Meta - Prospecting"
+    }
+  ],
+  "screenshots": {
+    "before": ".growth-marketer/habit-loop/screenshots/meta-before.png",
+    "after": ".growth-marketer/habit-loop/screenshots/meta-after.png"
+  },
+  "draft_diff": [
+    {
+      "field": "Campaign name",
+      "before": "",
+      "after": "Habit Loop - Meta - Prospecting",
+      "matches_intended": true
+    }
+  ],
+  "confirmation_checklist": [
+    {
+      "item": "Review-assets gate passed",
+      "status": "blocked"
+    }
+  ],
+  "publish_action_taken": false
+}
