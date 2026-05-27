@@ -1,6 +1,6 @@
 {
   "name": "growth-marketer",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Analyze your mobile app or web/SaaS service with Claude-in-Chrome to extract ICP, VOC, and positioning, then receive scored marketing channel recommendations.",
   "author": {
     "name": "gprecious",
