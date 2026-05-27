@@ -1,0 +1,16 @@
+{
+  "service_slug": "habit-coach",
+  "reviewed_at": "2026-05-27T09:30:00Z",
+  "reviewed_artifacts": [
+    {
+      "artifact": "service-profile"
+    }
+  ],
+  "findings": [
+    {
+      "artifact": "copy/ad-cta-meta",
+      "dimension": "claim_evidence",
+      "severity": "blocking"
+    }
+  ]
+}

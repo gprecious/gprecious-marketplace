@@ -1,0 +1,64 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "review-checklist",
+  "description": "Structured publish-gate companion for review-assets. Validated by scripts/validate-artifact.sh via x-required / x-required-item / x-required-when hints.",
+  "type": "object",
+  "x-required": ["service_slug", "reviewed_at", "reviewed_artifacts", "findings", "gate_status"],
+  "x-required-when": [
+    { "field": "blocking_findings", "when": { "gate_status": "fail" } }
+  ],
+  "properties": {
+    "service_slug": { "type": "string" },
+    "reviewed_at": { "type": "string", "description": "UTC ISO8601 timestamp." },
+    "gate_status": { "type": "string", "enum": ["pass", "fail"] },
+    "reviewed_artifacts": {
+      "type": "array",
+      "description": "Every input artifact reviewed for consistency and evidence integrity.",
+      "items": {
+        "type": "object",
+        "x-required-item": ["artifact", "source_path"],
+        "properties": {
+          "artifact": { "type": "string" },
+          "source_path": { "type": "string" },
+          "artifact_type": {
+            "type": "string",
+            "enum": ["service-profile", "channel-scores", "copy", "playbook", "cro-audit", "campaign-draft", "other"]
+          }
+        }
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "x-required-item": ["artifact", "dimension", "severity", "recommendation"],
+        "properties": {
+          "artifact": { "type": "string" },
+          "dimension": {
+            "type": "string",
+            "enum": ["brand_voice", "messaging", "tone", "claim_evidence", "channel_fit", "cro_friction", "dark_pattern", "measurement", "other"]
+          },
+          "severity": { "type": "string", "enum": ["low", "medium", "high", "blocking"] },
+          "recommendation": { "type": "string" },
+          "evidence_gap": { "type": "string" },
+          "source_path": { "type": "string" }
+        }
+      }
+    },
+    "blocking_findings": {
+      "type": "array",
+      "description": "Required when gate_status=fail. These must be fixed before draft-campaign proceeds.",
+      "items": {
+        "type": "object",
+        "x-required-item": ["artifact", "dimension", "recommendation"],
+        "properties": {
+          "artifact": { "type": "string" },
+          "dimension": { "type": "string" },
+          "recommendation": { "type": "string" },
+          "source_path": { "type": "string" }
+        }
+      }
+    },
+    "summary": { "type": "string" }
+  }
+}
