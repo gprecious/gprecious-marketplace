@@ -1,0 +1,19 @@
+{
+  "service_slug": "habit-coach",
+  "reviewed_at": "2026-05-27T09:30:00Z",
+  "gate_status": "fail",
+  "reviewed_artifacts": [
+    {
+      "artifact": "service-profile",
+      "source_path": ".growth-marketer/habit-coach/service-profile.json"
+    }
+  ],
+  "findings": [
+    {
+      "artifact": "copy/ad-cta-meta",
+      "dimension": "claim_evidence",
+      "severity": "blocking",
+      "recommendation": "Remove the unsupported customer-count claim before draft-campaign."
+    }
+  ]
+}

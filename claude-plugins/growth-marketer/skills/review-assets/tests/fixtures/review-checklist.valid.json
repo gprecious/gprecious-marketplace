@@ -1,0 +1,38 @@
+{
+  "service_slug": "habit-coach",
+  "reviewed_at": "2026-05-27T09:30:00Z",
+  "gate_status": "fail",
+  "reviewed_artifacts": [
+    {
+      "artifact": "service-profile",
+      "source_path": ".growth-marketer/habit-coach/service-profile.json"
+    },
+    {
+      "artifact": "copy/ad-cta-meta",
+      "source_path": ".growth-marketer/habit-coach/copy/ad-cta-meta.json"
+    }
+  ],
+  "findings": [
+    {
+      "artifact": "copy/ad-cta-meta",
+      "dimension": "claim_evidence",
+      "severity": "blocking",
+      "recommendation": "Remove the unsupported customer-count claim or attach a source from service-profile evidence.",
+      "evidence_gap": "No reviewed artifact contains a source for the claimed 10,000 users."
+    },
+    {
+      "artifact": "playbook-meta-ads",
+      "dimension": "channel_fit",
+      "severity": "medium",
+      "recommendation": "Align the creative angle with the ICP pain about habit consistency rather than broad productivity."
+    }
+  ],
+  "blocking_findings": [
+    {
+      "artifact": "copy/ad-cta-meta",
+      "dimension": "claim_evidence",
+      "recommendation": "Remove the unsupported customer-count claim before draft-campaign."
+    }
+  ],
+  "summary": "One unsupported proof claim blocks the publish gate."
+}
