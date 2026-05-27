@@ -1,0 +1,8 @@
+{
+  "query": "x",
+  "markets": ["kr"],
+  "serp_competitors": [
+    { "domain": "a.com", "url": "https://a.com", "market": "naver", "source_url": "https://api.dataforseo.com/v3/serp/naver/organic/live/advanced" }
+  ],
+  "captured_at": "2026-05-27T09:00:00Z"
+}

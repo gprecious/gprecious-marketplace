@@ -1,0 +1,14 @@
+{
+  "query": "헬스 트래킹 앱",
+  "markets": ["kr", "global"],
+  "search_volume": {
+    "value": 8100,
+    "source_url": "https://api.dataforseo.com/v3/keywords_data/google_ads/search_volume/live"
+  },
+  "serp_competitors": [
+    { "domain": "competitor-a.com", "rank": 1, "url": "https://competitor-a.com/", "market": "google", "source_url": "https://api.dataforseo.com/v3/serp/google/organic/live/advanced" },
+    { "domain": "blog.naver.com", "rank": 1, "url": "https://blog.naver.com/x", "market": "naver", "source_url": "https://api.dataforseo.com/v3/serp/naver/organic/live/advanced" }
+  ],
+  "serp_features": ["organic", "video", "people_also_ask"],
+  "captured_at": "2026-05-27T09:00:00Z"
+}

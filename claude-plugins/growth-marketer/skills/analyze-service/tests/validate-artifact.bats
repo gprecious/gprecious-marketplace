@@ -56,3 +56,15 @@ FIX="$ROOT/tests/fixtures"
   [ "$status" -eq 1 ]
   [[ "$output" == *"voc"* ]]
 }
+
+@test "seo-enrichment valid fixture passes" {
+  run "$VALIDATE" seo-enrichment "$FIX/seo-enrichment.valid.json"
+  [ "$status" -eq 0 ]
+}
+
+@test "seo-enrichment invalid fixture fails with missing-field messages" {
+  run "$VALIDATE" seo-enrichment "$FIX/seo-enrichment.invalid.json"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"search_volume"* ]]
+  [[ "$output" == *"rank"* ]]
+}
