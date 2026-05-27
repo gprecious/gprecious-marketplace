@@ -1,0 +1,59 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "playbook",
+  "description": "Structured companion contract for channel-playbook Markdown artifacts.",
+  "type": "object",
+  "x-required": ["channel", "generated_at", "service_slug", "targeting", "budget_guidance", "creative_specs", "kpis", "tailored_from"],
+  "properties": {
+    "channel": { "type": "string", "enum": ["meta-ads", "google-ads-uac", "naver-search-gfa", "aso", "seo-content", "retargeting"] },
+    "generated_at": { "type": "string", "description": "UTC ISO8601 timestamp." },
+    "service_slug": { "type": "string" },
+    "targeting": {
+      "type": "object",
+      "x-required": ["primary_audience", "segments"],
+      "properties": {
+        "primary_audience": { "type": "string" },
+        "segments": { "type": "array", "items": { "type": "string" } },
+        "exclusions": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "budget_guidance": {
+      "type": "object",
+      "x-required": ["starting_budget", "bidding", "guardrails"],
+      "properties": {
+        "starting_budget": { "type": "string" },
+        "bidding": { "type": "string" },
+        "guardrails": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "creative_specs": {
+      "type": "object",
+      "x-required": ["formats", "aspect_ratios", "message_angles"],
+      "properties": {
+        "formats": { "type": "array", "items": { "type": "string" } },
+        "aspect_ratios": { "type": "array", "items": { "type": "string" } },
+        "message_angles": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "kpis": {
+      "type": "object",
+      "x-required": ["primary", "measurement_notes"],
+      "properties": {
+        "primary": { "type": "array", "items": { "type": "string" } },
+        "secondary": { "type": "array", "items": { "type": "string" } },
+        "measurement_notes": { "type": "string" }
+      }
+    },
+    "tailored_from": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "x-required-item": ["source", "claim"],
+        "properties": {
+          "source": { "type": "string" },
+          "claim": { "type": "string" }
+        }
+      }
+    }
+  }
+}

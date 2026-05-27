@@ -1,0 +1,31 @@
+{
+  "channel": "meta-ads",
+  "generated_at": "2026-05-27T09:00:00Z",
+  "service_slug": "focus-tracker",
+  "targeting": {
+    "primary_audience": "B2C mobile users who want daily focus routines",
+    "segments": ["habit builders", "productivity app switchers"],
+    "exclusions": ["existing paid subscribers"]
+  },
+  "budget_guidance": {
+    "starting_budget": "Use a small daily learning budget until conversion events stabilize.",
+    "bidding": "Optimize for trial_start or purchase once events are available.",
+    "guardrails": ["Do not optimize for traffic when paid conversion is the goal."]
+  },
+  "creative_specs": {
+    "formats": ["short vertical video", "square product screenshot"],
+    "aspect_ratios": ["9:16", "1:1"],
+    "message_angles": ["finish today with less context switching", "build a focus streak in minutes"]
+  },
+  "kpis": {
+    "primary": ["cost per trial_start", "trial-to-paid conversion rate"],
+    "secondary": ["thumbstop rate", "landing conversion rate"],
+    "measurement_notes": "Compare ad promise to first-screen landing message."
+  },
+  "tailored_from": [
+    {
+      "source": "references/channels/meta-ads.md#sources-s1-s7",
+      "claim": "Meta objective choice should match the conversion event used for delivery optimization."
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "channel": "meta-ads",
+  "generated_at": "2026-05-27T09:00:00Z",
+  "service_slug": "focus-tracker",
+  "targeting": {
+    "primary_audience": "B2C mobile users",
+    "segments": ["habit builders"]
+  },
+  "creative_specs": {
+    "formats": ["short vertical video"]
+  },
+  "kpis": {
+    "primary": ["cost per trial_start"],
+    "measurement_notes": "Track downstream quality."
+  },
+  "tailored_from": [
+    {
+      "source": "references/channels/meta-ads.md#sources-s1-s7"
+    }
+  ]
+}
