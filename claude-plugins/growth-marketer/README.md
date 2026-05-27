@@ -8,6 +8,7 @@
 - `analyze-service` skill — 연결된 브라우저(web)로 페이지·리뷰를 읽거나 로컬 코드베이스
   파일(README·manifest·docs)을 읽어 구조화 프로파일 + 채널 스코어 산출(입력 자동 감지).
   결과는 `.growth-marketer/<slug>/` 에 저장(데이터 계약 준수).
+  (선택) DataForSEO HTTP enrichment 으로 검색량·Google/Naver SERP 를 더해 채널 근거를 실측으로 보강 — 자격증명은 1Password(op), 없으면 자동 skip.
 
 ## 동작 원리
 - skill-first / MCP-driven (무빌드). 브라우저 자동화는 연결된 Claude-in-Chrome MCP.
