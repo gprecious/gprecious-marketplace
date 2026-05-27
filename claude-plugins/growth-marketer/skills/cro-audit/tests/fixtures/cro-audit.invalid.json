@@ -1,0 +1,11 @@
+{
+  "page_url": "https://example.com/signup",
+  "page_type": "signup",
+  "friction_items": [
+    {
+      "area": "cta_clarity",
+      "evidence": "Hero has three competing CTAs with different promises.",
+      "severity": "medium"
+    }
+  ]
+}
