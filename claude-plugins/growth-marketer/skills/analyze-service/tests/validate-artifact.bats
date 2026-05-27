@@ -68,3 +68,46 @@ FIX="$ROOT/tests/fixtures"
   [[ "$output" == *"search_volume"* ]]
   [[ "$output" == *"rank"* ]]
 }
+
+DFS="$ROOT/scripts/dataforseo.sh"
+DFSFIX="$ROOT/tests/fixtures/dfs"
+
+@test "dataforseo.sh both: produces contract-valid enrichment from fixtures" {
+  out="$(mktemp)"
+  DFS_FIXTURE_DIR="$DFSFIX" run "$DFS" "헬스 트래킹 앱" both "$out"
+  [ "$status" -eq 0 ]
+  run "$VALIDATE" seo-enrichment "$out"
+  [ "$status" -eq 0 ]
+  rm -f "$out"
+}
+
+@test "dataforseo.sh both: extracts volume + google and naver competitors + features" {
+  out="$(mktemp)"
+  DFS_FIXTURE_DIR="$DFSFIX" "$DFS" "헬스 트래킹 앱" both "$out"
+  [ "$(jq -r '.query' "$out")" = "헬스 트래킹 앱" ]
+  [ "$(jq -r '.search_volume.value' "$out")" = "8100" ]
+  [ "$(jq -r '[.serp_competitors[] | select(.market=="google")] | length' "$out")" -ge 1 ]
+  [ "$(jq -r '[.serp_competitors[] | select(.market=="naver")] | length' "$out")" -ge 1 ]
+  [ "$(jq -r '.serp_features | index("organic")' "$out")" != "null" ]
+  rm -f "$out"
+}
+
+@test "dataforseo.sh global: skips naver (no naver competitors)" {
+  out="$(mktemp)"
+  DFS_FIXTURE_DIR="$DFSFIX" "$DFS" "헬스 트래킹 앱" global "$out"
+  [ "$(jq -r '[.serp_competitors[] | select(.market=="naver")] | length' "$out")" = "0" ]
+  [ "$(jq -r '.markets' "$out")" != "null" ]
+  rm -f "$out"
+}
+
+@test "dataforseo.sh: missing args exits 2" {
+  run "$DFS" "헬스 트래킹 앱"
+  [ "$status" -eq 2 ]
+}
+
+@test "dataforseo.sh: invalid market exits 2" {
+  out="$(mktemp)"
+  DFS_FIXTURE_DIR="$DFSFIX" run "$DFS" "kw" mars "$out"
+  rm -f "$out"
+  [ "$status" -eq 2 ]
+}

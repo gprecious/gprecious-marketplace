@@ -1,0 +1,19 @@
+{
+  "status_code": 20000,
+  "tasks": [
+    {
+      "status_code": 20000,
+      "result": [
+        {
+          "keyword": "헬스 트래킹 앱",
+          "items": [
+            { "type": "organic", "rank_absolute": 1, "domain": "competitor-a.com", "url": "https://competitor-a.com/" },
+            { "type": "organic", "rank_absolute": 2, "domain": "competitor-b.io", "url": "https://competitor-b.io/app" },
+            { "type": "people_also_ask", "rank_absolute": 3 },
+            { "type": "video", "rank_absolute": 4 }
+          ]
+        }
+      ]
+    }
+  ]
+}
