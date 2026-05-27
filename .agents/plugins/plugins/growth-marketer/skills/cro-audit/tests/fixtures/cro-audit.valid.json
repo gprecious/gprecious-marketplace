@@ -1,0 +1,22 @@
+{
+  "page_url": "https://example.com/pricing",
+  "captured_at": "2026-05-27T12:00:00Z",
+  "page_type": "paywall",
+  "summary": "Pricing page has a clear trial CTA but weak trust proof near the plan decision.",
+  "friction_items": [
+    {
+      "area": "trust_signals",
+      "evidence": "The plan cards show price and features, but no customer proof, guarantee, or security reassurance near the CTA.",
+      "severity": "high",
+      "recommendation": "Add proof adjacent to the primary CTA: customer logo, short testimonial, refund/guarantee language, or secure checkout cue.",
+      "reference_ids": ["S7", "S8"]
+    },
+    {
+      "area": "form_length",
+      "evidence": "Signup asks for name, company, phone, role, team size, and budget before the user sees product value.",
+      "severity": "medium",
+      "recommendation": "Keep only account-creation fields before activation and move segmentation fields to progressive profiling.",
+      "reference_ids": ["S1", "S4", "S6"]
+    }
+  ]
+}
