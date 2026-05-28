@@ -1,7 +1,7 @@
 {
   "name": "growth-marketer",
-  "version": "0.2.0",
-  "description": "Analyze your mobile app or web/SaaS service with Claude-in-Chrome to extract ICP, VOC, and positioning, then receive scored marketing channel recommendations.",
+  "version": "0.2.1",
+  "description": "Marketing automation for mobile apps and web/SaaS — ICP+VOC analysis, channel scoring + playbooks, cognitive-psychology copy, CRO audit, consistency QA, and ad-platform draft entry (publishing remains a human step). Claude-in-Chrome MCP powered.",
   "author": {
     "name": "gprecious",
     "email": "gprecious@users.noreply.github.com",
@@ -14,25 +14,37 @@
     "icp",
     "voc",
     "channel-scoring",
+    "playbook",
+    "copywriting",
+    "cro",
+    "ads",
     "claude-code",
     "codex"
   ],
   "skills": "./skills/",
   "interface": {
     "displayName": "growth-marketer",
-    "shortDescription": "ICP + VOC analysis and marketing channel scoring for your app or SaaS.",
-    "longDescription": "Point growth-marketer at your App Store listing or SaaS landing page (a service URL) — or at a local codebase directory. For URLs it reads the page and reviews via Claude-in-Chrome; for a local directory it reads README/manifest/docs from the filesystem. It extracts your ICP, VOC quotes, and positioning, then scores each marketing channel (0–5) with a rationale. The input type is auto-detected and recorded as source_type (web|local_dir); VOC is required only for web input. All outputs are saved as structured JSON artifacts validated against data-contract schemas. A connected Claude-in-Chrome MCP session is required only for the web (URL) input.",
+    "shortDescription": "End-to-end marketing automation: analyze service, recommend channels, write copy, audit CRO, QA, and draft ad campaigns.",
+    "longDescription": "growth-marketer chains six skills covering the full marketing loop. analyze-service reads your App Store listing or landing page via Claude-in-Chrome, or a local codebase directory (README/manifest/docs), to extract ICP, VOC quotes, positioning, and channel signals; an optional DataForSEO HTTP enrichment adds real search volume and Google/Naver SERP competitors (credentials via 1Password, gracefully skipped if absent). channel-playbook tailors per-channel operating playbooks (targeting, bidding, creative specs, KPIs) from baked references. generate-copy produces ads/CTAs, landing copy, email sequences, and organic social with each variant annotated by cognitive-psychology technique id and source; dark-pattern techniques are explicitly out of scope. cro-audit reads conversion funnels read-only and grades friction against baked CRO best practices with prioritized fixes. review-assets QAs the whole artifact set for brand voice, claim/evidence integrity, and dark-pattern risk, emitting a review-checklist whose gate_status is a hard publish gate. draft-campaign uses Claude-in-Chrome to enter ad-platform fields as a DRAFT ONLY — the schema and tests forbid a published state, and review-checklist=pass plus screenshot read-back are required. All outputs are saved as structured artifacts under .growth-marketer/<slug>/ and validated against per-skill data-contract schemas via a generic validate-artifact.sh.",
     "developerName": "gprecious",
     "category": "Productivity",
     "capabilities": [
       "Analysis",
       "Research",
-      "Scoring"
+      "Scoring",
+      "Copywriting",
+      "Playbooks",
+      "CRO Audit",
+      "QA Review",
+      "Ad Draft Entry"
     ],
     "defaultPrompt": [
       "Analyze my app and recommend marketing channels.",
-      "Extract ICP and VOC from my landing page.",
-      "Score channels for my SaaS product."
+      "Build a Meta Ads playbook for my SaaS.",
+      "Write landing-page copy using loss aversion and social proof.",
+      "Audit my signup funnel for conversion friction.",
+      "QA all my marketing assets for brand voice and dark-pattern risk.",
+      "Draft a Google Ads campaign from my approved copy (do not publish)."
     ],
     "brandColor": "#16A34A"
   }

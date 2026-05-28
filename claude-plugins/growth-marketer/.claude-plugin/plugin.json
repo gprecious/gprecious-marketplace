@@ -1,7 +1,7 @@
 {
   "name": "growth-marketer",
-  "version": "0.2.0",
-  "description": "내 제품(모바일 앱·웹/SaaS) 마케팅 자동화 — 서비스 분석(ICP·VOC), 채널 추천, 인지심리학 기반 카피·플레이북, 광고 플랫폼 draft 자동입력(발행은 사람). Claude-in-Chrome MCP 구동.",
+  "version": "0.2.1",
+  "description": "내 제품(모바일 앱·웹/SaaS) 마케팅 자동화 — 서비스 분석(ICP·VOC), 채널 추천·플레이북, 인지심리학 기반 카피, CRO 감사, 일관성 QA, 광고 플랫폼 draft 자동입력(발행은 사람). Claude-in-Chrome MCP 구동.",
   "author": {
     "name": "gprecious",
     "email": "gprecious@users.noreply.github.com"
