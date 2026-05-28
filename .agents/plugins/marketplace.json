@@ -55,8 +55,8 @@
     {
       "name": "research-engine",
       "source": {
-        "source": "local",
-        "path": "./.agents/plugins/plugins/research-engine"
+        "source": "url",
+        "url": "https://github.com/gprecious/research-engine.git"
       },
       "policy": {
         "installation": "AVAILABLE",
