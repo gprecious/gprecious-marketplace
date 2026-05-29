@@ -20,6 +20,7 @@ orchestrator. 협업 패턴 (fan-out / split / 역할 분담) 은 호출자가 p
 ## 발동 / 비발동
 
 발동:
+
 - "herdr 로 claude+codex 둘 다 시켜봐"
 - "두 에이전트 병렬로 같은 task 던져봐"
 - "herdr pane 새로 띄워서 codex 한테도 시켜"
@@ -27,6 +28,7 @@ orchestrator. 협업 패턴 (fan-out / split / 역할 분담) 은 호출자가 p
 - worker 3개 이상 (예: claude 2 + codex 1, codex 9개 fan-out 등)
 
 비발동:
+
 - 단일 worker 만 필요 — `herdr` 공식 skill 직접 호출.
 - 단순 pane 송수신 — 다른 가벼운 skill.
 - herdr 밖 환경 — 이 skill 범위 밖.
@@ -49,10 +51,12 @@ worker pane 에는 **항상 인터랙티브 TUI 세션**을 띄운다. prompt �
 에서 에이전트가 실시간으로 일하는 모습을 직접 볼 수 있다.
 
 올바름 (인터랙티브 — 세션 유지, 사용자 관찰 가능):
-- `claude --dangerously-skip-permissions`  → 이후 `send-text` 로 prompt 주입
-- `codex --dangerously-bypass-approvals-and-sandbox`  → 이후 `send-text` 로 prompt 주입
+
+- `claude --dangerously-skip-permissions` → 이후 `send-text` 로 prompt 주입
+- `codex --dangerously-bypass-approvals-and-sandbox` → 이후 `send-text` 로 prompt 주입
 
 **금지** (headless one-shot — 사용자 눈에 안 보이고 즉시 종료해 백그라운드처럼 느껴짐):
+
 - `claude -p "..."` / `claude --print "..."`
 - `codex exec "..."`
 - prompt 를 CLI 인자로 직접 붙여 한 번에 실행하는 모든 형태
@@ -62,11 +66,11 @@ worker pane 에는 **항상 인터랙티브 TUI 세션**을 띄운다. prompt �
 
 ## 위계 매핑
 
-| herdr 개념 | 용도 |
-|---|---|
-| workspace | 한 task = 1 workspace. 새로 생성. 호출자 workspace 와 격리. |
-| tab | worker pane 그룹. 각 tab 최대 9 pane (3×3). label `agents-1`, `agents-2`, ... |
-| pane | 실제 worker (claude 또는 codex). slot 순서로 채움. |
+| herdr 개념 | 용도                                                                          |
+| ---------- | ----------------------------------------------------------------------------- |
+| workspace  | 한 task = 1 workspace. 새로 생성. 호출자 workspace 와 격리.                   |
+| tab        | worker pane 그룹. 각 tab 최대 9 pane (3×3). label `agents-1`, `agents-2`, ... |
+| pane       | 실제 worker (claude 또는 codex). slot 순서로 채움.                            |
 
 호출자(orchestrator) 본인 pane 은 원래 workspace 에 그대로 둔다. worker
 workspace_id ≠ launcher workspace_id 를 매 send 직전 검증.
@@ -87,6 +91,7 @@ slot index = col * 3 + row   (column-major)
 ```
 
 worker 수 N 분배:
+
 - `N ≤ 9` → 단일 tab `agents-1`, 필요한 슬롯만 split.
 - `N > 9` → 매 9개마다 새 tab (`agents-2`, …).
 - 부족한 슬롯은 split 자체 skip (예: N=5 → col0 전체 + col1 의 row0/row1 만).
@@ -128,9 +133,19 @@ WORKER_PROMPTS=(
   "$PROMPT_FOR_SLOT_1"
   # ... slot 인덱스 정렬 = WORKER_CMDS 와 동일
 )
+# (v0.3) WORKER_MODES = slot 별 초기 effort/모드 (선택). WORKER_CMDS 와 index 정렬.
+#   plain(기본) | ultracode | max | xhigh | high | medium | low
+WORKER_MODES=(
+  # "ultracode"   # 예: slot 0 은 깊은 fan-out → ultracode 로 시작
+  # "plain"       # 예: slot 1 은 평소 effort
+)
 N=${#WORKER_CMDS[@]}
 [ "$N" -eq "${#WORKER_PROMPTS[@]}" ] || { echo "len(WORKER_CMDS) != len(WORKER_PROMPTS)"; exit 1; }
 [ "$N" -ge 1 ] || { echo "N must be >= 1"; exit 1; }
+
+# (v0.3) WORKER_MODES 길이 보정 — 미지정 slot 은 plain.
+declare -a WORKER_MODES=("${WORKER_MODES[@]}")
+for ((i=0; i<N; i++)); do : "${WORKER_MODES[$i]:=plain}"; done
 
 # 옵션
 : "${KEEP_WS:=0}"          # 1 이면 close 확인 절차 생략하고 항상 workspace 유지
@@ -138,9 +153,16 @@ N=${#WORKER_CMDS[@]}
 ```
 
 협업 패턴 예시 (호출자가 prompt 단계에서 결정):
+
 - **fan-out** (같은 task) → `WORKER_PROMPTS` 모두 동일 문자열.
 - **split** → 호출자가 task 를 N 조각으로 쪼개 각 slot 에 다른 prompt.
 - **역할 분담** → slot 별로 claude/codex 비율 + prompt 를 호출자가 매핑.
+
+(v0.3) **effort 계층 규약** — `ultracode`/`xhigh` 워커에 prompt 를 줄 때 다음 한 줄을
+접미로 포함해 비용을 계층화한다: _"workflow 를 쓸 때 subagent 는 low effort 로 생성해
+비용을 절감하고, 너(orchestrator pane)만 xhigh 로 판단해라."_ — pane(세션) effort 는
+herdr 가 `WORKER_MODES`/`toggle_mode` 로 제어하지만, 워커가 띄우는 workflow subagent 의
+effort 는 워커가 작성하는 스크립트가 정하므로 prompt 규약으로 강제.
 
 ### 2. 새 workspace 생성 (격리)
 
@@ -259,8 +281,72 @@ send_prompt() {
 }
 
 for ((i=0; i<N; i++)); do
+  # (v0.3) plain 이 아니면 prompt 주입 전에 모드 먼저 전환 (cache 보존 escalation).
+  [ "${WORKER_MODES[$i]}" != "plain" ] && toggle_mode "$i" "${WORKER_MODES[$i]}"
   send_prompt "${PANES[$i]}" "${WORKER_PROMPTS[$i]}" || exit 1
 done
+```
+
+### 4.5 toggle_mode — 세션 중간 effort/모드 전환 (v0.3)
+
+워커 pane 의 effort/모드를 세션 중간에 **싸게** 전환하는 primitive. Opus 4.8 의
+mid-conversation system message 덕에, Claude Code 가 `/effort` 슬래시를 messages 배열
+**꼬리**에 system 엔트리로 반영 → 앞선 긴 컨텍스트의 prompt cache 가 보존된다
+(top-level `system` 수정 시 발생하는 전체 재처리를 회피). 즉 "평소엔 가볍게, 깊은
+구간에서만 ultracode" 운영이 경제적이다.
+
+```bash
+# 사용: toggle_mode <slot_index> <mode>
+#   mode ∈ ultracode | max | xhigh | high | medium | low
+# 전제:
+#   - 해당 slot 이 claude 워커일 것 (codex 는 /effort 슬래시 없음 → skip).
+#   - 호출 시점에 그 pane 이 입력 프롬프트 대기 상태일 것 (생성 중이면 슬래시가
+#     큐잉/무시될 수 있음). spawn 직후(prompt 주입 전) 또는 한 task 완료 후가 안전.
+toggle_mode() {
+  local I="$1" MODE="$2"
+  local PANE="${PANES[$I]}" CMD="${WORKER_CMDS[$I]}"
+
+  # 1) codex 워커는 /effort 슬래시가 없다 — skip (codex 는 spawn 시 모델 플래그로 제어).
+  case "$CMD" in
+    claude*) : ;;
+    *) echo "toggle_mode: slot $I 는 claude 가 아님 ($CMD) — skip"; return 0 ;;
+  esac
+
+  # 2) 모드 화이트리스트 검증.
+  case "$MODE" in
+    ultracode|max|xhigh|high|medium|low) : ;;
+    *) echo "toggle_mode: 알 수 없는 mode '$MODE'"; return 1 ;;
+  esac
+
+  # 3) 격리 가드 — pane workspace 가 WS_ID 와 일치할 때만 송신 (send_prompt 와 동일 규칙).
+  local PANE_WS
+  PANE_WS=$(herdr pane list \
+            | jq -r --arg p "$PANE" '.result.panes[] | select(.pane_id==$p) | .workspace_id')
+  [ "$PANE_WS" = "$WS_ID" ] || { echo "toggle_mode: pane $PANE workspace mismatch — abort"; return 1; }
+
+  # 4) /effort 슬래시 주입. 슬래시는 모델 turn 을 소비하지 않고 즉시 처리되며,
+  #    Claude Code 가 이를 mid-conversation system message 로 반영 → cache 보존.
+  echo "toggle_mode: slot $I (ws:$PANE_WS) → /effort $MODE"
+  herdr pane send-text "$PANE" "/effort $MODE"
+  herdr pane send-keys "$PANE" Enter
+
+  # 5) 적용 확인 — effort 라벨이 TUI 에 뜰 때까지 짧게 대기 (best-effort, 실패해도 계속).
+  herdr wait output "$PANE" --match "$MODE" --timeout 8000 \
+    || echo "toggle_mode: slot $I effort 라벨 확인 실패 (계속 진행)"
+}
+```
+
+**단계별 재-escalation (선택, 고급)** — 한 워커를 "가볍게 1차 → 깊게 2차" 로 운영.
+1차 완료를 기다린 뒤 ultracode 로 올리고 후속 prompt 를 던진다. cache 가 보존되므로
+1차 컨텍스트를 그대로 들고 깊이만 키운다:
+
+```bash
+# slot 0 을 가볍게 1차 실행했다고 가정 (WORKER_MODES[0]=plain)
+herdr wait agent-status "${PANES[0]}" --status done --timeout "$TIMEOUT_MS"
+
+# 2차: ultracode 로 올리고 심화 prompt 주입 (de-escalation 은 toggle_mode 0 high)
+toggle_mode 0 ultracode
+send_prompt "${PANES[0]}" "1차 결과를 바탕으로, workflow 로 전 구간을 교차검증해줘."
 ```
 
 ### 5. 병렬 대기
@@ -367,13 +453,33 @@ Codex 호출자도 본인은 orchestrator 로 남고, worker pane (claude/codex 
 6. **인터랙티브 TUI only** — worker 는 항상 TUI 로 띄우고 prompt 는 `send-text` 로
    주입. `claude -p` / `codex exec` 등 headless one-shot 금지. spawn 후 worker
    workspace 로 focus 전환해 사용자가 실시간 관찰 가능하게 함.
+7. **(v0.3) 모드 전환도 격리 가드 적용** — `toggle_mode` 는 `send_prompt` 와 동일하게
+   송신 직전 pane workspace_id == `WS_ID` 검증. codex pane 에는 `/effort` 를 보내지
+   않는다(no-op skip).
 
-## 비기능 / 미구현 (v0.1.0 YAGNI)
+## resume 한계 경고 (v0.3)
+
+dynamic workflow 는 **세션 종료 시 cross-session resume 불가** (다음 세션 fresh start).
+herdr 워커 pane = 그 세션 자체이므로, workflow 진행 중인 pane 을 죽이면 그 안의
+workflow 도 증발한다. cleanup(7단계)에서 "해당 pane 이 workflow 진행 중일 수 있으면
+close 전 강한 경고" 를 안내할 것. (자동 감지는 v0.4 폴링 기능 — v0.3 은 문구 가드만.)
+
+## 비기능 / 미구현 (v0.3 YAGNI)
 
 다음은 본 버전 범위 밖. 필요해지면 별도 spec → 후속 버전.
 
 - manifest.json / 영속 상태.
 - resume 모드 (workspace 닫히면 끝).
 - 결과 자동 비교/diff/투표 알고리즘 — 호출자 자연어 처리.
+- workflow 진행 폴링 중계 / 결과 펜스(`=== RESULT_JSON ===`) 자동 파싱 — v0.4 후보.
+- pane 수 × pane 당 동시성 ≤ 물리 코어 예산 자동 배분 — v0.4 후보.
 - TDD 파이프라인 (RED/GREEN), 디자인 일치도 검증 등 풀 파이프라인.
-- bats 테스트 — 본 버전은 SKILL.md 중심. 스크립트화는 v0.2 이후.
+- bats 테스트 — 본 버전은 SKILL.md 중심.
+
+## 변경 이력
+
+- **v0.3** (2026-05-29) — `WORKER_MODES` + `toggle_mode()` (세션 중간 effort/모드 전환,
+  Opus 4.8 mid-conversation system message 로 cache 보존), effort 계층 규약, resume 한계
+  경고. spec: `docs/superpowers/specs/2026-05-29-herdr-orchestrator-v0.3-toggle-mode.md`.
+- **v0.2** — 인터랙티브 TUI only + focus 전환 + 확인 후 정리.
+- **v0.1** — 최초 spawn/대기/회수/정리 primitive.
