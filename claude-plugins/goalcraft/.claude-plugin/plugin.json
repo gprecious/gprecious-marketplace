@@ -1,6 +1,6 @@
 {
   "name": "goalcraft",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "요구사항·버그·작업 설명을 실행 주체(Claude Code/Codex)에 맞춘 goal 최적화 프롬프트로 변환하는 skill. executor-adaptive — 변환 전 누락 필드(완료조건·범위·검증) 질문 후 복붙용 프롬프트 생성, 장기작업은 /goal 활용.",
   "author": {
     "name": "gprecious",

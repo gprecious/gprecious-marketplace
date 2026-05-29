@@ -8,7 +8,7 @@
 
 - **Executor-adaptive** — 스킬을 실행 중인 에이전트를 타깃으로 삼는다. Claude Code 가 실행하면 Claude 최적화(plan-first·`@file`·scope guard·`think`), Codex 가 실행하면 Codex 최적화(`Goal/Context/Constraints/Done-when` 4부 골격). 사용자가 타깃을 명시하면 그쪽을 따른다.
 - **변환 전 누락 필드 질문** — 완료조건(done-when)·범위·제약·검증 명령이 빠졌으면 먼저 묻는다(없으면 명시적 가정).
-- **장기작업은 `/goal`** — 마이그레이션·리팩토링 등은 Claude Code / Codex 의 실제 `/goal ... without stopping until <검증가능 종료조건>` 으로 구성.
+- **장기작업은 `/goal`** — 마이그레이션·리팩토링 등은 Claude Code / Codex 의 실제 `/goal ... without stopping until <검증가능 종료조건>` 으로 구성. 두 도구 모두 `/goal` 텍스트는 **4000자 하드리밋**이라, 초과하면 실행 전에 거부된다 — goal 은 검증가능 종료조건+체크 명령만 담고, 상세 지시는 파일로 빼서 참조(`@docs/goal.md` / `follow the instructions in docs/goal.md`)하도록 구성한다.
 - **복붙용 출력** — 변환된 프롬프트를 단일 코드블록으로 전달.
 
 ## 사용 예

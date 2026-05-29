@@ -44,6 +44,8 @@ Verification:
 - **Thinking triggers** — add `think` / `think hard` / `ultrathink` (escalating reasoning budget) for genuinely hard tasks: 5+ files, security-sensitive, or multiple candidate root causes. Don't add it to routine changes.
 - **`/goal <condition>`** — for long-horizon, mostly-unattended work. Sets a session-scoped completion condition that a fast model re-checks after every turn until it holds. Use it when the task is a sustained grind (a migration, an optimization loop) rather than a single change. Make the condition measurable and bound it. Example:
   > `/goal All callers migrated off the legacy `parseDate` helper, `npm run typecheck` and `npm test` both pass, or stop after 25 turns.`
+  >
+  > The condition is hard-capped at **4000 characters** — Claude Code rejects anything longer up front (*"Goal condition is limited to 4000 characters"*), so an over-long goal never runs. Keep it to the verifiable end state plus its check commands. If the work needs more context than that, put the detail in a file and aim the condition at it with an `@` reference rather than inlining it — e.g. `/goal Complete the plan in @docs/goal.md; done when `npm run typecheck` and `npm test` both pass.`
 - **Subagents** — suggest a fresh-context subagent for adversarial review ("review the diff against the plan; report correctness and requirement gaps, not style") or for scoped exploration that would otherwise flood the main context.
 - **Evidence over assertions** — ask it to show the command it ran and the output, not just claim success.
 

@@ -66,3 +66,19 @@ Both profiles share these cross-cutting rules — apply them always, regardless 
 Output the finished prompt inside a **single fenced code block** so the user can copy-paste it straight into the target agent. Above the block, one short line naming the target (e.g. `Claude Code 용:` / `Codex 용:`). Add nothing else unless the user asked for rationale.
 
 If you made assumptions — because the user said don't ask, or the input was thin — list them in one or two bullet lines *under* the block so they stay visible and easy to correct.
+
+### The 4000-character cap on `/goal`
+
+This applies **only when the deliverable is a `/goal` command** (the long-horizon form from Step 4) — a plain copy-paste prompt has no length limit.
+
+Both tools hard-cap the `/goal` text at **4000 characters** and reject anything longer *before the run starts*, so an overflowing goal never executes:
+
+- Claude Code rejects the condition: *"Goal condition is limited to 4000 characters."*
+- Codex rejects the objective: *"Goal objective is too long: N characters. Limit: 4000."*
+
+So spend that budget on what `/goal` is *for*: the verifiable end state and the exact check commands that prove it. Context, file inventories, and step-by-step instructions don't belong in the goal line — they belong in a file the agent reads. When the task needs more than fits, write that detail to a file and **point the goal at it** rather than inlining it:
+
+- Claude Code: reference it with `@` — `/goal Complete the plan in @docs/goal.md; done when `npm run typecheck` and `npm test` both pass.`
+- Codex: name the file in plain words (Codex's own overflow hint) — `/goal Follow the instructions in docs/goal.md; stop when the test suite passes.`
+
+If your drafted goal is creeping past ~4000 characters, that's the signal to split it this way — not to trim the verification down.

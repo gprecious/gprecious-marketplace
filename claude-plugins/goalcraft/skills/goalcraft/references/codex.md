@@ -32,6 +32,8 @@ Plan before coding, then implement, then run the checks yourself. Keep the diff 
   > `/goal Complete <objective> without stopping until <verifiable end state>.`
   >
   > Example: `/goal Replace all Moment.js usage with date-fns repo-wide without stopping until `rg "from 'moment'"` returns nothing and `npm run typecheck` and `npm test` both pass. After each module, run the suite, fix failures, and commit per module with a minimal diff.`
+  >
+  > The objective is hard-capped at **4000 characters** (`MAX_THREAD_GOAL_OBJECTIVE_CHARS`) — Codex rejects longer input outright (*"Goal objective is too long: N characters. Limit: 4000"*), before the run starts. Codex even tells you the fix: move long instructions into a file and reference it — e.g. `/goal Follow the instructions in docs/goal.md; stop when the test suite passes.` Keep the objective itself to the verifiable end state and its check commands, and let the file carry the detail.
 - **Plan mode (`/plan`)** — for ambiguous work, have Codex gather context and clarify before implementing.
 - **Reasoning effort** — the single biggest quality lever. Suggest `medium` for routine interactive work, `high`/`xhigh` for hard, multi-step, or multi-hour problems. Mention it when the task warrants it.
 - **AGENTS.md (durable vs one-off)** — keep the *immediate* objective in the prompt; recommend moving *durable, reusable* rules (build/test/lint commands, repo conventions, standing safety constraints) into `AGENTS.md` so every future prompt stays focused. If the user's requirement contains standing rules ("we always use pnpm", "never touch the generated/ dir"), note that those belong in AGENTS.md rather than re-stated each time.

@@ -1,6 +1,6 @@
 {
   "name": "goalcraft",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Convert raw requirements into goal-optimized prompts for Claude Code or Codex.",
   "author": {
     "name": "gprecious",
