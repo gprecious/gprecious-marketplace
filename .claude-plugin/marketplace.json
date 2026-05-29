@@ -43,6 +43,12 @@
       "category": "productivity"
     },
     {
+      "name": "goalcraft",
+      "description": "요구사항·버그·작업 설명을 실행 주체(Claude Code/Codex)에 맞춘 goal 최적화 프롬프트로 변환. executor-adaptive — 변환 전 누락 필드(완료조건·범위·검증) 질문 후 복붙용 프롬프트 생성, 장기작업은 /goal 활용.",
+      "source": "./claude-plugins/goalcraft",
+      "category": "productivity"
+    },
+    {
       "name": "hetzner-master",
       "description": "Hetzner Proxmox VE 8 lab 배포·운영 runbook. LXC, Terraform state safety, Ansible rollout, Tailscale, monitoring, firewall smoke gate를 포함한 hetzner-proxmox-deploy skill.",
       "source": {

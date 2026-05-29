@@ -1,0 +1,36 @@
+{
+  "name": "goalcraft",
+  "version": "0.1.0",
+  "description": "Convert raw requirements into goal-optimized prompts for Claude Code or Codex.",
+  "author": {
+    "name": "gprecious",
+    "email": "gprecious@users.noreply.github.com",
+    "url": "https://github.com/gprecious"
+  },
+  "repository": "https://github.com/gprecious/gprecious-marketplace",
+  "keywords": [
+    "prompt-engineering",
+    "goal",
+    "prompt",
+    "spec",
+    "claude-code",
+    "codex"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Goalcraft",
+    "shortDescription": "Turn requirements into goal-optimized agent prompts.",
+    "longDescription": "Convert raw feature requirements, bug reports, or rough task descriptions into a goal-optimized prompt for the coding agent that will run it — Claude Code or Codex. Executor-adaptive; asks for missing done-criteria/scope before producing a copy-paste prompt; uses /goal for long-horizon work.",
+    "developerName": "gprecious",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive"
+    ],
+    "defaultPrompt": [
+      "이 요구사항을 코딩 에이전트용 goal 프롬프트로 변환해줘.",
+      "Turn this into a Codex prompt.",
+      "대시보드 빠르게 해달라는 걸 제대로 된 goal 프롬프트로 만들어줘."
+    ],
+    "brandColor": "#7C3AED"
+  }
+}

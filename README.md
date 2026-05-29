@@ -30,6 +30,7 @@ gprecious-marketplace/
 | herdr | herdr 위에서 Claude Code + Codex 워커 N개를 3×3 grid (한 탭 최대 9개) + 탭 spillover 로 병렬 spawn / 대기 / 결과 회수 / 자동 정리 | `claude-plugins/herdr` |
 | hetzner-master | Hetzner Proxmox VE 8 lab 배포·운영 runbook. LXC, Terraform state safety, Ansible rollout, Tailscale, monitoring 포함 | 외부 repo (`github.com/gprecious/hetzner-master`) |
 | growth-marketer | 모바일 앱·웹/SaaS 마케팅 자동화. 서비스 분석(ICP·VOC) → 채널 추천 → 카피·플레이북·CRO·draft 캠페인 | `claude-plugins/growth-marketer` |
+| goalcraft | 요구사항·버그·작업 설명을 실행 주체(Claude Code/Codex)에 맞춘 goal 최적화 프롬프트로 변환. executor-adaptive — 누락 필드(완료조건·범위·검증) 질문 후 복붙용 프롬프트 생성, 장기작업은 /goal 활용 | `claude-plugins/goalcraft` |
 
 ### 설치 방법
 
@@ -40,6 +41,7 @@ claude /install cmux@gprecious-marketplace
 claude /install herdr@gprecious-marketplace
 claude /install hetzner-master@gprecious-marketplace
 claude /install growth-marketer@gprecious-marketplace
+claude /install goalcraft@gprecious-marketplace
 
 # app-release 는 최초 설치 후 한 번:
 cd ~/.claude/plugins/marketplaces/gprecious-marketplace/claude-plugins/app-release && npm install
@@ -58,6 +60,7 @@ Claude marketplace에 있는 플러그인은 모두 Codex marketplace에도 노�
 | youtube-shorts-orchestrator | YouTube Shorts 제작 workflow | `.agents/plugins/plugins/youtube-shorts-orchestrator` |
 | hetzner-master | Hetzner Proxmox lab deploy/ops runbook | `.agents/plugins/plugins/hetzner-master` |
 | growth-marketer | 모바일 앱·웹/SaaS 마케팅 자동화. 서비스 분석 → 채널 추천 → 카피·플레이북 | `.agents/plugins/plugins/growth-marketer` |
+| goalcraft | 요구사항을 실행 주체(Claude Code/Codex)에 맞춘 goal 최적화 프롬프트로 변환. executor-adaptive + 누락 필드 질문 + /goal 장기작업 | `.agents/plugins/plugins/goalcraft` |
 
 ### 설치 방법
 
@@ -72,6 +75,7 @@ codex plugin add herdr@gprecious-marketplace
 codex plugin add youtube-shorts-orchestrator@gprecious-marketplace
 codex plugin add hetzner-master@gprecious-marketplace
 codex plugin add growth-marketer@gprecious-marketplace
+codex plugin add goalcraft@gprecious-marketplace
 ```
 
 GitHub에서 직접 추가할 때는 repo root 아래 `.agents/plugins`만 sparse checkout하면 된다:
