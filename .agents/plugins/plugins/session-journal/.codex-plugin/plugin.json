@@ -1,0 +1,39 @@
+{
+  "name": "session-journal",
+  "version": "0.1.0",
+  "description": "Record Codex sessions to a dedicated Obsidian vault with summaries, durable wiki notes, and wikilinks.",
+  "author": {
+    "name": "gprecious",
+    "email": "gprecious@users.noreply.github.com",
+    "url": "https://github.com/gprecious"
+  },
+  "repository": "https://github.com/gprecious/gprecious-marketplace",
+  "keywords": [
+    "obsidian",
+    "journal",
+    "hooks",
+    "memory",
+    "wiki",
+    "claude-code",
+    "codex"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "session-journal",
+    "shortDescription": "Record agent sessions into an Obsidian vault.",
+    "longDescription": "Capture Claude Code and Codex prompts, tool activity, and final results through lifecycle hooks; write append-only raw logs, readable session summaries, durable wiki notes, and Obsidian wikilinks for graph navigation.",
+    "developerName": "gprecious",
+    "category": "Productivity",
+    "capabilities": [
+      "Logging",
+      "Memory",
+      "Hooks"
+    ],
+    "defaultPrompt": [
+      "Summarize the current session journal.",
+      "Show where session-journal writes Obsidian notes.",
+      "Explain how wiki-worthy notes are selected."
+    ],
+    "brandColor": "#6D28D9"
+  }
+}

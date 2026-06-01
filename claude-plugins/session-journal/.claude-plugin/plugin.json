@@ -1,0 +1,19 @@
+{
+  "name": "session-journal",
+  "version": "0.1.0",
+  "description": "Record Claude Code sessions to a dedicated Obsidian vault with summaries, durable wiki notes, and wikilinks.",
+  "author": {
+    "name": "gprecious",
+    "email": "gprecious@users.noreply.github.com"
+  },
+  "keywords": [
+    "obsidian",
+    "journal",
+    "hooks",
+    "memory",
+    "wiki",
+    "claude-code",
+    "codex"
+  ],
+  "hooks": "./hooks/hooks.json"
+}

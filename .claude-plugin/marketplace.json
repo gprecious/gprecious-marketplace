@@ -49,6 +49,12 @@
       "category": "productivity"
     },
     {
+      "name": "session-journal",
+      "description": "Claude Code/Codex 세션의 사용자 프롬프트, 도구 활동, 에이전트 결과를 Obsidian vault에 기록하고 요약·wiki 노트·wikilink graph를 생성하는 hooks 기반 저널.",
+      "source": "./claude-plugins/session-journal",
+      "category": "productivity"
+    },
+    {
       "name": "hetzner-master",
       "description": "Hetzner Proxmox VE 8 lab 배포·운영 runbook. LXC, Terraform state safety, Ansible rollout, Tailscale, monitoring, firewall smoke gate를 포함한 hetzner-proxmox-deploy skill.",
       "source": {

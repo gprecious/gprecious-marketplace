@@ -14,8 +14,10 @@ gprecious-marketplace/
 ├── claude-plugins/          # Claude Code 플러그인
 │   ├── app-release/
 │   ├── cmux/
+│   ├── goalcraft/
 │   ├── growth-marketer/
-│   └── herdr/
+│   ├── herdr/
+│   └── session-journal/
 └── opencode-plugins/        # OpenCode 플러그인
     └── youtube-shorts-orchestrator/
 ```
@@ -31,6 +33,7 @@ gprecious-marketplace/
 | hetzner-master | Hetzner Proxmox VE 8 lab 배포·운영 runbook. LXC, Terraform state safety, Ansible rollout, Tailscale, monitoring 포함 | 외부 repo (`github.com/gprecious/hetzner-master`) |
 | growth-marketer | 모바일 앱·웹/SaaS 마케팅 자동화. 서비스 분석(ICP·VOC) → 채널 추천 → 카피·플레이북·CRO·draft 캠페인 | `claude-plugins/growth-marketer` |
 | goalcraft | 요구사항·버그·작업 설명을 실행 주체(Claude Code/Codex)에 맞춘 goal 최적화 프롬프트로 변환. executor-adaptive — 누락 필드(완료조건·범위·검증) 질문 후 복붙용 프롬프트 생성, 장기작업은 /goal 활용 | `claude-plugins/goalcraft` |
+| session-journal | Claude Code/Codex 세션의 프롬프트·도구 활동·결과를 Obsidian vault에 기록하고 요약·wiki 노트·wikilink graph 생성 | `claude-plugins/session-journal` |
 
 ### 설치 방법
 
@@ -42,9 +45,13 @@ claude /install herdr@gprecious-marketplace
 claude /install hetzner-master@gprecious-marketplace
 claude /install growth-marketer@gprecious-marketplace
 claude /install goalcraft@gprecious-marketplace
+claude /install session-journal@gprecious-marketplace
 
 # app-release 는 최초 설치 후 한 번:
 cd ~/.claude/plugins/marketplaces/gprecious-marketplace/claude-plugins/app-release && npm install
+
+# session-journal vault 경로 기본값:
+export LLM_OBSIDIAN_VAULT="$HOME/Documents/Obsidian/llm-agent-vault"
 ```
 
 ## Codex 플러그인
@@ -61,6 +68,7 @@ Claude marketplace에 있는 플러그인은 모두 Codex marketplace에도 노�
 | hetzner-master | Hetzner Proxmox lab deploy/ops runbook | `.agents/plugins/plugins/hetzner-master` |
 | growth-marketer | 모바일 앱·웹/SaaS 마케팅 자동화. 서비스 분석 → 채널 추천 → 카피·플레이북 | `.agents/plugins/plugins/growth-marketer` |
 | goalcraft | 요구사항을 실행 주체(Claude Code/Codex)에 맞춘 goal 최적화 프롬프트로 변환. executor-adaptive + 누락 필드 질문 + /goal 장기작업 | `.agents/plugins/plugins/goalcraft` |
+| session-journal | Codex/Claude hook 이벤트를 Obsidian vault에 append-only raw log, session summary, wiki note, wikilink graph로 저장 | `.agents/plugins/plugins/session-journal` |
 
 ### 설치 방법
 
@@ -76,6 +84,7 @@ codex plugin add youtube-shorts-orchestrator@gprecious-marketplace
 codex plugin add hetzner-master@gprecious-marketplace
 codex plugin add growth-marketer@gprecious-marketplace
 codex plugin add goalcraft@gprecious-marketplace
+codex plugin add session-journal@gprecious-marketplace
 ```
 
 GitHub에서 직접 추가할 때는 repo root 아래 `.agents/plugins`만 sparse checkout하면 된다:

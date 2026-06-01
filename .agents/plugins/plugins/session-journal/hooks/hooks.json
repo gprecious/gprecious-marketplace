@@ -1,0 +1,48 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${PLUGIN_ROOT}/hooks/session_journal_hook.py\" hook --agent \"Codex\"",
+            "statusMessage": "Recording session start in Obsidian"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${PLUGIN_ROOT}/hooks/session_journal_hook.py\" hook --agent \"Codex\"",
+            "statusMessage": "Recording user prompt in Obsidian"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${PLUGIN_ROOT}/hooks/session_journal_hook.py\" hook --agent \"Codex\"",
+            "statusMessage": "Recording tool result in Obsidian"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${PLUGIN_ROOT}/hooks/session_journal_hook.py\" hook --agent \"Codex\"",
+            "statusMessage": "Summarizing turn in Obsidian"
+          }
+        ]
+      }
+    ]
+  }
+}
