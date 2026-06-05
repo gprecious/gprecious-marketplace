@@ -56,7 +56,7 @@
     },
     {
       "name": "hetzner-master",
-      "description": "Hetzner Proxmox VE 8 lab 배포·운영 runbook. LXC, Terraform state safety, Ansible rollout, Tailscale, monitoring, firewall smoke gate를 포함한 hetzner-proxmox-deploy skill.",
+      "description": "Hetzner Proxmox VE 8 lab 배포·운영 runbook. LXC, Terraform state safety, Ansible rollout, Tailscale, monitoring, firewall smoke gate, Supabase self-hosted LXC 템플릿(프로젝트별 복제)을 포함한 hetzner-proxmox-deploy skill.",
       "source": {
         "source": "url",
         "url": "https://github.com/gprecious/hetzner-master.git"
