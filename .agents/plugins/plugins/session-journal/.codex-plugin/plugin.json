@@ -1,6 +1,6 @@
 {
   "name": "session-journal",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Record Codex sessions to an Obsidian vault (or a subfolder of an existing one) with summaries, durable wiki notes, and wikilinks. Every generated note is tagged #ai-generated to stay distinct from hand-authored notes. Supports portable name-based vault resolution for multi-machine setups synced via Obsidian Sync.",
   "author": {
     "name": "gprecious",
