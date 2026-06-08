@@ -2,13 +2,14 @@ import Foundation
 import Testing
 @testable import DevSweepCore
 
-/// Test double: returns canned stdout keyed by executable, records invocations.
+/// Test double: canned stdout + optional exit code keyed by executable. Records nothing.
+/// `exitCodes` defaults to empty so M1 call sites `MockCommandRunner(outputs:)` still compile.
 struct MockCommandRunner: CommandRunner {
-    /// Map of executable path → stdout to return.
     let outputs: [String: String]
+    var exitCodes: [String: Int32] = [:]
 
-    func run(_ executable: String, _ args: [String]) async throws -> String {
-        outputs[executable] ?? ""
+    func runResult(_ executable: String, _ args: [String]) async throws -> CommandResult {
+        CommandResult(stdout: outputs[executable] ?? "", exitCode: exitCodes[executable] ?? 0)
     }
 }
 
@@ -18,8 +19,27 @@ struct MockCommandRunner: CommandRunner {
     #expect(out.contains("echo hi"))
 }
 
+@Test func mockCommandRunnerReturnsCannedExitCode() async throws {
+    let runner = MockCommandRunner(outputs: ["/bin/x": ""], exitCodes: ["/bin/x": 7])
+    let result = try await runner.runResult("/bin/x", [])
+    #expect(result.exitCode == 7)
+}
+
 @Test func processCommandRunnerCapturesEcho() async throws {
     let runner = ProcessCommandRunner()
     let out = try await runner.run("/bin/echo", ["devsweep-ok"])
     #expect(out.trimmingCharacters(in: .whitespacesAndNewlines) == "devsweep-ok")
+}
+
+@Test func processCommandRunnerCapturesExitCode() async throws {
+    let runner = ProcessCommandRunner()
+    let result = try await runner.runResult("/bin/sh", ["-c", "exit 3"])
+    #expect(result.exitCode == 3)
+    #expect(result.stdout.isEmpty)
+}
+
+@Test func runDefaultExtensionStillReturnsStdoutOnly() async throws {
+    let runner = ProcessCommandRunner()
+    let out = try await runner.run("/bin/echo", ["devsweep-ext"])
+    #expect(out.trimmingCharacters(in: .whitespacesAndNewlines) == "devsweep-ext")
 }
