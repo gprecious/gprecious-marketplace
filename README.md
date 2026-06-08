@@ -52,6 +52,9 @@ cd ~/.claude/plugins/marketplaces/gprecious-marketplace/claude-plugins/app-relea
 
 # session-journal vault 경로 기본값:
 export LLM_OBSIDIAN_VAULT="$HOME/Documents/Obsidian/llm-agent-vault"
+# 기존 Obsidian vault 안에 합치려면 전용 하위폴더를 지정 (루트에 안 섞임):
+#   export LLM_OBSIDIAN_VAULT="$HOME/Documents/obsidian/<vault>/AI-Journal"
+# AI 생성 노트는 모두 #ai-generated 태그가 붙어 내 노트와 구별됨.
 ```
 
 ## Codex 플러그인

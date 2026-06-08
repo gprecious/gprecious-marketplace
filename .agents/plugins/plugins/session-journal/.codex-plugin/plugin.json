@@ -1,7 +1,7 @@
 {
   "name": "session-journal",
-  "version": "0.1.0",
-  "description": "Record Codex sessions to a dedicated Obsidian vault with summaries, durable wiki notes, and wikilinks.",
+  "version": "0.2.0",
+  "description": "Record Codex sessions to an Obsidian vault (or a subfolder of an existing one) with summaries, durable wiki notes, and wikilinks. Every generated note is tagged #ai-generated to stay distinct from hand-authored notes.",
   "author": {
     "name": "gprecious",
     "email": "gprecious@users.noreply.github.com",

@@ -14,6 +14,10 @@ def find_core() -> pathlib.Path:
     if explicit:
         return pathlib.Path(explicit).expanduser().resolve()
 
+    rel = pathlib.Path("shared") / "session-journal" / "session_journal_core.py"
+
+    # 1. Walk up from contextual roots — works in the dev repo and whenever the
+    #    plugin root ships a `shared/` sibling (a full marketplace checkout).
     starts = [
         pathlib.Path(os.environ.get("CLAUDE_PLUGIN_ROOT", "")),
         pathlib.Path(os.environ.get("PLUGIN_ROOT", "")),
@@ -25,9 +29,29 @@ def find_core() -> pathlib.Path:
             continue
         current = start if start.is_dir() else start.parent
         for parent in [current, *current.parents]:
-            candidate = parent / "shared" / "session-journal" / "session_journal_core.py"
+            candidate = parent / rel
             if candidate.exists():
                 return candidate
+
+    # 2. Fallback — cached/packaged plugins don't bundle `shared/`, and the hook
+    #    process cwd may be anywhere. Locate the full marketplace checkout (which
+    #    always ships `shared/`) under the host tool's plugin install roots, so
+    #    resolution never depends on cwd.
+    home = pathlib.Path.home()
+    install_roots = [
+        home / ".claude" / "plugins" / "marketplaces",
+        home / ".config" / "claude" / "plugins" / "marketplaces",
+        home / ".codex" / "plugins",
+        home / ".config" / "codex" / "plugins",
+    ]
+    for root in install_roots:
+        if not root.is_dir():
+            continue
+        for depth in ("*", "*/*"):
+            for candidate in sorted(root.glob(f"{depth}/{rel.as_posix()}")):
+                if candidate.exists():
+                    return candidate
+
     raise SystemExit("session-journal core not found")
 
 

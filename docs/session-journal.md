@@ -19,6 +19,25 @@ export LLM_OBSIDIAN_VAULT="$HOME/Documents/Obsidian/llm-agent-vault"
 
 If unset, the plugin writes to `~/Documents/Obsidian/llm-agent-vault`.
 
+For Claude Code, the most reliable way to set this is the `env` block in
+`~/.claude/settings.json` (hooks inherit it on session start). For Codex, export
+it from your shell profile or Codex config so the shared core sees the same path.
+
+### Merging into an existing (e.g. Obsidian Sync) vault
+
+To keep agent logs inside a vault you already use, point `LLM_OBSIDIAN_VAULT` at a
+dedicated **subfolder** of that vault rather than its root:
+
+```bash
+export LLM_OBSIDIAN_VAULT="$HOME/Documents/obsidian/<your-vault>/AI-Journal"
+```
+
+The plugin then writes `Index.md`, `Sessions/`, `Raw/`, and `Wiki/` under that
+subfolder only — never mixed at the vault root. Combined with the `#ai-generated`
+tag (below), this keeps AI-authored content cleanly separated from your own notes
+at both the file-tree and search/graph level, and lets Obsidian Sync's selective
+sync include or exclude the branch as a unit.
+
 ## Vault Layout
 
 ```text
@@ -32,6 +51,23 @@ Wiki/*.md
 - `Sessions/` is human-readable markdown with prompts, tool activity, final agent result, and a regenerated summary block.
 - `Wiki/` stores durable notes and keyword notes that make Obsidian graph links visible.
 
+## AI-Generated Tagging
+
+Every note the plugin writes — `Index.md`, session notes, keyword notes, and
+durable wiki notes — carries this YAML frontmatter so it is unambiguously
+distinct from hand-authored notes when the vault is shared:
+
+```yaml
+tags:
+  - ai-generated
+  - session-journal
+```
+
+`Index.md` additionally opens with a `> [!info] 🤖 AI-generated` callout. In
+Obsidian you can filter or exclude all plugin output with `tag:#ai-generated`
+in search, color it in graph view, or query it with Dataview. The tag set lives
+in `AI_TAGS` in the shared core.
+
 ## Hook Behavior
 
 The plugin registers:
@@ -41,7 +77,7 @@ The plugin registers:
 - `PostToolUse` to capture tool names and command snippets.
 - `Stop` to capture the final assistant message and refresh the summary.
 
-The shared core is `shared/session-journal/session_journal_core.py`. Claude and Codex plugin wrappers call this same core from their own hook entrypoints.
+The shared core is `shared/session-journal/session_journal_core.py`. Claude and Codex plugin wrappers call this same core from their own hook entrypoints. Each wrapper resolves the core by walking up from its plugin root / cwd and, as a fallback, by locating the full marketplace checkout under the host tool's plugin install roots — so resolution never depends on the hook's working directory (cached plugin copies do not bundle `shared/`). Override with `SESSION_JOURNAL_CORE` if needed.
 
 ## Known Limitations
 

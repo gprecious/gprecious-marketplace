@@ -38,6 +38,11 @@ WIKI_MARKERS = (
     "resolved:",
     "lesson:",
 )
+# Tags stamped on every generated note so AI-authored content stays clearly
+# distinguishable from a user's own notes when the vault is shared (e.g. a
+# subfolder inside an existing Obsidian Sync vault). Filter/exclude in Obsidian
+# search or graph with `tag:#ai-generated`.
+AI_TAGS = ("ai-generated", "session-journal")
 
 
 def now_iso() -> str:
@@ -46,6 +51,11 @@ def now_iso() -> str:
 
 def today() -> str:
     return dt.datetime.now().strftime("%Y-%m-%d")
+
+
+def tags_block() -> str:
+    """YAML frontmatter ``tags:`` list marking a note as AI-generated."""
+    return "tags:\n" + "".join(f"  - {tag}\n" for tag in AI_TAGS)
 
 
 def expand(path: str) -> pathlib.Path:
@@ -118,7 +128,15 @@ def ensure_layout(vault: pathlib.Path) -> None:
     index = vault / "Index.md"
     if not index.exists():
         index.write_text(
+            "---\n"
+            "type: index\n"
+            f"{tags_block()}"
+            "---\n\n"
             "# LLM Agent Vault\n\n"
+            "> [!info] 🤖 AI-generated\n"
+            "> Every note under this folder is written by the session-journal plugin "
+            "(Claude Code / Codex) and tagged `#ai-generated`. It is **not** hand-authored. "
+            "Filter or exclude it from search/graph with `tag:#ai-generated`.\n\n"
             "- [[Claude Code]]\n"
             "- [[Codex]]\n"
             "- [[research-engine]]\n"
@@ -166,6 +184,7 @@ def ensure_keyword_notes(vault: pathlib.Path, cwd: str | None = None) -> None:
             "---\n"
             "type: keyword\n"
             "source: session-journal\n"
+            f"{tags_block()}"
             "---\n\n"
             f"# {name}\n\n"
             f"Related: {' '.join(wikilinks(cwd))}\n",
@@ -190,6 +209,7 @@ def init_session_note(path: pathlib.Path, session_id: str, event: dict[str, Any]
         f"agent: {agent}\n"
         f"created: {now_iso()}\n"
         f"cwd: {json.dumps(cwd)}\n"
+        f"{tags_block()}"
         "---\n\n"
         f"# Session {session_id}\n\n"
         f"Agent: [[{agent}]]\n\n"
@@ -329,6 +349,7 @@ def write_wiki_notes(vault: pathlib.Path, session_id: str, event: dict[str, Any]
             f"created: {now_iso()}\n"
             f"agent: {agent}\n"
             f"session_id: {session_id}\n"
+            f"{tags_block()}"
             "---\n\n"
             f"# {title}\n\n"
             f"Source: {session_link}\n\n"
