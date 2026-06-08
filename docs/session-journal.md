@@ -11,32 +11,64 @@ Install the plugin from this marketplace:
 
 Enable or trust the plugin hooks in the host tool's hook UI. Both Claude Code and Codex require hook review/trust for non-managed plugin hooks before commands run.
 
-Set an explicit vault path when desired:
+### Choosing the vault
 
-```bash
-export LLM_OBSIDIAN_VAULT="$HOME/Documents/Obsidian/llm-agent-vault"
-```
+The core resolves the vault in this precedence order:
 
-If unset, the plugin writes to `~/Documents/Obsidian/llm-agent-vault`.
+1. **`LLM_OBSIDIAN_VAULT`** — an explicit absolute path. Use for a per-machine
+   override.
 
-For Claude Code, the most reliable way to set this is the `env` block in
-`~/.claude/settings.json` (hooks inherit it on session start). For Codex, export
-it from your shell profile or Codex config so the shared core sees the same path.
+   ```bash
+   export LLM_OBSIDIAN_VAULT="$HOME/Documents/Obsidian/llm-agent-vault"
+   ```
 
-### Merging into an existing (e.g. Obsidian Sync) vault
+2. **`LLM_OBSIDIAN_VAULT_NAME`** (+ optional **`LLM_OBSIDIAN_SUBDIR`**) — resolve
+   an Obsidian vault by **name** and descend into a subfolder. The core reads the
+   Obsidian desktop app's `obsidian.json` (macOS/Linux/Windows) to find the
+   named vault's local path, preferring an open then most-recently-used match.
 
-To keep agent logs inside a vault you already use, point `LLM_OBSIDIAN_VAULT` at a
-dedicated **subfolder** of that vault rather than its root:
+   ```bash
+   export LLM_OBSIDIAN_VAULT_NAME="harry"
+   export LLM_OBSIDIAN_SUBDIR="AI-Journal"
+   ```
 
-```bash
-export LLM_OBSIDIAN_VAULT="$HOME/Documents/obsidian/<your-vault>/AI-Journal"
-```
+3. **Default** — `~/Documents/Obsidian/llm-agent-vault` when nothing is set, or
+   when a named vault can't be resolved on this machine.
 
-The plugin then writes `Index.md`, `Sessions/`, `Raw/`, and `Wiki/` under that
-subfolder only — never mixed at the vault root. Combined with the `#ai-generated`
-tag (below), this keeps AI-authored content cleanly separated from your own notes
-at both the file-tree and search/graph level, and lets Obsidian Sync's selective
-sync include or exclude the branch as a unit.
+For Claude Code, set these in the `env` block of `~/.claude/settings.json` (hooks
+inherit it on session start). For Codex, export them from `~/.zshenv` (or your
+shell profile / Codex config) so the shared core sees them too.
+
+### Merging into an existing vault (subfolder)
+
+To keep agent logs inside a vault you already use, target a dedicated
+**subfolder** rather than the vault root — via `LLM_OBSIDIAN_SUBDIR` (name mode)
+or by pointing `LLM_OBSIDIAN_VAULT` at `.../<your-vault>/AI-Journal`. The plugin
+then writes `Index.md`, `Sessions/`, `Raw/`, and `Wiki/` under that subfolder
+only — never mixed at the vault root. Combined with the `#ai-generated` tag
+(below), AI-authored content stays cleanly separated from your own notes at both
+the file-tree and search/graph level.
+
+### Multi-machine access via Obsidian Sync
+
+Because the journal lives in a **subfolder of a real vault**, it rides that
+vault's existing sync. With Obsidian Sync (the paid service) on the vault:
+
+- **Content propagates automatically** — every machine and the mobile app that
+  syncs the vault receives the `AI-Journal/` notes. No extra wiring.
+- **Use name-based config** (mode 2 above) so the *same* env works on every
+  machine: the absolute path differs per machine, but the vault name is stable
+  and each machine resolves it through its own `obsidian.json`.
+- **Selective sync**: in Obsidian Sync settings, ensure `AI-Journal/` is not
+  excluded. Note that Obsidian Sync only carries `.jsonl` raw logs when *"Sync
+  all other file types"* is enabled — leave it off to sync just the readable
+  `.md` notes and keep the bulky append-only `Raw/` logs machine-local.
+- **Conflicts are rare**: each session writes its own uniquely-named files, so
+  concurrent sessions on different machines don't contend; `Index.md` is only
+  written when missing.
+
+The plugin's hooks only run where an agent (Claude Code / Codex) runs — other
+machines and mobile are read-only consumers of the synced notes.
 
 ## Vault Layout
 

@@ -50,10 +50,12 @@ claude /install session-journal@gprecious-marketplace
 # app-release 는 최초 설치 후 한 번:
 cd ~/.claude/plugins/marketplaces/gprecious-marketplace/claude-plugins/app-release && npm install
 
-# session-journal vault 경로 기본값:
-export LLM_OBSIDIAN_VAULT="$HOME/Documents/Obsidian/llm-agent-vault"
-# 기존 Obsidian vault 안에 합치려면 전용 하위폴더를 지정 (루트에 안 섞임):
-#   export LLM_OBSIDIAN_VAULT="$HOME/Documents/obsidian/<vault>/AI-Journal"
+# session-journal vault (기본값: ~/Documents/Obsidian/llm-agent-vault)
+# 기존 Obsidian vault 하위폴더에 합치기 — 멀티 머신은 이름 기반 권장 (각 머신
+# obsidian.json 으로 로컬 경로 자동 해석, 콘텐츠는 Obsidian Sync 가 전파):
+export LLM_OBSIDIAN_VAULT_NAME="harry"      # Obsidian vault 이름
+export LLM_OBSIDIAN_SUBDIR="AI-Journal"     # 그 안의 전용 하위폴더
+# 또는 절대경로 1개로 고정: export LLM_OBSIDIAN_VAULT="$HOME/.../<vault>/AI-Journal"
 # AI 생성 노트는 모두 #ai-generated 태그가 붙어 내 노트와 구별됨.
 ```
 

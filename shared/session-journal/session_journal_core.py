@@ -62,8 +62,67 @@ def expand(path: str) -> pathlib.Path:
     return pathlib.Path(path).expanduser().resolve()
 
 
+def obsidian_config_paths() -> list[pathlib.Path]:
+    """Where the Obsidian desktop app records its known vaults, per OS."""
+    home = pathlib.Path.home()
+    paths = [
+        home / "Library" / "Application Support" / "obsidian" / "obsidian.json",  # macOS
+        home / ".config" / "obsidian" / "obsidian.json",                          # Linux
+    ]
+    appdata = os.environ.get("APPDATA")
+    if appdata:
+        paths.append(pathlib.Path(appdata) / "obsidian" / "obsidian.json")        # Windows
+    return paths
+
+
+def resolve_named_vault(name: str) -> pathlib.Path | None:
+    """Resolve an Obsidian vault by NAME to its machine-local absolute path.
+
+    The same synced vault (e.g. via Obsidian Sync) has a different absolute path
+    on each machine, but its name is stable — so a name-based config is portable:
+    the same env works everywhere and each machine reads its own `obsidian.json`.
+    Prefers an open vault, then the most recently used. Returns None when Obsidian
+    or the named vault is not registered on this machine.
+    """
+    best: tuple[int, int] | None = None
+    best_path: pathlib.Path | None = None
+    for cfg in obsidian_config_paths():
+        try:
+            if not cfg.is_file():
+                continue
+            vaults = json.loads(cfg.read_text(encoding="utf-8")).get("vaults")
+        except (OSError, json.JSONDecodeError, AttributeError):
+            continue
+        if not isinstance(vaults, dict):
+            continue
+        for info in vaults.values():
+            if not isinstance(info, dict):
+                continue
+            path = info.get("path")
+            if not isinstance(path, str) or pathlib.Path(path).name != name:
+                continue
+            rank = (int(bool(info.get("open"))), int(info.get("ts") or 0))
+            if best is None or rank > best:
+                best, best_path = rank, pathlib.Path(path).expanduser()
+    return best_path
+
+
 def vault_root(explicit: str | None = None) -> pathlib.Path:
-    return expand(explicit or os.environ.get("LLM_OBSIDIAN_VAULT") or DEFAULT_VAULT)
+    if explicit:
+        return expand(explicit)
+    env_path = os.environ.get("LLM_OBSIDIAN_VAULT")
+    if env_path:
+        return expand(env_path)
+    # Portable multi-machine config: resolve a named Obsidian vault and descend
+    # into an optional subfolder. The vault content travels between machines via
+    # Obsidian Sync; this resolves the right local path on whichever machine runs.
+    name = os.environ.get("LLM_OBSIDIAN_VAULT_NAME")
+    if name:
+        resolved = resolve_named_vault(name)
+        if resolved:
+            subdir = (os.environ.get("LLM_OBSIDIAN_SUBDIR") or "").strip("/")
+            return (resolved / subdir).resolve() if subdir else resolved.resolve()
+    return expand(DEFAULT_VAULT)
 
 
 def safe_id(value: Any, fallback: str = "unknown-session") -> str:
