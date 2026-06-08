@@ -538,6 +538,34 @@ def run_self_test(vault: pathlib.Path) -> dict[str, Any]:
     return {"vault": str(vault), "events": len(events), "results": results}
 
 
+def diagnose(vault: pathlib.Path) -> dict[str, Any]:
+    """Report how the vault path was resolved — for verifying per-machine setup."""
+    explicit = os.environ.get("LLM_OBSIDIAN_VAULT")
+    name = os.environ.get("LLM_OBSIDIAN_VAULT_NAME")
+    named = resolve_named_vault(name) if name else None
+    if explicit:
+        mode = "explicit (LLM_OBSIDIAN_VAULT)"
+    elif name and named:
+        mode = "name (LLM_OBSIDIAN_VAULT_NAME)"
+    elif name:
+        mode = "default (named vault NOT found on this machine — check Obsidian is set up)"
+    else:
+        mode = "default (no env set)"
+    return {
+        "resolved_vault": str(vault),
+        "vault_exists": vault.exists(),
+        "resolution_mode": mode,
+        "env": {
+            "LLM_OBSIDIAN_VAULT": explicit,
+            "LLM_OBSIDIAN_VAULT_NAME": name,
+            "LLM_OBSIDIAN_SUBDIR": os.environ.get("LLM_OBSIDIAN_SUBDIR"),
+        },
+        "named_vault_path": str(named) if named else None,
+        "obsidian_config_found": [str(p) for p in obsidian_config_paths() if p.is_file()],
+        "ok": bool(explicit or named),
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Obsidian session journal hook core")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -553,9 +581,15 @@ def main(argv: list[str] | None = None) -> int:
     self_test = sub.add_parser("self-test")
     self_test.add_argument("--vault")
 
+    where = sub.add_parser("where")
+    where.add_argument("--vault")
+
     args = parser.parse_args(argv)
     vault = vault_root(getattr(args, "vault", None))
 
+    if args.command == "where":
+        print(json.dumps(diagnose(vault), ensure_ascii=False, indent=2))
+        return 0
     if args.command == "hook":
         result = handle_event(read_json_stdin(), args.agent, vault)
         print(json.dumps({"continue": True, "sessionJournal": result}, ensure_ascii=False))

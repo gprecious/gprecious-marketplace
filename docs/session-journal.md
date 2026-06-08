@@ -70,6 +70,53 @@ vault's existing sync. With Obsidian Sync (the paid service) on the vault:
 The plugin's hooks only run where an agent (Claude Code / Codex) runs — other
 machines and mobile are read-only consumers of the synced notes.
 
+#### Setting up a new machine
+
+1. **Sync the vault**: install Obsidian, sign in to the same Obsidian Sync
+   account, and connect the vault (e.g. `harry`). Obsidian downloads it locally
+   and registers it in that machine's `obsidian.json` — which is what name-based
+   resolution reads. Ensure `AI-Journal/` is included in selective sync.
+2. **Install the plugin** from this marketplace (Claude Code and/or Codex) and
+   trust its hooks.
+3. **Configure the vault** — the *same* lines on every machine:
+   - Claude Code → `~/.claude/settings.json`:
+     ```json
+     "env": { "LLM_OBSIDIAN_VAULT_NAME": "harry", "LLM_OBSIDIAN_SUBDIR": "AI-Journal" }
+     ```
+   - Codex / shell → `~/.zshenv`:
+     ```bash
+     export LLM_OBSIDIAN_VAULT_NAME="harry"
+     export LLM_OBSIDIAN_SUBDIR="AI-Journal"
+     ```
+4. **Restart** Claude Code / open a new shell so the env loads, then verify (below).
+
+If the machine has no Obsidian app (e.g. a headless server), name resolution
+can't read `obsidian.json` and falls back to the default vault — set an explicit
+`LLM_OBSIDIAN_VAULT` absolute path there instead.
+
+#### Updating an already-installed machine
+
+1. Update the marketplace + plugin to the current version (via `/plugin`, or
+   `claude plugin marketplace update gprecious-marketplace` then reinstall).
+   This also clears the older "Duplicate hooks file detected" load error.
+2. Add the two env vars (step 3 above) if not already present.
+3. Restart Claude Code / reopen the shell, then verify.
+
+#### Verifying the configuration
+
+Run the `where` subcommand on any machine to confirm the resolved vault:
+
+```bash
+python3 <plugin-root>/hooks/session_journal_hook.py where
+```
+
+It prints the resolved vault path, the resolution mode (`explicit` / `name` /
+`default`), the env it saw, and `ok: true/false`. `ok: false` with
+`"named vault NOT found"` means Obsidian hasn't registered that vault on this
+machine yet — open it in Obsidian once. Precedence: an explicit
+`LLM_OBSIDIAN_VAULT` overrides the name vars, so set only the name vars for a
+portable config.
+
 ## Vault Layout
 
 ```text
