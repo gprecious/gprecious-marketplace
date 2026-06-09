@@ -56,3 +56,61 @@ import Testing
     #expect(template.isTemplate == true)
     #expect(colour.isTemplate == false)
 }
+
+// MARK: - Shared skin fixtures
+
+/// Representative reclaimable levels — one per band plus an empty case (mirrors --render-samples).
+let representativeStates: [(label: String, state: ReclaimVisualState)] = {
+    let low: Int64 = 5_000_000_000
+    let high: Int64 = 20_000_000_000
+    return [
+        ("0", ReclaimVisualState(reclaimableBytes: 0, low: low, high: high)),
+        ("2gb", ReclaimVisualState(reclaimableBytes: 2_000_000_000, low: low, high: high)),
+        ("12gb", ReclaimVisualState(reclaimableBytes: 12_000_000_000, low: low, high: high)),
+        ("30gb", ReclaimVisualState(reclaimableBytes: 30_000_000_000, low: low, high: high)),
+    ]
+}()
+
+private let renderHeight: CGFloat = 18
+
+// MARK: - Free skins (template, monochrome)
+
+@Test func freeSkinCatalogContainsGaugeAndBattery() {
+    let freeIds = SkinCatalog.free.map(\.id)
+    #expect(freeIds.contains("gauge"))
+    #expect(freeIds.contains("battery"))
+    let allFree = SkinCatalog.free.allSatisfy { $0.isFree }
+    #expect(allFree)
+}
+
+@Test func freeSkinsRenderExactHeightNonEmptyTemplateAtEveryBand() {
+    for skin in SkinCatalog.free {
+        for sample in representativeStates {
+            let image = skin.image(for: sample.state, height: renderHeight)
+            #expect(image.size.height == renderHeight, "\(skin.id)-\(sample.label) height")
+            #expect(image.isTemplate == true, "\(skin.id)-\(sample.label) isTemplate")
+            #expect(PixelInspection.isNonEmpty(image), "\(skin.id)-\(sample.label) non-empty")
+        }
+    }
+}
+
+@Test func freeSkinsAreDeterministic() {
+    for skin in SkinCatalog.free {
+        for sample in representativeStates {
+            let a = skin.image(for: sample.state, height: renderHeight)
+            let b = skin.image(for: sample.state, height: renderHeight)
+            #expect(PixelInspection.rawPixels(a) == PixelInspection.rawPixels(b), "\(skin.id)-\(sample.label) determinism")
+        }
+    }
+}
+
+@Test func gaugeSkinFillGrowsWithReclaimableBytes() {
+    // More reclaimable bytes ⇒ at least as many drawn (non-zero) pixels as a lower band.
+    let gauge = GaugeSkin()
+    func drawnBytes(_ state: ReclaimVisualState) -> Int {
+        (PixelInspection.rawPixels(gauge.image(for: state, height: renderHeight)) ?? Data()).reduce(0) { $0 + ($1 != 0 ? 1 : 0) }
+    }
+    let low = drawnBytes(representativeStates[1].state)  // 2GB
+    let high = drawnBytes(representativeStates[2].state) // 12GB
+    #expect(high > low)
+}

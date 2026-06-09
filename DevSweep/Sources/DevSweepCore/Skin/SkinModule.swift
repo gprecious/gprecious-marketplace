@@ -21,7 +21,10 @@ public protocol SkinModule: Sendable {
 /// skins land (M5 Tasks 3–4); `--render-samples` and the menu picker both iterate `all`.
 public enum SkinCatalog {
     /// Every bundled skin, in display order (free first, then paid).
-    public static let all: [any SkinModule] = []
+    public static let all: [any SkinModule] = [
+        GaugeSkin(),
+        BatterySkin(),
+    ]
 
     /// Skins the user can select today.
     public static var free: [any SkinModule] { all.filter(\.isFree) }
