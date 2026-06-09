@@ -9,7 +9,11 @@ let package = Package(
     ],
     targets: [
         .target(name: "DevSweepCore", linkerSettings: [.linkedLibrary("sqlite3")]),
-        .executableTarget(name: "DevSweepApp", dependencies: ["DevSweepCore"]),
+        .executableTarget(
+            name: "DevSweepApp",
+            dependencies: ["DevSweepCore"],
+            resources: [.copy("Resources/DevSweep.storekit")]
+        ),
         .testTarget(name: "DevSweepCoreTests", dependencies: ["DevSweepCore"])
     ]
 )

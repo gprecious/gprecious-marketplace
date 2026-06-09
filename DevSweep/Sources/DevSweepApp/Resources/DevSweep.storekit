@@ -1,0 +1,77 @@
+{
+  "identifier" : "DE05EE17-0000-4000-8000-000000000000",
+  "nonRenewingSubscriptions" : [],
+  "products" : [
+    {
+      "displayPrice" : "1.99",
+      "familyShareable" : false,
+      "internalID" : "00000000-0000-4000-8000-000000000001",
+      "localizations" : [
+        {
+          "description" : "Retro LED dot-matrix menubar skin that lights up with reclaimable space.",
+          "displayName" : "Dot Matrix Skin",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "kr.qplace.devsweep.skin.dotmatrix",
+      "referenceName" : "Dot Matrix Skin",
+      "type" : "NonConsumable"
+    },
+    {
+      "displayPrice" : "2.99",
+      "familyShareable" : false,
+      "internalID" : "00000000-0000-4000-8000-000000000002",
+      "localizations" : [
+        {
+          "description" : "Neon synthwave gauge menubar skin with a cyan-to-magenta fill.",
+          "displayName" : "Synthwave Skin",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "kr.qplace.devsweep.skin.synthwave",
+      "referenceName" : "Synthwave Skin",
+      "type" : "NonConsumable"
+    },
+    {
+      "displayPrice" : "3.99",
+      "familyShareable" : false,
+      "internalID" : "00000000-0000-4000-8000-000000000003",
+      "localizations" : [
+        {
+          "description" : "Both retro skins — Dot Matrix and Synthwave — bundled at a pack price.",
+          "displayName" : "Retro Theme Pack",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "kr.qplace.devsweep.themepack.retro",
+      "referenceName" : "Retro Theme Pack",
+      "type" : "NonConsumable"
+    },
+    {
+      "displayPrice" : "9.99",
+      "familyShareable" : false,
+      "internalID" : "00000000-0000-4000-8000-000000000004",
+      "localizations" : [
+        {
+          "description" : "Unlock every DevSweep skin — current and future — with one purchase.",
+          "displayName" : "All-Access",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "kr.qplace.devsweep.allaccess",
+      "referenceName" : "All-Access",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+    "_failTransactionsEnabled" : false,
+    "_locale" : "en_US",
+    "_storefront" : "USA",
+    "_storeKitErrors" : []
+  },
+  "subscriptionGroups" : [],
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}
