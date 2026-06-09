@@ -143,7 +143,15 @@ final class AppCoordinator: ObservableObject {
         isScanning = true
         repeat {
             rescanPending = false
-            let result = await scanCoordinator.runScanDetailed()
+            // The recursive DirectorySizer `du` over tens of GB of node_modules is heavy and
+            // synchronous. AppCoordinator is @MainActor, so running the scan inline here pins that
+            // du to the main thread and freezes the run loop (the menubar title stays "0 bytes",
+            // the scan never settles). Offload it onto a detached background task; we hop back to
+            // the main actor only to publish the result.
+            let coordinator = scanCoordinator // Sendable struct captured by the detached task
+            let result = await Task.detached(priority: .utility) {
+                await coordinator.runScanDetailed()
+            }.value
             currentGrouped = result.grouped
             currentItems = result.grouped.flatMap(\.items)
             apply(record: result.record)
