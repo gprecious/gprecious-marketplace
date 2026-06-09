@@ -16,7 +16,8 @@ public struct BatterySkin: SkinModule {
             let lineWidth: CGFloat = state.isCritical ? 1.75 : 1.25
             let nubWidth = (size.width * 0.08).rounded() + 1
             let nubHeight = (size.height * 0.4).rounded()
-            let vInset = (lineWidth / 2 + 1).rounded()
+            // Symmetric with the horizontal inset below (both `lineWidth/2 + 1`), matching GaugeSkin.
+            let vInset = lineWidth / 2 + 1
 
             let body = CGRect(
                 x: lineWidth / 2 + 1,

@@ -124,30 +124,33 @@ private let renderHeight: CGFloat = 18
     }
 }
 
-@Test func freeSkinOutlineSpansAllFourEdges() {
-    // Regression: the rounded-rect outline must reach all four edges, not clip to a corner
-    // (the M5 AppKit double-scale bug rendered only the bottom-left quarter).
-    let image = GaugeSkin().image(for: representativeStates[0].state, height: 36) // band 0 = outline only
-    guard let rep = PixelInspection.bitmapRep(image), let ptr = rep.bitmapData else {
-        #expect(Bool(false), "missing bitmap rep"); return
-    }
-    let w = rep.pixelsWide, h = rep.pixelsHigh
-    func hasInk(xRange: Range<Int>, yRange: Range<Int>) -> Bool {
-        for y in yRange {
-            for x in xRange where ptr[y * rep.bytesPerRow + x * rep.samplesPerPixel + 3] > 0 {
-                return true
-            }
+@Test func freeSkinOutlinesSpanAllFourEdges() {
+    // Regression: every free skin's outline must reach all four edges, not clip to a corner
+    // (the M5 AppKit double-scale bug rendered only the bottom-left quarter). Both gauge AND battery
+    // use the same NSBezierPath outline path, so both are guarded here.
+    for skin in SkinCatalog.free {
+        let image = skin.image(for: representativeStates[0].state, height: 36) // band 0 = outline only
+        guard let rep = PixelInspection.bitmapRep(image), let ptr = rep.bitmapData else {
+            #expect(Bool(false), "\(skin.id): missing bitmap rep"); continue
         }
-        return false
+        let w = rep.pixelsWide, h = rep.pixelsHigh
+        func hasInk(xRange: Range<Int>, yRange: Range<Int>) -> Bool {
+            for y in yRange {
+                for x in xRange where ptr[y * rep.bytesPerRow + x * rep.samplesPerPixel + 3] > 0 {
+                    return true
+                }
+            }
+            return false
+        }
+        let topBand = 0..<max(1, h * 18 / 100)
+        let bottomBand = (h - max(1, h * 18 / 100))..<h
+        let leftBand = 0..<max(1, w * 22 / 100)
+        let rightBand = (w - max(1, w * 22 / 100))..<w
+        #expect(hasInk(xRange: 0..<w, yRange: topBand), "\(skin.id): top edge missing")
+        #expect(hasInk(xRange: 0..<w, yRange: bottomBand), "\(skin.id): bottom edge missing")
+        #expect(hasInk(xRange: leftBand, yRange: 0..<h), "\(skin.id): left edge missing")
+        #expect(hasInk(xRange: rightBand, yRange: 0..<h), "\(skin.id): right edge missing")
     }
-    let topBand = 0..<max(1, h * 18 / 100)
-    let bottomBand = (h - max(1, h * 18 / 100))..<h
-    let leftBand = 0..<max(1, w * 22 / 100)
-    let rightBand = (w - max(1, w * 22 / 100))..<w
-    #expect(hasInk(xRange: 0..<w, yRange: topBand), "top edge missing")
-    #expect(hasInk(xRange: 0..<w, yRange: bottomBand), "bottom edge missing")
-    #expect(hasInk(xRange: leftBand, yRange: 0..<h), "left edge missing")
-    #expect(hasInk(xRange: rightBand, yRange: 0..<h), "right edge missing")
 }
 
 @Test func gaugeSkinFillGrowsWithReclaimableBytes() {
@@ -159,6 +162,30 @@ private let renderHeight: CGFloat = 18
     let low = drawnBytes(representativeStates[1].state)  // 2GB
     let high = drawnBytes(representativeStates[2].state) // 12GB
     #expect(high > low)
+}
+
+@Test func batterySkinFillGrowsWithReclaimableBytes() {
+    let battery = BatterySkin()
+    func drawnBytes(_ state: ReclaimVisualState) -> Int {
+        (PixelInspection.rawPixels(battery.image(for: state, height: renderHeight)) ?? Data()).reduce(0) { $0 + ($1 != 0 ? 1 : 0) }
+    }
+    #expect(drawnBytes(representativeStates[2].state) > drawnBytes(representativeStates[1].state))
+}
+
+@Test func gaugeFillReachesInteriorTopWhenFullButNotWhenEmpty() {
+    // Guards the fill geometry at fillRatio 1.0: the centre of the gauge near the top must be painted
+    // when full, and transparent when empty (catches a fill rect that fails to reach the interior top).
+    let low: Int64 = 5_000_000_000, high: Int64 = 20_000_000_000
+    let skin = GaugeSkin()
+    func centerInkNearTop(_ bytes: Int64) -> Bool {
+        let image = skin.image(for: ReclaimVisualState(reclaimableBytes: bytes, low: low, high: high), height: 36)
+        guard let rep = PixelInspection.bitmapRep(image), let ptr = rep.bitmapData else { return false }
+        let cx = rep.pixelsWide / 2
+        let y = rep.pixelsHigh / 4 // ~25% down from the top (bitmap row 0 = top)
+        return ptr[y * rep.bytesPerRow + cx * rep.samplesPerPixel + 3] > 0
+    }
+    #expect(centerInkNearTop(30_000_000_000) == true)  // full → fill reaches the interior top
+    #expect(centerInkNearTop(0) == false)              // empty → interior centre is unpainted
 }
 
 // MARK: - Paid skins (colour, non-template)
@@ -187,6 +214,37 @@ private let renderHeight: CGFloat = 18
     for skin in SkinCatalog.paid {
         let image = skin.image(for: critical, height: renderHeight)
         #expect(PixelInspection.hasChromaticPixel(image), "\(skin.id) should render colour")
+    }
+}
+
+@Test func dotMatrixSkinMapsBandsToDistinctColors() {
+    // The skin's purpose is band-coded colour: band 1 = amber (green-rich), band 2 = red (green-poor).
+    // A bug that always picked one band colour would pass the "has-chromatic-pixel" test; this catches it.
+    let low: Int64 = 5_000_000_000, high: Int64 = 20_000_000_000
+    let skin = DotMatrixSkin()
+    func mostSaturatedLitPixel(_ bytes: Int64) -> (r: Int, g: Int, b: Int)? {
+        let image = skin.image(for: ReclaimVisualState(reclaimableBytes: bytes, low: low, high: high), height: 18)
+        guard let rep = PixelInspection.bitmapRep(image), let ptr = rep.bitmapData else { return nil }
+        var best: (r: Int, g: Int, b: Int)?
+        var bestSaturation = -1
+        for y in 0..<rep.pixelsHigh {
+            for x in 0..<rep.pixelsWide {
+                let p = y * rep.bytesPerRow + x * rep.samplesPerPixel
+                let r = Int(ptr[p]), g = Int(ptr[p + 1]), b = Int(ptr[p + 2]), a = Int(ptr[p + 3])
+                if a < 200 { continue } // lit cells are opaque
+                let saturation = max(r, g, b) - min(r, g, b)
+                if saturation > bestSaturation { bestSaturation = saturation; best = (r, g, b) }
+            }
+        }
+        return best
+    }
+    let amber = mostSaturatedLitPixel(12_000_000_000) // band 1
+    let red = mostSaturatedLitPixel(30_000_000_000)   // band 2
+    #expect(amber != nil)
+    #expect(red != nil)
+    if let amber, let red {
+        #expect(amber.g > red.g + 40, "amber green (\(amber.g)) should clearly exceed red green (\(red.g))")
+        #expect(red.r > red.g, "the critical (band 2) lit colour should be red-dominant")
     }
 }
 
