@@ -20,27 +20,59 @@ public struct ReclaimRouter: Sendable {
         self.now = now
     }
 
-    /// Partition `items` by owning module, reclaim each module's batch (honoring `dryRun`),
-    /// record the combined outcomes to the audit log, and return them in input order.
+    /// Partition `items` by owning module (decided by the item id's `<moduleId>:` prefix),
+    /// reclaim each module's batch (honoring `dryRun`), record the combined outcomes to the
+    /// audit log, and return them in input order. Use this when you only have item ids;
+    /// prefer `reclaim(grouped:dryRun:)` when the owning module is already known (it routes
+    /// modules whose ids are raw filesystem paths, e.g. node_modules, which carry no prefix).
     public func reclaim(_ items: [CleanupItem], dryRun: Bool) async -> [ReclaimOutcome] {
-        // Group owned items per module (per-module input order preserved).
-        var ownedByModule: [String: [CleanupItem]] = [:]
+        // Group owned items per module (per-module input order preserved), preserving overall
+        // input order so the unowned-item failures land in the right slots.
+        var grouped: [(module: String, items: [CleanupItem])] = []
+        var indexByModule: [String: Int] = [:]
         for item in items {
-            guard let owner = owningModule(for: item.id) else { continue }
-            ownedByModule[owner.id, default: []].append(item)
+            let moduleId = owningModuleId(for: item.id)
+            if let existing = indexByModule[moduleId] {
+                grouped[existing].items.append(item)
+            } else {
+                indexByModule[moduleId] = grouped.count
+                grouped.append((module: moduleId, items: [item]))
+            }
         }
+        return await route(grouped: grouped, allItems: items, dryRun: dryRun)
+    }
 
-        // Reclaim each owning module's batch, indexing every result by item id.
+    /// Reclaim items already grouped by their owning module id (as produced by
+    /// `DetectorRegistry.scanGrouped`). Routes by the authoritative module id from the scan —
+    /// NOT by parsing `item.id` — so modules whose item ids are raw filesystem paths with no
+    /// `<moduleId>:` prefix (e.g. node_modules) reclaim correctly. Groups whose id matches no
+    /// known module fail in place with `.failed("no owning module")`. Audit recording and
+    /// input-order semantics match `reclaim(_:dryRun:)`.
+    public func reclaim(
+        grouped: [(module: String, items: [CleanupItem])],
+        dryRun: Bool
+    ) async -> [ReclaimOutcome] {
+        let allItems = grouped.flatMap(\.items)
+        return await route(grouped: grouped, allItems: allItems, dryRun: dryRun)
+    }
+
+    /// Shared core: reclaim each group through its named module, reassemble outcomes in the
+    /// order of `allItems`, persist the audit log, and return them.
+    private func route(
+        grouped: [(module: String, items: [CleanupItem])],
+        allItems: [CleanupItem],
+        dryRun: Bool
+    ) async -> [ReclaimOutcome] {
         var routed: [String: ReclaimOutcome] = [:]
-        for module in modules {
-            guard let owned = ownedByModule[module.id], !owned.isEmpty else { continue }
-            for outcome in await module.reclaim(owned, dryRun: dryRun) {
+        for group in grouped {
+            guard !group.items.isEmpty,
+                  let module = modules.first(where: { $0.id == group.module }) else { continue }
+            for outcome in await module.reclaim(group.items, dryRun: dryRun) {
                 routed[outcome.item.id] = outcome
             }
         }
 
-        // Reassemble in input order; anything without a routed result had no owning module.
-        let outcomes = items.map { item in
+        let outcomes = allItems.map { item in
             routed[item.id] ?? ReclaimOutcome(item: item, status: .failed(message: "no owning module"))
         }
 
@@ -48,9 +80,9 @@ public struct ReclaimRouter: Sendable {
         return outcomes
     }
 
-    /// The module whose id matches the token before the item id's first ":", or `nil`.
-    private func owningModule(for itemId: String) -> (any CleanupModule)? {
-        guard let prefix = itemId.split(separator: ":").first.map(String.init) else { return nil }
-        return modules.first { $0.id == prefix }
+    /// The token before the item id's first ":", used as the owning module id for prefix-based
+    /// routing. A path-shaped id (no ":") yields the whole string, which matches no module.
+    private func owningModuleId(for itemId: String) -> String {
+        itemId.split(separator: ":").first.map(String.init) ?? itemId
     }
 }

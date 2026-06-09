@@ -14,6 +14,26 @@ public enum DefaultDetectorRegistry {
         deleter: any FileSystemDeleter,
         registry: ProtectedRegistry = ProtectedRegistry()
     ) -> DetectorRegistry {
+        DetectorRegistry(modules: makeModules(
+            home: home,
+            devRoots: devRoots,
+            commandRunner: commandRunner,
+            deleter: deleter,
+            registry: registry
+        ))
+    }
+
+    /// The composed module instances, exposed so the App layer can build BOTH a
+    /// `DetectorRegistry` (for scanning) and a `ReclaimRouter` (for routing approved reclaims)
+    /// from one shared module set — identical safety compositions, no duplication, no divergence.
+    /// `make` is implemented on top of this; existing callers see no behavior change.
+    public static func makeModules(
+        home: String = NSHomeDirectory(),
+        devRoots: [String] = [(("~/Documents/dev") as NSString).expandingTildeInPath],
+        commandRunner: any CommandRunner = ProcessCommandRunner(),
+        deleter: any FileSystemDeleter,
+        registry: ProtectedRegistry = ProtectedRegistry()
+    ) -> [any CleanupModule] {
         let sizer = DirectorySizer()
 
         let cacheLayer = SafetyLayer(
@@ -42,6 +62,6 @@ public enum DefaultDetectorRegistry {
             sizer: sizer
         )
 
-        return DetectorRegistry(modules: [docker, packageCache, nodeModules])
+        return [docker, packageCache, nodeModules]
     }
 }

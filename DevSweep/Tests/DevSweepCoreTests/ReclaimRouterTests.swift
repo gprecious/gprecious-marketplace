@@ -134,3 +134,57 @@ private func router(_ modules: [any CleanupModule], _ store: any Store) -> Recla
     #expect(byItem["z:b"]?.status == "failed")
     #expect(byItem["z:b"]?.bytesReclaimed == 0)
 }
+
+// MARK: - Grouped routing (authoritative module id; for modules whose item ids are raw paths)
+
+/// node_modules emits raw filesystem-path ids with NO "<moduleId>:" prefix, so prefix parsing
+/// would fail them. Grouped routing uses the scan's owning module id directly and reclaims them.
+@Test func groupedRoutesByModuleIdNotItemIdPrefix() async {
+    let node = RecordingModule(id: "node-modules")
+    let store = InMemoryStore()
+    let pathItem = item("/Users/dev/proj/node_modules", 512) // path-shaped id, no prefix
+
+    let outcomes = await router([node], store).reclaim(
+        grouped: [(module: "node-modules", items: [pathItem])],
+        dryRun: true
+    )
+
+    #expect(await node.receivedItems.map(\.id) == ["/Users/dev/proj/node_modules"])
+    #expect(outcomes.count == 1)
+    #expect(outcomes[0].status == .dryRun(plannedBytes: 512))
+}
+
+@Test func groupedUnknownModuleGroupFailsInPlace() async {
+    let x = RecordingModule(id: "x")
+    let store = InMemoryStore()
+
+    let outcomes = await router([x], store).reclaim(
+        grouped: [(module: "ghost", items: [item("/some/path", 10)])],
+        dryRun: true
+    )
+
+    #expect(outcomes.count == 1)
+    #expect(outcomes[0].status == .failed(message: "no owning module"))
+    #expect(await x.receivedItems.isEmpty)
+}
+
+@Test func groupedPreservesInputOrderAndRecordsAudit() async {
+    let a = RecordingModule(id: "a")
+    let b = RecordingModule(id: "b")
+    let store = InMemoryStore()
+
+    let outcomes = await router([a, b], store).reclaim(
+        grouped: [
+            (module: "a", items: [item("/p/a1", 1), item("/p/a2", 2)]),
+            (module: "b", items: [item("b:keyed", 3)]) // prefixed id routes fine here too
+        ],
+        dryRun: false
+    )
+
+    #expect(outcomes.map(\.item.id) == ["/p/a1", "/p/a2", "b:keyed"])
+    #expect(outcomes.allSatisfy { if case .deleted = $0.status { return true } else { return false } })
+
+    let audit = await store.auditLog(limit: 100)
+    #expect(audit.count == 3)
+    #expect(audit.allSatisfy { $0.timestamp == fixedNow })
+}
