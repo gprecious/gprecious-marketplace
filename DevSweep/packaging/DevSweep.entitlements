@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<!--
+  Developer ID distribution (NOT Mac App Store) — intentionally NOT sandboxed.
+
+  DevSweep scans and reclaims disk across the whole home tree (Docker via CLI,
+  global package caches like ~/.npm and ~/.gradle, node_modules anywhere). That
+  requires full filesystem reach, which the user grants once via Full Disk Access
+  (TCC, System Settings → Privacy & Security) — a permission, not an entitlement.
+
+  Hardened Runtime is enabled at sign time (`codesign --options runtime`), which
+  is what notarization requires. No special entitlements are needed: spawning the
+  docker/du child processes is unaffected by Hardened Runtime, and we use no JIT,
+  unsigned memory, DYLD injection, or Apple Events automation.
+
+  If a future feature sends Apple Events to other apps, add
+  com.apple.security.automation.apple-events here.
+-->
+<dict>
+</dict>
+</plist>

@@ -2,3 +2,7 @@
 .swiftpm/
 *.xcodeproj
 DerivedData/
+
+# packaging output
+build/
+packaging/icon-master.png
