@@ -40,6 +40,26 @@ import Testing
     #expect(PixelInspection.isNonEmpty(image) == false)
 }
 
+@Test func skinCanvasFillRectCoversEntirePixelBuffer() {
+    // A full-bounds fill must map to every pixel — guards against half/double-scale CTM bugs that
+    // leave part of the canvas unpainted (the M5 double-scale regression).
+    let image = SkinCanvas.image(width: 12, height: 18, isTemplate: false) { cg, size in
+        cg.setFillColor(NSColor.white.cgColor)
+        cg.fill(CGRect(origin: .zero, size: size))
+    }
+    guard let rep = PixelInspection.bitmapRep(image), let ptr = rep.bitmapData else {
+        #expect(Bool(false), "missing bitmap rep"); return
+    }
+    var opaquePixels = 0
+    let total = rep.pixelsWide * rep.pixelsHigh
+    for y in 0..<rep.pixelsHigh {
+        for x in 0..<rep.pixelsWide where ptr[y * rep.bytesPerRow + x * rep.samplesPerPixel + 3] > 0 {
+            opaquePixels += 1
+        }
+    }
+    #expect(opaquePixels == total, "expected full coverage, got \(opaquePixels)/\(total)")
+}
+
 @Test func skinCanvasIsDeterministicForIdenticalDrawing() {
     func render() -> NSImage {
         SkinCanvas.image(width: 14, height: 18, isTemplate: false) { cg, size in
@@ -102,6 +122,32 @@ private let renderHeight: CGFloat = 18
             #expect(PixelInspection.rawPixels(a) == PixelInspection.rawPixels(b), "\(skin.id)-\(sample.label) determinism")
         }
     }
+}
+
+@Test func freeSkinOutlineSpansAllFourEdges() {
+    // Regression: the rounded-rect outline must reach all four edges, not clip to a corner
+    // (the M5 AppKit double-scale bug rendered only the bottom-left quarter).
+    let image = GaugeSkin().image(for: representativeStates[0].state, height: 36) // band 0 = outline only
+    guard let rep = PixelInspection.bitmapRep(image), let ptr = rep.bitmapData else {
+        #expect(Bool(false), "missing bitmap rep"); return
+    }
+    let w = rep.pixelsWide, h = rep.pixelsHigh
+    func hasInk(xRange: Range<Int>, yRange: Range<Int>) -> Bool {
+        for y in yRange {
+            for x in xRange where ptr[y * rep.bytesPerRow + x * rep.samplesPerPixel + 3] > 0 {
+                return true
+            }
+        }
+        return false
+    }
+    let topBand = 0..<max(1, h * 18 / 100)
+    let bottomBand = (h - max(1, h * 18 / 100))..<h
+    let leftBand = 0..<max(1, w * 22 / 100)
+    let rightBand = (w - max(1, w * 22 / 100))..<w
+    #expect(hasInk(xRange: 0..<w, yRange: topBand), "top edge missing")
+    #expect(hasInk(xRange: 0..<w, yRange: bottomBand), "bottom edge missing")
+    #expect(hasInk(xRange: leftBand, yRange: 0..<h), "left edge missing")
+    #expect(hasInk(xRange: rightBand, yRange: 0..<h), "right edge missing")
 }
 
 @Test func gaugeSkinFillGrowsWithReclaimableBytes() {

@@ -42,18 +42,24 @@ enum SkinCanvas {
         ) else {
             return NSImage(size: pointSize)
         }
-        // Report the point size so PNG export / status item treat the pixels as @2x.
-        rep.size = NSSize(width: pointSize.width, height: pointSize.height)
 
+        // Leave `rep.size` at its default (pixel dimensions) *while drawing*. AppKit drawing
+        // (`NSBezierPath`) auto-scales user-space by `rep.size`→pixel ratio, while CoreGraphics
+        // (`cg.*`) honours only the raw CTM. Keeping `rep.size` == pixels makes that AppKit ratio
+        // 1×, so our explicit `scaleBy(scale)` becomes the single point→pixel scale for *both*
+        // drawing paths — otherwise AppKit drawing double-scales and clips to a corner.
         if let ctx = NSGraphicsContext(bitmapImageRep: rep) {
             NSGraphicsContext.saveGraphicsState()
             NSGraphicsContext.current = ctx
             let cg = ctx.cgContext
             cg.scaleBy(x: scale, y: scale) // draw in point coordinates
             draw(cg, pointSize)
-            NSGraphicsContext.current?.flushGraphics()
+            ctx.flushGraphics()
             NSGraphicsContext.restoreGraphicsState()
         }
+
+        // Now advertise the point size so the NSImage treats the @2x pixel buffer as Retina-native.
+        rep.size = NSSize(width: pointSize.width, height: pointSize.height)
 
         let image = NSImage(size: pointSize)
         image.addRepresentation(rep)
