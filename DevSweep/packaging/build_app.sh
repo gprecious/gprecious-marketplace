@@ -92,14 +92,22 @@ iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/DevSweep.icns"
 rm -rf "$ICONSET"
 
 # 4. Sign
+# Only pass --entitlements when the file actually declares one (AMFI rejects a
+# commented/empty entitlements plist). With no entitlements, Hardened Runtime
+# defaults are correct for DevSweep — see DevSweep.entitlements.
+ENT_ARG=()
+if grep -q "<key>" "$PKG/DevSweep.entitlements" 2>/dev/null; then
+  ENT_ARG=(--entitlements "$PKG/DevSweep.entitlements")
+  echo "==> using entitlements: $PKG/DevSweep.entitlements"
+fi
 if [ "$ADHOC" = "1" ]; then
   echo "==> ad-hoc signing (local test only)"
-  codesign --force --sign - --timestamp=none "$APP"
+  codesign --force --sign - --timestamp=none "${ENT_ARG[@]}" "$APP"
 else
   : "${IDENTITY:?set IDENTITY to a 'Developer ID Application: …' codesign identity, or pass --adhoc}"
   echo "==> signing with: $IDENTITY (Hardened Runtime)"
   codesign --force --options runtime --timestamp \
-    --entitlements "$PKG/DevSweep.entitlements" \
+    "${ENT_ARG[@]}" \
     --sign "$IDENTITY" "$APP"
 fi
 echo "==> codesign verify"
