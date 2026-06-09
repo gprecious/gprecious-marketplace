@@ -8,7 +8,8 @@ description: |
   "herdr orchestrator", "herdr pane 새로 띄워서 codex 한테도", "여러 worker 병렬"
   같은 의도를 표현할 때 발동. herdr 안에서만 (HERDR_ENV=1) 동작.
   Claude Code / Codex 어느 쪽에서 호출해도 호출자 = orchestrator, worker pane 은
-  별도 spawn 하는 동일 절차.
+  호출자 workspace 안의 새 tab 에 별도 spawn 하는 동일 절차 (workspace 는 새로
+  만들지 않는다).
 ---
 
 # herdr-orchestrator
@@ -68,12 +69,12 @@ worker pane 에는 **항상 인터랙티브 TUI 세션**을 띄운다. prompt �
 
 | herdr 개념 | 용도                                                                          |
 | ---------- | ----------------------------------------------------------------------------- |
-| workspace  | 한 task = 1 workspace. 새로 생성. 호출자 workspace 와 격리.                   |
-| tab        | worker pane 그룹. 각 tab 최대 9 pane (3×3). label `agents-1`, `agents-2`, ... |
+| workspace  | 호출자(orchestrator) workspace 를 **그대로 공유**. 새로 만들지 않는다.        |
+| tab        | worker pane 그룹. 한 task = 새 tab(들). 각 tab 최대 9 pane (3×3). label `SLUG-1`, `SLUG-2`, ... 호출자 tab 과 격리. |
 | pane       | 실제 worker (claude 또는 codex). slot 순서로 채움.                            |
 
-호출자(orchestrator) 본인 pane 은 원래 workspace 에 그대로 둔다. worker
-workspace_id ≠ launcher workspace_id 를 매 send 직전 검증.
+호출자(orchestrator) 본인 pane 이 있는 tab(`LAUNCHER_TAB`)은 그대로 두고 절대
+건드리지 않는다. worker tab_id ≠ `LAUNCHER_TAB` 를 매 send·close 직전 검증.
 
 ### 3×3 grid 배치
 
@@ -92,8 +93,8 @@ slot index = col * 3 + row   (column-major)
 
 worker 수 N 분배:
 
-- `N ≤ 9` → 단일 tab `agents-1`, 필요한 슬롯만 split.
-- `N > 9` → 매 9개마다 새 tab (`agents-2`, …).
+- `N ≤ 9` → 단일 worker tab `SLUG-1`, 필요한 슬롯만 split.
+- `N > 9` → 매 9개마다 새 worker tab (`SLUG-2`, …).
 - 부족한 슬롯은 split 자체 skip (예: N=5 → col0 전체 + col1 의 row0/row1 만).
 
 ## Prerequisite
@@ -114,7 +115,12 @@ command -v herdr  >/dev/null || { echo "herdr CLI missing";  exit 1; }
 command -v claude >/dev/null || { echo "claude CLI missing"; exit 1; }
 command -v codex  >/dev/null || { echo "codex CLI missing";  exit 1; }
 
-LAUNCHER_WS=$(herdr pane list | jq -r '.result.focused.workspace_id')
+# focused pane = orchestrator 본인. workspace_id 와 tab_id 를 둘 다 기록.
+# (herdr 버전에 따라 .result.focused 가 null 일 수 있어 panes[] fallback 사용)
+LAUNCHER_WS=$(herdr pane list | jq -r '.result.focused.workspace_id // (.result.panes[] | select(.focused==true) | .workspace_id)')
+LAUNCHER_TAB=$(herdr pane list | jq -r '.result.focused.tab_id // (.result.panes[] | select(.focused==true) | .tab_id)')
+[ -n "$LAUNCHER_WS"  ] && [ "$LAUNCHER_WS"  != "null" ] || { echo "cannot resolve launcher workspace — stop"; exit 1; }
+[ -n "$LAUNCHER_TAB" ] && [ "$LAUNCHER_TAB" != "null" ] || { echo "cannot resolve launcher tab — stop"; exit 1; }
 ```
 
 ### 1. 호출자 결정 변수
@@ -148,7 +154,7 @@ declare -a WORKER_MODES=("${WORKER_MODES[@]}")
 for ((i=0; i<N; i++)); do : "${WORKER_MODES[$i]:=plain}"; done
 
 # 옵션
-: "${KEEP_WS:=0}"          # 1 이면 close 확인 절차 생략하고 항상 workspace 유지
+: "${KEEP_TABS:=0}"        # 1 이면 close 확인 절차 생략하고 worker tab 항상 유지
 : "${TIMEOUT_MS:=600000}"  # worker 당 대기 타임아웃 (ms)
 ```
 
@@ -164,15 +170,21 @@ for ((i=0; i<N; i++)); do : "${WORKER_MODES[$i]:=plain}"; done
 herdr 가 `WORKER_MODES`/`toggle_mode` 로 제어하지만, 워커가 띄우는 workflow subagent 의
 effort 는 워커가 작성하는 스크립트가 정하므로 prompt 규약으로 강제.
 
-### 2. 새 workspace 생성 (격리)
+### 2. workspace 결정 (호출자 workspace 공유 — 새로 만들지 않음)
+
+worker 는 호출자와 **같은 workspace** 에 둔다 (새 workspace 를 만들면 workspace 가
+계속 쌓여 불편). 격리는 workspace 가 아니라 **tab** 단위로 한다 — 3단계에서 worker 마다
+새 tab 을 만들고 `LAUNCHER_TAB`(orchestrator 본인 tab)은 건드리지 않는다. cwd 는 기존과
+동일하게 `$PWD` 를 따른다.
 
 ```bash
-SLUG="herdr-orc-$(date +%Y%m%d-%H%M%S)"
-WS_ID=$(herdr workspace create --cwd "$PWD" --label "$SLUG" --no-focus \
-        | jq -r '.result.workspace.workspace_id')
-
-[ "$WS_ID" = "$LAUNCHER_WS" ] && { echo "workspace isolation failed — abort"; exit 1; }
+WS_ID="$LAUNCHER_WS"                       # 새 workspace 생성 없음 — 호출자 workspace 재사용
+SLUG="herdr-orc-$(date +%Y%m%d-%H%M%S)"   # worker tab label 식별자 (한 workspace 에 여러 task tab 공존 가능)
 ```
+
+> 파일시스템까지 격리하려면(같은 repo 동시 쓰기 충돌 방지) 이 skill 범위 밖의
+> `herdr worktree` / git worktree 를 호출자가 별도로 준비한다. workspace 분리는
+> herdr UI 상의 분리였을 뿐 cwd 격리가 아니었다 (worker cwd 는 늘 `$PWD`).
 
 ### 3. worker pane spawn (3×3 grid + tab spillover)
 
@@ -222,13 +234,13 @@ remaining=$N
 batch=0
 while [ "$remaining" -gt 0 ]; do
   batch=$((batch+1))
-  if [ "$batch" -eq 1 ]; then
-    TID=$(herdr tab list --workspace "$WS_ID" | jq -r '.result.tabs[0].tab_id')
-  else
-    TID=$(herdr tab create --workspace "$WS_ID" --no-focus \
-          | jq -r '.result.tab.tab_id')
-  fi
-  herdr tab rename "$TID" "agents-${batch}"
+  # 항상 새 tab 을 만든다. launcher workspace 의 기존 tab(특히 LAUNCHER_TAB)은
+  # orchestrator 본인 pane 이 있을 수 있으므로 절대 재사용·split 하지 않는다.
+  TID=$(herdr tab create --workspace "$WS_ID" --cwd "$PWD" --no-focus \
+        | jq -r '.result.tab.tab_id')
+  [ -n "$TID" ] && [ "$TID" != "null" ] || { echo "tab create 실패 — abort"; exit 1; }
+  [ "$TID" = "$LAUNCHER_TAB" ] && { echo "새 tab 이 LAUNCHER_TAB 과 충돌 — abort"; exit 1; }
+  herdr tab rename "$TID" "${SLUG}-${batch}"
   TAB_IDS+=( "$TID" )
 
   this_count=$(( remaining > 9 ? 9 : remaining ))
@@ -256,26 +268,35 @@ for ((i=0; i<N; i++)); do
 done
 ```
 
-### 3.5 worker workspace 보이기 (focus — 필수)
+### 3.5 worker tab 보이기 (focus — 필수)
 
-worker TUI 가 다 떴으면 사용자가 실시간으로 볼 수 있도록 worker workspace 로 focus
-를 전환한다. orchestrator 본인 pane 은 launcher workspace 에서 백그라운드로 계속
-동작하므로 focus 를 옮겨도 조율은 멈추지 않는다.
+worker TUI 가 다 떴으면 사용자가 실시간으로 볼 수 있도록 worker 의 첫 tab 으로 focus
+를 전환한다. orchestrator 본인 pane(`LAUNCHER_TAB`)은 같은 workspace 의 다른 tab 에서
+백그라운드로 계속 동작하므로 focus 를 옮겨도 조율은 멈추지 않는다.
 
 ```bash
-herdr workspace focus "$WS_ID"
+herdr tab focus "${TAB_IDS[0]}"
 ```
 
 ### 4. prompt 주입 (격리 가드)
 
 ```bash
+# worker tab 화이트리스트 membership 검사 (LAUNCHER_TAB 은 절대 매칭 안 됨).
+is_worker_tab() {
+  local T="$1"
+  [ "$T" = "$LAUNCHER_TAB" ] && return 1
+  local wt
+  for wt in "${TAB_IDS[@]}"; do [ "$wt" = "$T" ] && return 0; done
+  return 1
+}
+
 send_prompt() {
   local PANE="$1" PROMPT="$2"
-  local PANE_WS
-  PANE_WS=$(herdr pane list \
-            | jq -r --arg p "$PANE" '.result.panes[] | select(.pane_id==$p) | .workspace_id')
-  [ "$PANE_WS" = "$WS_ID" ] || { echo "pane $PANE workspace mismatch — abort"; return 1; }
-  echo "send: from=orchestrator(ws:$LAUNCHER_WS) to=$PANE(ws:$PANE_WS)"
+  local PANE_TAB
+  PANE_TAB=$(herdr pane list \
+             | jq -r --arg p "$PANE" '.result.panes[] | select(.pane_id==$p) | .tab_id')
+  is_worker_tab "$PANE_TAB" || { echo "pane $PANE tab($PANE_TAB) is not a worker tab — abort"; return 1; }
+  echo "send: from=orchestrator(tab:$LAUNCHER_TAB) to=$PANE(tab:$PANE_TAB)"
   herdr pane send-text "$PANE" "$PROMPT"
   herdr pane send-keys "$PANE" Enter
 }
@@ -318,15 +339,15 @@ toggle_mode() {
     *) echo "toggle_mode: 알 수 없는 mode '$MODE'"; return 1 ;;
   esac
 
-  # 3) 격리 가드 — pane workspace 가 WS_ID 와 일치할 때만 송신 (send_prompt 와 동일 규칙).
-  local PANE_WS
-  PANE_WS=$(herdr pane list \
-            | jq -r --arg p "$PANE" '.result.panes[] | select(.pane_id==$p) | .workspace_id')
-  [ "$PANE_WS" = "$WS_ID" ] || { echo "toggle_mode: pane $PANE workspace mismatch — abort"; return 1; }
+  # 3) 격리 가드 — pane 이 worker tab 에 속할 때만 송신 (send_prompt 와 동일 규칙).
+  local PANE_TAB
+  PANE_TAB=$(herdr pane list \
+             | jq -r --arg p "$PANE" '.result.panes[] | select(.pane_id==$p) | .tab_id')
+  is_worker_tab "$PANE_TAB" || { echo "toggle_mode: pane $PANE tab($PANE_TAB) is not a worker tab — abort"; return 1; }
 
   # 4) /effort 슬래시 주입. 슬래시는 모델 turn 을 소비하지 않고 즉시 처리되며,
   #    Claude Code 가 이를 mid-conversation system message 로 반영 → cache 보존.
-  echo "toggle_mode: slot $I (ws:$PANE_WS) → /effort $MODE"
+  echo "toggle_mode: slot $I (tab:$PANE_TAB) → /effort $MODE"
   herdr pane send-text "$PANE" "/effort $MODE"
   herdr pane send-keys "$PANE" Enter
 
@@ -377,25 +398,27 @@ for ((i=0; i<N; i++)); do
                 --source recent-unwrapped --lines 300)" )
 done
 
-# 결과를 보고하기 전에 orchestrator pane 으로 focus 복귀 — 사용자가 요약 보고 +
-# close 확인 질문을 자기 화면(launcher workspace)에서 보게 한다.
-herdr workspace focus "$LAUNCHER_WS"
+# 결과를 보고하기 전에 orchestrator tab 으로 focus 복귀 — 사용자가 요약 보고 +
+# close 확인 질문을 자기 화면(LAUNCHER_TAB)에서 보게 한다.
+herdr tab focus "$LAUNCHER_TAB"
 ```
 
 orchestrator (호출자) 가 `${OUTPUTS[@]}` 를 자연어로 사용자에게 정리 보고. 집계
 포맷은 호출자 재량 — 비교 / 합치기 / 요약 자유.
 
-### 7. Cleanup (사용자 확인 후 close)
+### 7. Cleanup (사용자 확인 후 worker tab 만 close)
 
-worker workspace 는 **자동으로 닫지 않는다**. 사용자가 직접 worker pane 의 최종
-상태를 확인할 수 있어야 하므로, 성공해도 바로 close 하지 않는다.
+worker tab 은 **자동으로 닫지 않는다**. 사용자가 직접 worker pane 의 최종 상태를
+확인할 수 있어야 하므로, 성공해도 바로 close 하지 않는다. **호출자 workspace 와
+`LAUNCHER_TAB` 은 절대 닫지 않는다** — orchestrator 본인이 거기 있다. 정리 대상은 이
+task 가 만든 worker tab(`TAB_IDS`) 뿐이다.
 
 절차:
 
 1. orchestrator 가 `${OUTPUTS[@]}` 를 자연어로 사용자에게 보고한다.
 2. 실패한 slot 이 있으면 (`WAIT_RCS` 에 비-0) tabs / panes / rcs 를 안내하고 보존.
-3. 사용자에게 worker workspace 를 닫아도 되는지 확인한다 (`WS_ID` 안내).
-4. 사용자가 확인하면 **그때** close:
+3. 사용자에게 worker tab 을 닫아도 되는지 확인한다 (`TAB_IDS` 안내).
+4. 사용자가 확인하면 **그때** worker tab 만 close:
 
 ```bash
 all_ok=1
@@ -404,7 +427,7 @@ for rc in "${WAIT_RCS[@]}"; do
 done
 
 if [ "$all_ok" != "1" ]; then
-  echo "일부 worker 실패 — workspace $WS_ID 보존 (확인용)"
+  echo "일부 worker 실패 — worker tab 보존 (확인용)"
   echo "  tabs:  ${TAB_IDS[*]}"
   echo "  panes: ${PANES[*]}"
   echo "  rcs:   ${WAIT_RCS[*]}"
@@ -412,12 +435,16 @@ fi
 
 # 아래 close 는 사용자가 "닫아도 된다" 고 확인한 뒤에만 실행한다.
 # (orchestrator 가 다음 턴에서 사용자 응답을 받고 호출)
-#   herdr workspace close "$WS_ID"
-#   echo "cleanup: workspace $WS_ID closed (tabs ${TAB_IDS[*]} + ${#PANES[@]} panes 통째 정리)"
+# 절대 LAUNCHER_TAB / workspace 는 close 하지 않는다 — worker tab 만.
+#   for t in "${TAB_IDS[@]}"; do
+#     [ "$t" = "$LAUNCHER_TAB" ] && { echo "guard: refuse to close LAUNCHER_TAB"; continue; }
+#     herdr tab close "$t"
+#   done
+#   echo "cleanup: worker tabs ${TAB_IDS[*]} closed (${#PANES[@]} panes 통째 정리). workspace/LAUNCHER_TAB 보존."
 ```
 
-- default: 성공/실패와 무관하게 workspace 를 유지하고 사용자 확인을 기다린 뒤 close.
-- `KEEP_WS=1`: 확인 절차도 생략하고 항상 유지 (사용자가 수동 정리).
+- default: 성공/실패와 무관하게 worker tab 을 유지하고 사용자 확인을 기다린 뒤 close.
+- `KEEP_TABS=1`: 확인 절차도 생략하고 항상 유지 (사용자가 수동 정리).
 
 ## 호출자별 진입점
 
@@ -438,24 +465,26 @@ Codex CLI 는 SKILL.md 자동 발동 메커니즘이 없으므로, 사용자가 
    를 먼저 읽고 동일 절차 수행.
 
 Codex 호출자도 본인은 orchestrator 로 남고, worker pane (claude/codex 어느 쪽이든)
-은 새 workspace 에 별도 spawn 한다.
+은 호출자 workspace 안의 새 tab 에 별도 spawn 한다.
 
 ## 안전 / 격리 규칙 (요약)
 
 1. **HERDR_ENV 가드** — skill 시작점에서 무조건 확인. 실패 시 stop.
-2. **새 workspace 강제** — 호출자 workspace 안에 worker pane 만들기 금지. 매번
-   새 workspace.
-3. **send 직전 workspace_id 검증** — pane 의 workspace_id 가 `WS_ID` 와 일치할
-   때만 송신.
+2. **새 tab 강제 + LAUNCHER_TAB 격리** — 호출자 workspace 를 공유하되, worker 는
+   매번 **새 tab** 에 만든다. `LAUNCHER_TAB`(orchestrator 본인 pane) 및 기존 tab 은
+   재사용·split 금지. 새 workspace 는 만들지 않는다 (workspace 누적 방지).
+3. **send 직전 worker-tab 검증** — pane 의 tab_id 가 worker `TAB_IDS` 에 속하고
+   `LAUNCHER_TAB` 이 아닐 때만 송신 (`is_worker_tab`).
 4. **타임아웃 + 확인 후 정리** — 성공/실패 무관하게 자동 close 금지. 결과 보고 후
-   사용자 확인을 받고 close. 실패 시 tabs / panes / rcs 안내.
+   사용자 확인을 받고 **worker tab 만** close. workspace/LAUNCHER_TAB 은 보존.
+   실패 시 tabs / panes / rcs 안내.
 5. **인증 정책 불변** — API 키 사용 금지. OAuth CLI 만.
 6. **인터랙티브 TUI only** — worker 는 항상 TUI 로 띄우고 prompt 는 `send-text` 로
    주입. `claude -p` / `codex exec` 등 headless one-shot 금지. spawn 후 worker
-   workspace 로 focus 전환해 사용자가 실시간 관찰 가능하게 함.
+   tab 으로 focus 전환해 사용자가 실시간 관찰 가능하게 함.
 7. **(v0.3) 모드 전환도 격리 가드 적용** — `toggle_mode` 는 `send_prompt` 와 동일하게
-   송신 직전 pane workspace_id == `WS_ID` 검증. codex pane 에는 `/effort` 를 보내지
-   않는다(no-op skip).
+   송신 직전 pane tab_id 가 worker tab 인지(`is_worker_tab`) 검증. codex pane 에는
+   `/effort` 를 보내지 않는다(no-op skip).
 
 ## resume 한계 경고 (v0.3)
 
@@ -469,7 +498,7 @@ close 전 강한 경고" 를 안내할 것. (자동 감지는 v0.4 폴링 기능
 다음은 본 버전 범위 밖. 필요해지면 별도 spec → 후속 버전.
 
 - manifest.json / 영속 상태.
-- resume 모드 (workspace 닫히면 끝).
+- resume 모드 (worker tab 닫히면 끝).
 - 결과 자동 비교/diff/투표 알고리즘 — 호출자 자연어 처리.
 - workflow 진행 폴링 중계 / 결과 펜스(`=== RESULT_JSON ===`) 자동 파싱 — v0.4 후보.
 - pane 수 × pane 당 동시성 ≤ 물리 코어 예산 자동 배분 — v0.4 후보.
@@ -478,6 +507,12 @@ close 전 강한 경고" 를 안내할 것. (자동 감지는 v0.4 폴링 기능
 
 ## 변경 이력
 
+- **v0.4** (2026-06-09) — **workspace 격리 → tab 격리 전환**. 새 workspace 를 만들지
+  않고 호출자 workspace 를 공유, worker 는 매번 새 tab(`SLUG-batch`)에 배치 (workspace
+  누적 불편 해소). `LAUNCHER_TAB`(orchestrator 본인 tab) 기록·격리, 격리 가드/cleanup 을
+  tab 기준으로 전환(`is_worker_tab`, `herdr tab close` — workspace/LAUNCHER_TAB 보존).
+  focus 전환도 `workspace focus` → `tab focus`. Preflight 의 focused pane 해석을
+  `.result.panes[] | select(.focused==true)` fallback 으로 보정.
 - **v0.3** (2026-05-29) — `WORKER_MODES` + `toggle_mode()` (세션 중간 effort/모드 전환,
   Opus 4.8 mid-conversation system message 로 cache 보존), effort 계층 규약, resume 한계
   경고. spec: `docs/superpowers/specs/2026-05-29-herdr-orchestrator-v0.3-toggle-mode.md`.
