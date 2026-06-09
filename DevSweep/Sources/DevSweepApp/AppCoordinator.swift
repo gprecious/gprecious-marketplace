@@ -53,6 +53,21 @@ final class AppCoordinator: ObservableObject {
     /// until `skinStore.load()` resolves ownership, so it's re-applied in `reconcileSkinSelection`.
     private var pendingSkinId: String?
 
+    /// `true` once the initial entitlements load has completed. Gates the refund-revert branch so a
+    /// transient empty read (e.g. a `Transaction.updates` tick before the first load) can't strip a
+    /// still-owned paid skin.
+    private var didLoadEntitlements = false
+
+    /// Pure decision logic for re-applying a persisted paid skin / reverting a refunded one.
+    private let skinReconciler = SkinSelectionReconciler()
+
+    /// Free skin ids, precomputed for the reconciler (free skins are always selectable).
+    private static let freeSkinIds = Set(SkinCatalog.free.map(\.id))
+
+    /// Production purchase backend — one stateless instance shared by `skinStore` and the
+    /// `Transaction.updates` observer.
+    private let purchaseBackend = StoreKit2Backend()
+
     /// Long-lived `Transaction.updates` listener (Ask-to-Buy, family sharing, other devices).
     private var transactionObserver: Task<Void, Never>?
 
@@ -95,7 +110,7 @@ final class AppCoordinator: ObservableObject {
 
     init(config: AppConfig = .default) {
         self.config = config
-        self.skinStore = SkinStore(backend: StoreKit2Backend())
+        self.skinStore = SkinStore(backend: purchaseBackend)
 
         // Restore the persisted skin selection. A free skin applies immediately; a persisted *paid*
         // skin is held in `pendingSkinId` and re-applied (or reverted) once entitlements load.
@@ -142,14 +157,16 @@ final class AppCoordinator: ObservableObject {
         notifier.requestAuthorizationIfPossible()
 
         // Load IAP products + entitlements, then reconcile the persisted skin selection against what
-        // the user actually owns (re-apply a persisted paid skin; revert a refunded one).
+        // the user actually owns (re-apply a persisted paid skin; revert a refunded one). The
+        // `didLoadEntitlements` flag is set before reconciling so the revert branch is now armed.
         Task { [weak self] in
             await self?.skinStore.load()
+            self?.didLoadEntitlements = true
             self?.reconcileSkinSelection()
         }
         // React to transactions completed outside an explicit buy (Ask-to-Buy, family sharing, other
         // devices) so an external unlock/refund is reflected without a relaunch.
-        transactionObserver = StoreKit2Backend().observeTransactionUpdates { [weak self] in
+        transactionObserver = purchaseBackend.observeTransactionUpdates { [weak self] in
             await self?.handleEntitlementChange()
         }
 
@@ -181,25 +198,28 @@ final class AppCoordinator: ObservableObject {
         onSkinChange?(id)
     }
 
-    /// Reconcile the selected skin against current entitlements. Runs after the initial entitlements
-    /// load and on every external transaction update: re-applies a persisted paid skin once it's
-    /// owned, and reverts the current skin to the default if it's a paid skin no longer owned
-    /// (refund / family-sharing loss). Free skins are never affected.
+    /// Reconcile the selected skin against current entitlements via the pure `SkinSelectionReconciler`.
+    /// Runs after the initial load and on every external transaction update: re-applies a persisted
+    /// paid skin once it's owned (consuming `pendingSkinId` only then — so a concurrent early tick
+    /// can't discard it), and reverts a no-longer-owned paid skin to the default (refund /
+    /// family-sharing loss), gated on `didLoadEntitlements`. Free skins are never affected.
     private func reconcileSkinSelection() {
-        if let pending = pendingSkinId,
-           pending != currentSkinId,
-           let skin = SkinCatalog.skin(id: pending),
-           skinStore.canSelect(skin) {
-            currentSkinId = pending
-            UserDefaults.standard.set(pending, forKey: Self.skinDefaultsKey)
-            onSkinChange?(pending)
+        let decision = skinReconciler.reconcile(
+            currentSelection: currentSkinId,
+            pendingSelection: pendingSkinId,
+            freeSkinIds: Self.freeSkinIds,
+            unlockedSkinIds: skinStore.unlockedSkinIds,
+            didLoadEntitlements: didLoadEntitlements,
+            defaultSkinId: SkinCatalog.defaultSkinId
+        )
+        if decision.clearedPending {
+            pendingSkinId = nil
         }
-        if let current = SkinCatalog.skin(id: currentSkinId), !skinStore.canSelect(current) {
-            currentSkinId = SkinCatalog.defaultSkinId
+        if decision.selection != currentSkinId {
+            currentSkinId = decision.selection
             UserDefaults.standard.set(currentSkinId, forKey: Self.skinDefaultsKey)
             onSkinChange?(currentSkinId)
         }
-        pendingSkinId = nil // applied once at startup; later updates revert-only.
     }
 
     /// An external transaction changed ownership — refresh the unlocked set and reconcile selection.

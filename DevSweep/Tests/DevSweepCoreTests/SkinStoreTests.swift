@@ -82,4 +82,39 @@ import Testing
         _ = await store.buy(dotmatrixProduct)
         #expect(!store.purchaseInFlight)
     }
+
+    @Test func refundRelocksAPreviouslyOwnedSkin() async {
+        // The highest-risk M6 path: a refunded/revoked entitlement must re-lock its skin.
+        let backend = MockPurchaseBackend(owned: [dotmatrixProduct])
+        let store = SkinStore(backend: backend)
+        await store.load()
+        let dotMatrix = SkinCatalog.skin(id: "dot-matrix")!
+        #expect(store.canSelect(dotMatrix))
+
+        await backend.revoke(dotmatrixProduct) // App Store refund / revocation
+        await store.refresh()
+        #expect(!store.canSelect(dotMatrix))
+        #expect(store.unlockedSkinIds.isEmpty)
+    }
+
+    @Test func concurrentBuyIsRejectedWhileOneIsInFlight() async {
+        // A double-tap (two buy buttons) must not run two purchases or flicker purchaseInFlight.
+        let backend = MockPurchaseBackend(holdPurchase: true)
+        let store = SkinStore(backend: backend)
+        await store.load()
+
+        async let first = store.buy(dotmatrixProduct)
+        await backend.waitUntilPurchaseStarted()
+        #expect(store.purchaseInFlight)
+
+        let second = await store.buy("kr.qplace.devsweep.skin.synthwave")
+        #expect(second == false) // rejected by the in-flight guard, never reaches the backend
+
+        await backend.releasePurchase()
+        let firstResult = await first
+        #expect(firstResult == true)
+
+        let calls = await backend.purchaseCalls
+        #expect(calls == [dotmatrixProduct])
+    }
 }

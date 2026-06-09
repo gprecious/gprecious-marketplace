@@ -9,6 +9,11 @@ import DevSweepCore
 /// On-device verification only (`VerificationResult`): no receipt server is needed for non-consumable
 /// IAPs — StoreKit 2 cryptographically verifies each transaction (`Guideline`-compliant).
 struct StoreKit2Backend: PurchaseBackend {
+    /// Distinguishes a genuine store/config failure from a user-cancel (which `purchase` reports as a
+    /// plain `false`). A missing product id means App Store Connect / `.storekit` is misconfigured —
+    /// surfacing it as an error keeps that from looking like the user simply declined.
+    enum StoreError: Error { case productUnavailable(String) }
+
     func loadProducts(ids: [String]) async throws -> [IAPProduct] {
         let storeProducts = try await Product.products(for: ids)
         return storeProducts.compactMap(Self.mapped)
@@ -16,7 +21,7 @@ struct StoreKit2Backend: PurchaseBackend {
 
     func purchase(id: String) async throws -> Bool {
         let storeProducts = try await Product.products(for: [id])
-        guard let product = storeProducts.first else { return false }
+        guard let product = storeProducts.first else { throw StoreError.productUnavailable(id) }
 
         switch try await product.purchase() {
         case .success(let verification):

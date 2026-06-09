@@ -43,9 +43,12 @@ public final class SkinStore: ObservableObject {
     }
 
     /// Buy a product. Returns `true` only on a verified purchase (user-cancel/pending/error → false).
-    /// On success the unlocked set is refreshed before returning.
+    /// On success the unlocked set is refreshed before returning. Reentrancy-guarded: a second buy
+    /// started while one is in flight (a double-tap across buy buttons) is rejected, so two purchases
+    /// can't race and `purchaseInFlight` can't flicker false mid-flight.
     @discardableResult
     public func buy(_ productId: String) async -> Bool {
+        guard !purchaseInFlight else { return false }
         purchaseInFlight = true
         defer { purchaseInFlight = false }
         let succeeded = (try? await backend.purchase(id: productId)) ?? false
