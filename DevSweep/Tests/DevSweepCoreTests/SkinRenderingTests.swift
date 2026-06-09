@@ -114,3 +114,58 @@ private let renderHeight: CGFloat = 18
     let high = drawnBytes(representativeStates[2].state) // 12GB
     #expect(high > low)
 }
+
+// MARK: - Paid skins (colour, non-template)
+
+@Test func paidSkinCatalogContainsDotMatrixAndSynthwave() {
+    let paidIds = SkinCatalog.paid.map(\.id)
+    #expect(paidIds.contains("dot-matrix"))
+    #expect(paidIds.contains("synthwave"))
+    let nonePaidFree = SkinCatalog.paid.allSatisfy { !$0.isFree }
+    #expect(nonePaidFree)
+}
+
+@Test func paidSkinsRenderExactHeightNonEmptyNonTemplateAtEveryBand() {
+    for skin in SkinCatalog.paid {
+        for sample in representativeStates {
+            let image = skin.image(for: sample.state, height: renderHeight)
+            #expect(image.size.height == renderHeight, "\(skin.id)-\(sample.label) height")
+            #expect(image.isTemplate == false, "\(skin.id)-\(sample.label) isTemplate=false")
+            #expect(PixelInspection.isNonEmpty(image), "\(skin.id)-\(sample.label) non-empty")
+        }
+    }
+}
+
+@Test func paidSkinsHaveChromaticPixelsInTopBand() {
+    let critical = ReclaimVisualState(reclaimableBytes: 30_000_000_000, low: 5_000_000_000, high: 20_000_000_000)
+    for skin in SkinCatalog.paid {
+        let image = skin.image(for: critical, height: renderHeight)
+        #expect(PixelInspection.hasChromaticPixel(image), "\(skin.id) should render colour")
+    }
+}
+
+@Test func synthwaveIsChromaticEvenWhenEmpty() {
+    // Its neon track is always drawn, so it reads as colour at band 0 too.
+    let empty = representativeStates[0].state
+    let image = SynthwaveGaugeSkin().image(for: empty, height: renderHeight)
+    #expect(PixelInspection.hasChromaticPixel(image))
+}
+
+@Test func paidSkinsAreDeterministic() {
+    for skin in SkinCatalog.paid {
+        for sample in representativeStates {
+            let a = skin.image(for: sample.state, height: renderHeight)
+            let b = skin.image(for: sample.state, height: renderHeight)
+            #expect(PixelInspection.rawPixels(a) == PixelInspection.rawPixels(b), "\(skin.id)-\(sample.label) determinism")
+        }
+    }
+}
+
+@Test func catalogPartitionsAllSkinsIntoFreeAndPaid() {
+    #expect(SkinCatalog.all.count == SkinCatalog.free.count + SkinCatalog.paid.count)
+    #expect(SkinCatalog.free.count == 2)
+    #expect(SkinCatalog.paid.count == 2)
+    // Every skin id is unique.
+    let ids = SkinCatalog.all.map(\.id)
+    #expect(Set(ids).count == ids.count)
+}

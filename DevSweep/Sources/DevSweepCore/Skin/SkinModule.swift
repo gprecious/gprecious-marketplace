@@ -24,6 +24,8 @@ public enum SkinCatalog {
     public static let all: [any SkinModule] = [
         GaugeSkin(),
         BatterySkin(),
+        DotMatrixSkin(),
+        SynthwaveGaugeSkin(),
     ]
 
     /// Skins the user can select today.
