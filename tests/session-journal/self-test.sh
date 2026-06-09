@@ -32,7 +32,17 @@ env PLUGIN_ROOT="${CODEX_PLUGIN_ROOT}" python3 "${CODEX_PLUGIN_ROOT}/hooks/sessi
   "hook_event_name": "UserPromptSubmit",
   "cwd": "/tmp/gprecious-marketplace",
   "turn_id": "turn-1",
-  "prompt": "Record this prompt. integration: Link [[research-engine]], [[dream]], and [[evolve]] from the Obsidian graph."
+  "prompt": "Record this prompt. Link [[research-engine]], [[dream]], and [[evolve]] from the Obsidian graph."
+}
+JSON
+
+env PLUGIN_ROOT="${CODEX_PLUGIN_ROOT}" python3 "${CODEX_PLUGIN_ROOT}/hooks/session_journal_hook.py" hook --agent "Codex" <<'JSON' >/tmp/session-journal-codex-tool.json
+{
+  "session_id": "codex-self-test",
+  "hook_event_name": "PostToolUse",
+  "cwd": "/tmp/gprecious-marketplace",
+  "tool_name": "Bash",
+  "tool_input": { "command": "echo hi # pattern: this verbatim line must NOT become a note" }
 }
 JSON
 
@@ -43,7 +53,7 @@ env PLUGIN_ROOT="${CODEX_PLUGIN_ROOT}" python3 "${CODEX_PLUGIN_ROOT}/hooks/sessi
   "cwd": "/tmp/gprecious-marketplace",
   "turn_id": "turn-1",
   "stop_hook_active": false,
-  "last_assistant_message": "Finished synthetic Codex work. pattern: Shared hook core creates Obsidian session summaries and durable wiki notes."
+  "last_assistant_message": "Finished synthetic Codex work. resolved: this whole line must NOT become a durable note."
 }
 JSON
 
@@ -52,7 +62,7 @@ env CLAUDE_PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT}" python3 "${CLAUDE_PLUGIN_ROOT}/ho
   "session_id": "claude-self-test",
   "hook_event_name": "UserPromptSubmit",
   "cwd": "/tmp/gprecious-marketplace",
-  "prompt": "Record this Claude prompt. convention: Raw events are append-only and summaries are regenerated."
+  "prompt": "Record this Claude prompt. Raw events are append-only and summaries are regenerated."
 }
 JSON
 
@@ -62,7 +72,7 @@ env CLAUDE_PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT}" python3 "${CLAUDE_PLUGIN_ROOT}/ho
   "hook_event_name": "Stop",
   "cwd": "/tmp/gprecious-marketplace",
   "stop_hook_active": false,
-  "last_assistant_message": "Finished synthetic Claude work. resolved: Claude Code hook output created a wiki note."
+  "last_assistant_message": "Finished synthetic Claude work. The note carries a summary block only."
 }
 JSON
 
@@ -76,24 +86,39 @@ test -f "${CLAUDE_SESSION}"
 test -f "${CODEX_RAW}"
 test -f "${CLAUDE_RAW}"
 
-grep -q "User Prompt" "${CODEX_SESSION}"
-grep -q "Agent Result" "${CODEX_SESSION}"
+# Session note carries the regenerated summary block with wikilinks for the graph.
 grep -q "Current Summary" "${CODEX_SESSION}"
 grep -q '\[\[research-engine\]\]' "${CODEX_SESSION}"
 grep -q '\[\[dream\]\]' "${CODEX_SESSION}"
 grep -q '\[\[evolve\]\]' "${CODEX_SESSION}"
-grep -q "User Prompt" "${CLAUDE_SESSION}"
-grep -q "Agent Result" "${CLAUDE_SESSION}"
 grep -q "Current Summary" "${CLAUDE_SESSION}"
 grep -q '\[\[Claude Code\]\]' "${CLAUDE_SESSION}"
 grep -q '\[\[Codex\]\]' "${CLAUDE_SESSION}"
 
-test "$(wc -l < "${CODEX_RAW}" | tr -d ' ')" -ge 3
-test "$(wc -l < "${CLAUDE_RAW}" | tr -d ' ')" -ge 2
+# Summary-only contract: NO verbatim per-event transcript sections appended.
+if grep -qE '^## (User Prompt|Agent Result|Tool Result|Session Start|Wiki Notes) -' "${CODEX_SESSION}"; then
+  echo "FAIL: verbatim transcript section leaked into session note" >&2
+  exit 1
+fi
+# The verbatim tool command must not be copied into the note (only the tool
+# NAME appears in the summary's tool-activity line, never the command body).
+if grep -q 'this verbatim line must NOT' "${CODEX_SESSION}"; then
+  echo "FAIL: verbatim tool command copied into session note" >&2
+  exit 1
+fi
+# A one-line digest of the last assistant message in the summary block IS
+# expected (that is the summary); what must NOT happen is a separate
+# marker-extracted durable note — covered by the no-Wiki check below.
 
-find "${VAULT}/Wiki" -type f -name '*.md' | grep -q .
-grep -R -q '\[\[research-engine\]\]' "${VAULT}/Wiki"
-grep -R -q '\[\[herdr\]\]' "${VAULT}/Wiki"
+# No auto-wiki: the Wiki/ folder must not exist and no marker note may be created.
+if [ -d "${VAULT}/Wiki" ]; then
+  echo "FAIL: auto-generated Wiki/ folder created" >&2
+  exit 1
+fi
+
+# Raw keeps the full append-only trail (source of truth).
+test "$(wc -l < "${CODEX_RAW}" | tr -d ' ')" -ge 4
+test "$(wc -l < "${CLAUDE_RAW}" | tr -d ' ')" -ge 2
 
 python3 "${ROOT}/shared/session-journal/session_journal_core.py" summarize --vault "${VAULT}" --session-id codex-self-test >/tmp/session-journal-summary.json
 grep -q "session_note" /tmp/session-journal-summary.json

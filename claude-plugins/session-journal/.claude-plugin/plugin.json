@@ -1,7 +1,7 @@
 {
   "name": "session-journal",
-  "version": "0.4.1",
-  "description": "Record Claude Code sessions to an Obsidian vault (or a subfolder of an existing one) with summaries, durable wiki notes, and wikilinks. Every generated note is tagged #ai-generated to stay distinct from hand-authored notes. Supports portable name-based vault resolution for multi-machine setups synced via Obsidian Sync.",
+  "version": "0.5.0",
+  "description": "Record Claude Code and Codex sessions to an Obsidian vault (or a subfolder of an existing one): an append-only raw event log plus one regenerated summary note per session — no verbatim transcript, no auto-generated wiki. Every note is tagged #ai-generated to stay distinct from hand-authored notes. Portable name-based vault resolution (with an explicit-pin guard against duplicate same-named vaults) for multi-machine setups synced via Obsidian Sync.",
   "author": {
     "name": "gprecious",
     "email": "gprecious@users.noreply.github.com"
@@ -11,7 +11,6 @@
     "journal",
     "hooks",
     "memory",
-    "wiki",
     "claude-code",
     "codex"
   ]

@@ -44,10 +44,16 @@ shell profile / Codex config) so the shared core sees them too.
 To keep agent logs inside a vault you already use, target a dedicated
 **subfolder** rather than the vault root — via `LLM_OBSIDIAN_SUBDIR` (name mode)
 or by pointing `LLM_OBSIDIAN_VAULT` at `.../<your-vault>/AI-Journal`. The plugin
-then writes `Index.md`, `Sessions/`, `Raw/`, and `Wiki/` under that subfolder
-only — never mixed at the vault root. Combined with the `#ai-generated` tag
-(below), AI-authored content stays cleanly separated from your own notes at both
-the file-tree and search/graph level.
+then writes `Index.md`, `Sessions/`, and `Raw/` under that subfolder only — never
+mixed at the vault root. Combined with the `#ai-generated` tag (below),
+AI-authored content stays cleanly separated from your own notes at both the
+file-tree and search/graph level.
+
+> **Duplicate same-named vaults (split-brain).** If the machine has more than one
+> vault with the same folder name (e.g. a live local copy and a stale iCloud
+> copy), name resolution flips between them based on which was last open,
+> splitting writes. `where` reports `named_vault_candidates` and warns; fix by
+> pinning `LLM_OBSIDIAN_VAULT` to the live vault's absolute subfolder path.
 
 ### Multi-machine access via Obsidian Sync
 
@@ -111,11 +117,12 @@ python3 <plugin-root>/hooks/session_journal_hook.py where
 ```
 
 It prints the resolved vault path, the resolution mode (`explicit` / `name` /
-`default`), the env it saw, and `ok: true/false`. `ok: false` with
-`"named vault NOT found"` means Obsidian hasn't registered that vault on this
-machine yet — open it in Obsidian once. Precedence: an explicit
-`LLM_OBSIDIAN_VAULT` overrides the name vars, so set only the name vars for a
-portable config.
+`default`), the env it saw, `named_vault_candidates`, any `warnings`, and
+`ok: true/false`. `ok: false` with `"named vault NOT found"` means Obsidian
+hasn't registered that vault on this machine yet — open it in Obsidian once. A
+non-empty `warnings` list means a duplicate same-named vault was found — pin
+`LLM_OBSIDIAN_VAULT`. Precedence: an explicit `LLM_OBSIDIAN_VAULT` overrides the
+name vars.
 
 ## Vault Layout
 
@@ -123,18 +130,20 @@ portable config.
 Index.md
 Sessions/YYYY-MM-DD/<session-id>.md
 Raw/YYYY-MM-DD/<session-id>.jsonl
-Wiki/*.md
 ```
 
-- `Raw/` is append-only JSONL from lifecycle hooks.
-- `Sessions/` is human-readable markdown with prompts, tool activity, final agent result, and a regenerated summary block.
-- `Wiki/` stores durable notes and keyword notes that make Obsidian graph links visible.
+- `Raw/` is append-only JSONL from lifecycle hooks — the source of truth.
+- `Sessions/` is one markdown note per session carrying a **regenerated summary
+  block only** (recent prompt + result first-lines and the set of tool names) —
+  not a verbatim transcript. The full text lives in `Raw/`.
+
+There is **no** auto-generated `Wiki/` folder (removed in 0.5.0 — see below).
 
 ## AI-Generated Tagging
 
-Every note the plugin writes — `Index.md`, session notes, keyword notes, and
-durable wiki notes — carries this YAML frontmatter so it is unambiguously
-distinct from hand-authored notes when the vault is shared:
+Every note the plugin writes — `Index.md` and session notes — carries this YAML
+frontmatter so it is unambiguously distinct from hand-authored notes when the
+vault is shared:
 
 ```yaml
 tags:
@@ -152,11 +161,15 @@ in `AI_TAGS` in the shared core.
 The plugin registers:
 
 - `SessionStart` to create the vault and session note.
-- `UserPromptSubmit` to capture the user's prompt close to real time.
-- `PostToolUse` to capture tool names and command snippets.
-- `Stop` to capture the final assistant message and refresh the summary.
+- `UserPromptSubmit` to record the prompt to the raw log and refresh the summary.
+- `PostToolUse` to record the tool name + command snippet to the raw log only
+  (the verbatim command is never copied into the session note).
+- `Stop` to record the final assistant message to the raw log and refresh the
+  summary block.
 
-The shared core is `shared/session-journal/session_journal_core.py`. Claude and Codex plugin wrappers call this same core from their own hook entrypoints. Each wrapper resolves the core by walking up from its plugin root / cwd and, as a fallback, by locating the full marketplace checkout under the host tool's plugin install roots — so resolution never depends on the hook's working directory (cached plugin copies do not bundle `shared/`). Override with `SESSION_JOURNAL_CORE` if needed.
+The session note itself is never appended to event-by-event; it holds a single
+summary block that is regenerated from the raw log. The shared core is
+`shared/session-journal/session_journal_core.py`. Claude and Codex plugin wrappers call this same core from their own hook entrypoints. Each wrapper resolves the core by walking up from its plugin root / cwd and, as a fallback, by locating the full marketplace checkout under the host tool's plugin install roots — so resolution never depends on the hook's working directory (cached plugin copies do not bundle `shared/`). Override with `SESSION_JOURNAL_CORE` if needed.
 
 ## Known Limitations
 
@@ -164,34 +177,31 @@ The shared core is `shared/session-journal/session_journal_core.py`. Claude and 
 - Full transcript parsing is intentionally avoided because Codex documents transcript format as unstable and Claude also exposes the fields needed for this workflow directly through hook inputs.
 - Raw prompt logging can contain user-provided sensitive text. The core redacts obvious token, password, secret, credential, and API-key patterns, but users should avoid pasting secrets into agent prompts.
 
-## Wiki-Worthy Notes
+## Durable Knowledge (curated on demand — not auto-generated)
 
-The hook writes durable wiki notes when a prompt or assistant result contains marker-style lines such as:
+Earlier versions (≤0.4.x) auto-wrote `Wiki/` notes from marker lines
+(`pattern:`, `resolved:`, …) and a keyword stub note per related term. In
+practice that produced **link-only stub notes** and **verbatim conversational
+fragments** — markers occur constantly in normal prose, shell output, and even
+text describing the markers themselves. The whole auto-wiki path was removed in
+**0.5.0**.
 
-- `wiki-worthy: ...`
-- `pattern: ...`
-- `convention: ...`
-- `integration: ...`
-- `failure mode: ...`
-- `resolved: ...`
-- `lesson: ...`
-
-This conservative rule is intentional. The wiki should capture reusable implementation patterns, repo conventions, integration discoveries, and resolved failure modes, not transient logs.
+Distilling reusable knowledge is now an explicit LLM task, done on request via the
+`session-journal` skill or **research-engine `/wiki`** (the LLM-authored Obsidian
+wiki under `LLM-Wiki/`). A durable note must be a *distilled summary* — the
+lesson, the key decision, the reusable pattern, and how to apply it later — never
+a verbatim copy of the session. Read the source session from `Raw/` for details.
 
 ## Obsidian Links
 
-Generated notes include links such as:
+Session notes still include wikilinks for graph navigation:
 
-- `[[Claude Code]]`
-- `[[Codex]]`
-- `[[research-engine]]`
-- `[[dream]]`
-- `[[evolve]]`
-- `[[herdr]]`
-- `[[session-journal]]`
+- `[[Claude Code]]`, `[[Codex]]`, `[[research-engine]]`, `[[dream]]`,
+  `[[evolve]]`, `[[herdr]]`, `[[session-journal]]`, `[[Obsidian]]`
 - the current repo name, such as `[[gprecious-marketplace]]`
 
-The plugin also creates keyword notes under `Wiki/` so the graph can connect session notes, durable notes, and related concepts.
+These are links only — the plugin no longer creates empty stub notes for them.
+Obsidian renders unresolved links as ghost graph nodes, which is harmless.
 
 ## research-engine, dream, and evolve Integration
 
@@ -204,12 +214,14 @@ Its cross-session learning layer uses:
 
 `session-journal` follows the same durable-local-artifact idea at session granularity:
 
-- raw hook events are the audit trail
-- session markdown is the readable report
-- wiki notes are the durable insight layer
+- raw hook events are the audit trail (`Raw/`)
+- session markdown is the readable per-session summary (`Sessions/`)
+- the durable insight layer is **research-engine `/wiki`** (`LLM-Wiki/`),
+  populated on demand — not auto-written by this plugin
 - Obsidian wikilinks make related concepts inspectable through the graph
 
-It does not auto-trigger `/dream` or `/evolve`; it links to those concepts and records integration discoveries so later research-engine work can reuse them.
+It does not auto-trigger `/dream`, `/evolve`, or `/wiki`; it links to those
+concepts so later research-engine work can reuse the captured sessions.
 
 ## Manual Summary
 

@@ -1,7 +1,7 @@
 {
   "name": "session-journal",
-  "version": "0.4.1",
-  "description": "Record Codex sessions to an Obsidian vault (or a subfolder of an existing one) with summaries, durable wiki notes, and wikilinks. Every generated note is tagged #ai-generated to stay distinct from hand-authored notes. Supports portable name-based vault resolution for multi-machine setups synced via Obsidian Sync.",
+  "version": "0.5.0",
+  "description": "Record Codex and Claude Code sessions to an Obsidian vault (or a subfolder of an existing one): an append-only raw event log plus one regenerated summary note per session — no verbatim transcript, no auto-generated wiki. Every note is tagged #ai-generated to stay distinct from hand-authored notes. Portable name-based vault resolution (with an explicit-pin guard against duplicate same-named vaults) for multi-machine setups synced via Obsidian Sync.",
   "author": {
     "name": "gprecious",
     "email": "gprecious@users.noreply.github.com",
@@ -13,7 +13,6 @@
     "journal",
     "hooks",
     "memory",
-    "wiki",
     "claude-code",
     "codex"
   ],
@@ -21,7 +20,7 @@
   "interface": {
     "displayName": "session-journal",
     "shortDescription": "Record agent sessions into an Obsidian vault.",
-    "longDescription": "Capture Claude Code and Codex prompts, tool activity, and final results through lifecycle hooks; write append-only raw logs, readable session summaries, durable wiki notes, and Obsidian wikilinks for graph navigation.",
+    "longDescription": "Capture Claude Code and Codex prompts, tool activity, and final results through lifecycle hooks; write an append-only raw log plus one regenerated summary note per session (no verbatim transcript, no auto-generated wiki), with Obsidian wikilinks for graph navigation.",
     "developerName": "gprecious",
     "category": "Productivity",
     "capabilities": [
@@ -32,7 +31,7 @@
     "defaultPrompt": [
       "Summarize the current session journal.",
       "Show where session-journal writes Obsidian notes.",
-      "Explain how wiki-worthy notes are selected."
+      "Verify my session-journal vault config."
     ],
     "brandColor": "#6D28D9"
   }

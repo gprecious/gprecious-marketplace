@@ -1,11 +1,23 @@
 #!/usr/bin/env python3
-"""Shared Obsidian session journal core for Claude Code and Codex hooks."""
+"""Shared Obsidian session journal core for Claude Code and Codex hooks.
+
+Capture-only by design: the hook is pure Python (no LLM), so it records a
+lightweight, append-only trail and a mechanical per-session summary — it does
+NOT try to author "knowledge". Two outputs per session:
+
+* ``Raw/<date>/<id>.jsonl`` — append-only full event log (source of truth).
+* ``Sessions/<date>/<id>.md`` — a single regenerated summary block (no verbatim
+  transcript; the full text lives in Raw).
+
+Durable wiki curation (distilling lessons / reusable knowledge) is an LLM task
+handled on demand by the ``/session-journal`` skill or by research-engine
+``/wiki`` — never auto-generated here, which only ever produced noise.
+"""
 
 from __future__ import annotations
 
 import argparse
 import datetime as dt
-import hashlib
 import json
 import os
 import pathlib
@@ -27,17 +39,6 @@ RELATED_KEYWORDS = [
     "session-journal",
     "Obsidian",
 ]
-WIKI_MARKERS = (
-    "wiki-worthy",
-    "durable note",
-    "pattern:",
-    "repo convention:",
-    "convention:",
-    "integration:",
-    "failure mode:",
-    "resolved:",
-    "lesson:",
-)
 # Tags stamped on every generated note so AI-authored content stays clearly
 # distinguishable from a user's own notes when the vault is shared (e.g. a
 # subfolder inside an existing Obsidian Sync vault). Filter/exclude in Obsidian
@@ -73,6 +74,39 @@ def obsidian_config_paths() -> list[pathlib.Path]:
     if appdata:
         paths.append(pathlib.Path(appdata) / "obsidian" / "obsidian.json")        # Windows
     return paths
+
+
+def named_vault_candidates(name: str) -> list[pathlib.Path]:
+    """All registered Obsidian vaults whose folder name matches ``name``.
+
+    More than one match means the machine has several same-named vaults (e.g. a
+    live local copy plus a stale iCloud copy) — name resolution would then flip
+    between them depending on which was last open, splitting writes. Pin
+    ``LLM_OBSIDIAN_VAULT`` to an absolute path to avoid that.
+    """
+    found: list[pathlib.Path] = []
+    seen: set[str] = set()
+    for cfg in obsidian_config_paths():
+        try:
+            if not cfg.is_file():
+                continue
+            vaults = json.loads(cfg.read_text(encoding="utf-8")).get("vaults")
+        except (OSError, json.JSONDecodeError, AttributeError):
+            continue
+        if not isinstance(vaults, dict):
+            continue
+        for info in vaults.values():
+            if not isinstance(info, dict):
+                continue
+            path = info.get("path")
+            if not isinstance(path, str) or pathlib.Path(path).name != name:
+                continue
+            resolved = pathlib.Path(path).expanduser()
+            key = str(resolved)
+            if key not in seen:
+                seen.add(key)
+                found.append(resolved)
+    return found
 
 
 def resolve_named_vault(name: str) -> pathlib.Path | None:
@@ -131,17 +165,6 @@ def safe_id(value: Any, fallback: str = "unknown-session") -> str:
     return text.strip("-")[:120] or fallback
 
 
-def slugify(value: str, fallback: str = "note") -> str:
-    text = value.strip().lower()
-    text = re.sub(r"[^a-z0-9]+", "-", text)
-    text = re.sub(r"-+", "-", text).strip("-")
-    return (text or fallback)[:80]
-
-
-def short_hash(value: str) -> str:
-    return hashlib.sha256(value.encode("utf-8")).hexdigest()[:10]
-
-
 def read_json_stdin() -> dict[str, Any]:
     raw = sys.stdin.read()
     if not raw.strip():
@@ -182,7 +205,7 @@ def redact(value: Any) -> Any:
 
 
 def ensure_layout(vault: pathlib.Path) -> None:
-    for rel in ("Sessions", "Raw", "Wiki", ".obsidian"):
+    for rel in ("Sessions", "Raw", ".obsidian"):
         (vault / rel).mkdir(parents=True, exist_ok=True)
     index = vault / "Index.md"
     if not index.exists():
@@ -196,14 +219,10 @@ def ensure_layout(vault: pathlib.Path) -> None:
             "> Every note under this folder is written by the session-journal plugin "
             "(Claude Code / Codex) and tagged `#ai-generated`. It is **not** hand-authored. "
             "Filter or exclude it from search/graph with `tag:#ai-generated`.\n\n"
-            "- [[Claude Code]]\n"
-            "- [[Codex]]\n"
-            "- [[research-engine]]\n"
-            "- [[dream]]\n"
-            "- [[evolve]]\n"
-            "- [[herdr]]\n"
-            "- [[session-journal]]\n\n"
-            "Session notes live under `Sessions/`; append-only raw hook events live under `Raw/`.\n",
+            "Session notes live under `Sessions/` (one per session — a regenerated "
+            "summary block only, not a verbatim transcript). The full append-only "
+            "event log lives under `Raw/`. Durable knowledge is curated on demand by "
+            "the `/session-journal` skill or research-engine `/wiki`, not written here.\n",
             encoding="utf-8",
         )
 
@@ -231,24 +250,6 @@ def wikilinks(cwd: str | None = None, extra: list[str] | None = None) -> list[st
             seen.add(key)
             links.append(f"[[{term}]]")
     return links
-
-
-def ensure_keyword_notes(vault: pathlib.Path, cwd: str | None = None) -> None:
-    for link in wikilinks(cwd):
-        name = link.strip("[]")
-        note = vault / "Wiki" / f"{name}.md"
-        if note.exists():
-            continue
-        note.write_text(
-            "---\n"
-            "type: keyword\n"
-            "source: session-journal\n"
-            f"{tags_block()}"
-            "---\n\n"
-            f"# {name}\n\n"
-            f"Related: {' '.join(wikilinks(cwd))}\n",
-            encoding="utf-8",
-        )
 
 
 def append_raw(path: pathlib.Path, record: dict[str, Any]) -> None:
@@ -281,33 +282,12 @@ def init_session_note(path: pathlib.Path, session_id: str, event: dict[str, Any]
     )
 
 
-def append_session_section(path: pathlib.Path, title: str, body: str) -> None:
-    if not body.strip():
-        return
-    with path.open("a", encoding="utf-8") as f:
-        f.write(f"\n## {title} - {now_iso()}\n\n{body.strip()}\n")
-
-
 def first_nonempty(text: str, limit: int = 180) -> str:
     for line in text.splitlines():
         clean = line.strip()
         if clean:
             return clean[:limit]
     return ""
-
-
-def extract_event_text(event: dict[str, Any]) -> str:
-    parts: list[str] = []
-    for key in ("prompt", "last_assistant_message", "message", "summary"):
-        value = event.get(key)
-        if isinstance(value, str):
-            parts.append(value)
-    tool_input = event.get("tool_input")
-    if isinstance(tool_input, dict):
-        command = tool_input.get("command")
-        if isinstance(command, str):
-            parts.append(f"Tool command: {command}")
-    return "\n".join(parts)
 
 
 def load_raw(raw_path: pathlib.Path) -> list[dict[str, Any]]:
@@ -370,81 +350,12 @@ def replace_summary(path: pathlib.Path, summary: str) -> None:
     path.write_text(text, encoding="utf-8")
 
 
-def wiki_candidates(text: str) -> list[tuple[str, str]]:
-    candidates: list[tuple[str, str]] = []
-    for line in text.splitlines():
-        clean = line.strip(" -\t")
-        lower = clean.lower()
-        if not clean:
-            continue
-        for marker in WIKI_MARKERS:
-            if marker in lower:
-                title = clean
-                if ":" in clean:
-                    title = clean.split(":", 1)[0].strip()
-                title = title.replace("wiki-worthy", "Wiki-worthy").strip() or "Durable note"
-                candidates.append((title[:80], clean))
-                break
-    return candidates
-
-
-def write_wiki_notes(vault: pathlib.Path, session_id: str, event: dict[str, Any], agent: str) -> list[pathlib.Path]:
-    text = extract_event_text(event)
-    candidates = wiki_candidates(text)
-    written: list[pathlib.Path] = []
-    if not candidates:
-        return written
-
-    cwd = event.get("cwd") if isinstance(event.get("cwd"), str) else None
-    session_link = f"[[Sessions/{today()}/{session_id}|session {session_id}]]"
-    for title, content in candidates:
-        slug = f"{slugify(title)}-{short_hash(content)}"
-        path = vault / "Wiki" / f"{slug}.md"
-        if path.exists():
-            continue
-        path.write_text(
-            "---\n"
-            "type: durable-note\n"
-            f"created: {now_iso()}\n"
-            f"agent: {agent}\n"
-            f"session_id: {session_id}\n"
-            f"{tags_block()}"
-            "---\n\n"
-            f"# {title}\n\n"
-            f"Source: {session_link}\n\n"
-            f"{content}\n\n"
-            f"Related: {' '.join(wikilinks(cwd))}\n",
-            encoding="utf-8",
-        )
-        written.append(path)
-    return written
-
-
-def event_body(event: dict[str, Any]) -> tuple[str | None, str]:
-    name = event.get("hook_event_name")
-    if name == "SessionStart":
-        return "Session Start", f"Source: `{event.get('source', 'unknown')}`"
-    if name == "UserPromptSubmit":
-        return "User Prompt", str(event.get("prompt", "")).strip()
-    if name == "Stop":
-        return "Agent Result", str(event.get("last_assistant_message", "")).strip()
-    if name == "PostToolUse":
-        tool_name = event.get("tool_name", "unknown-tool")
-        tool_input = event.get("tool_input", {})
-        command = ""
-        if isinstance(tool_input, dict) and isinstance(tool_input.get("command"), str):
-            command = f"\n\nCommand:\n\n```sh\n{tool_input['command'][:2000]}\n```"
-        return "Tool Result", f"Tool: `{tool_name}`{command}"
-    return None, ""
-
-
 def handle_event(event: dict[str, Any], agent: str, vault: pathlib.Path) -> dict[str, Any]:
     ensure_layout(vault)
     event = redact(event)
     session_id = safe_id(event.get("session_id"))
     paths = paths_for(vault, session_id)
     init_session_note(paths["session"], session_id, event, agent)
-    ensure_keyword_notes(vault, event.get("cwd") if isinstance(event.get("cwd"), str) else None)
 
     record = {
         "recorded_at": now_iso(),
@@ -453,15 +364,9 @@ def handle_event(event: dict[str, Any], agent: str, vault: pathlib.Path) -> dict
     }
     append_raw(paths["raw"], record)
 
-    title, body = event_body(event)
-    if title and body:
-        append_session_section(paths["session"], title, body)
-
-    wiki_written = write_wiki_notes(vault, session_id, event, agent)
-    if wiki_written:
-        links = " ".join(f"[[Wiki/{path.stem}|{path.stem}]]" for path in wiki_written)
-        append_session_section(paths["session"], "Wiki Notes", links)
-
+    # The session note carries a single regenerated summary block — no verbatim
+    # event-by-event append (the full trail is already in Raw/). Refresh it on the
+    # events that change the summary; PostToolUse only extends the raw log.
     if event.get("hook_event_name") in {"Stop", "UserPromptSubmit", "SessionStart"}:
         events = load_raw(paths["raw"])
         replace_summary(paths["session"], build_summary(events, event.get("cwd")))
@@ -471,7 +376,6 @@ def handle_event(event: dict[str, Any], agent: str, vault: pathlib.Path) -> dict
         "vault": str(vault),
         "session_note": str(paths["session"]),
         "raw_log": str(paths["raw"]),
-        "wiki_notes": [str(path) for path in wiki_written],
     }
 
 
@@ -506,14 +410,14 @@ def run_self_test(vault: pathlib.Path) -> dict[str, Any]:
             "session_id": "self-test-codex",
             "hook_event_name": "UserPromptSubmit",
             "cwd": "/tmp/gprecious-marketplace",
-            "prompt": "Implement session-journal. integration: Use [[research-engine]] dream/evolve style durable notes.",
+            "prompt": "Implement session-journal capture for [[research-engine]] work.",
             "turn_id": "turn-1",
         },
         {
             "session_id": "self-test-codex",
             "hook_event_name": "Stop",
             "cwd": "/tmp/gprecious-marketplace",
-            "last_assistant_message": "Done. pattern: Shared hook core writes Obsidian wikilinks for [[Claude Code]] and [[Codex]].",
+            "last_assistant_message": "Done. Shared hook core writes Obsidian summaries for [[Claude Code]] and [[Codex]].",
             "turn_id": "turn-1",
             "stop_hook_active": False,
         },
@@ -521,13 +425,13 @@ def run_self_test(vault: pathlib.Path) -> dict[str, Any]:
             "session_id": "self-test-claude",
             "hook_event_name": "UserPromptSubmit",
             "cwd": "/tmp/gprecious-marketplace",
-            "prompt": "Record this session. convention: Raw events stay append-only and summaries are regenerated.",
+            "prompt": "Record this session. Raw events stay append-only and summaries are regenerated.",
         },
         {
             "session_id": "self-test-claude",
             "hook_event_name": "Stop",
             "cwd": "/tmp/gprecious-marketplace",
-            "last_assistant_message": "Finished. resolved: synthetic Claude event created a wiki note.",
+            "last_assistant_message": "Finished. The session note carries a summary block only.",
             "stop_hook_active": False,
         },
     ]
@@ -542,6 +446,7 @@ def diagnose(vault: pathlib.Path) -> dict[str, Any]:
     """Report how the vault path was resolved — for verifying per-machine setup."""
     explicit = os.environ.get("LLM_OBSIDIAN_VAULT")
     name = os.environ.get("LLM_OBSIDIAN_VAULT_NAME")
+    candidates = named_vault_candidates(name) if name else []
     named = resolve_named_vault(name) if name else None
     if explicit:
         mode = "explicit (LLM_OBSIDIAN_VAULT)"
@@ -551,6 +456,13 @@ def diagnose(vault: pathlib.Path) -> dict[str, Any]:
         mode = "default (named vault NOT found on this machine — check Obsidian is set up)"
     else:
         mode = "default (no env set)"
+    warnings: list[str] = []
+    if not explicit and len(candidates) > 1:
+        warnings.append(
+            f"{len(candidates)} vaults named '{name}' are registered "
+            f"({', '.join(str(c) for c in candidates)}); name resolution may flip "
+            "between them. Pin LLM_OBSIDIAN_VAULT to an absolute path."
+        )
     return {
         "resolved_vault": str(vault),
         "vault_exists": vault.exists(),
@@ -561,7 +473,9 @@ def diagnose(vault: pathlib.Path) -> dict[str, Any]:
             "LLM_OBSIDIAN_SUBDIR": os.environ.get("LLM_OBSIDIAN_SUBDIR"),
         },
         "named_vault_path": str(named) if named else None,
+        "named_vault_candidates": [str(c) for c in candidates],
         "obsidian_config_found": [str(p) for p in obsidian_config_paths() if p.is_file()],
+        "warnings": warnings,
         "ok": bool(explicit or named),
     }
 
