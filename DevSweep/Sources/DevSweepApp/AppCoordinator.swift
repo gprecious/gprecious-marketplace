@@ -41,8 +41,20 @@ final class AppCoordinator: ObservableObject {
     @Published private(set) var isReclaiming = false
 
     /// Currently selected menubar skin id. SwiftUI (`MenuView`) observes this directly; the AppKit
-    /// status item is pushed updates via `onSkinChange`. Only free skins are selectable in M5.
+    /// status item is pushed updates via `onSkinChange`. Free skins are always selectable; paid skins
+    /// only once owned (gated by `skinStore.canSelect`).
     @Published private(set) var currentSkinId: String = SkinCatalog.defaultSkinId
+
+    /// IAP state: loaded products, unlocked-skin set, buy/restore. The menu observes it directly; the
+    /// coordinator consults it to gate skin selection. The real `StoreKit2Backend` is injected here.
+    let skinStore: SkinStore
+
+    /// Persisted skin id awaiting an entitlements load — a persisted *paid* skin can't be validated
+    /// until `skinStore.load()` resolves ownership, so it's re-applied in `reconcileSkinSelection`.
+    private var pendingSkinId: String?
+
+    /// Long-lived `Transaction.updates` listener (Ask-to-Buy, family sharing, other devices).
+    private var transactionObserver: Task<Void, Never>?
 
     /// UserDefaults key for the persisted skin selection.
     private static let skinDefaultsKey = "DevSweep.currentSkinId"
@@ -83,10 +95,13 @@ final class AppCoordinator: ObservableObject {
 
     init(config: AppConfig = .default) {
         self.config = config
+        self.skinStore = SkinStore(backend: StoreKit2Backend())
 
-        // Restore the persisted skin selection if it's still a valid free skin.
-        if let persisted = UserDefaults.standard.string(forKey: Self.skinDefaultsKey),
-           SkinCatalog.skin(id: persisted)?.isFree == true {
+        // Restore the persisted skin selection. A free skin applies immediately; a persisted *paid*
+        // skin is held in `pendingSkinId` and re-applied (or reverted) once entitlements load.
+        let persisted = UserDefaults.standard.string(forKey: Self.skinDefaultsKey)
+        self.pendingSkinId = persisted
+        if let persisted, SkinCatalog.skin(id: persisted)?.isFree == true {
             currentSkinId = persisted
         }
 
@@ -126,6 +141,18 @@ final class AppCoordinator: ObservableObject {
     func start() {
         notifier.requestAuthorizationIfPossible()
 
+        // Load IAP products + entitlements, then reconcile the persisted skin selection against what
+        // the user actually owns (re-apply a persisted paid skin; revert a refunded one).
+        Task { [weak self] in
+            await self?.skinStore.load()
+            self?.reconcileSkinSelection()
+        }
+        // React to transactions completed outside an explicit buy (Ask-to-Buy, family sharing, other
+        // devices) so an external unlock/refund is reflected without a relaunch.
+        transactionObserver = StoreKit2Backend().observeTransactionUpdates { [weak self] in
+            await self?.handleEntitlementChange()
+        }
+
         let watcher = WatcherService(
             config: config,
             probe: StatfsDiskSpaceProbe(),
@@ -143,13 +170,42 @@ final class AppCoordinator: ObservableObject {
         watcher?.triggerManual()
     }
 
-    /// Select a menubar skin. M5 only permits free skins (paid skins are shown locked); unknown or
-    /// paid ids are ignored. Persists the choice and notifies the status item.
+    /// Select a menubar skin. Free skins are always allowed; paid skins only when unlocked
+    /// (`skinStore.canSelect`). Unknown or still-locked ids are ignored. Persists + notifies.
     func setSkin(id: String) {
-        guard id != currentSkinId, SkinCatalog.skin(id: id)?.isFree == true else { return }
+        guard id != currentSkinId,
+              let skin = SkinCatalog.skin(id: id),
+              skinStore.canSelect(skin) else { return }
         currentSkinId = id
         UserDefaults.standard.set(id, forKey: Self.skinDefaultsKey)
         onSkinChange?(id)
+    }
+
+    /// Reconcile the selected skin against current entitlements. Runs after the initial entitlements
+    /// load and on every external transaction update: re-applies a persisted paid skin once it's
+    /// owned, and reverts the current skin to the default if it's a paid skin no longer owned
+    /// (refund / family-sharing loss). Free skins are never affected.
+    private func reconcileSkinSelection() {
+        if let pending = pendingSkinId,
+           pending != currentSkinId,
+           let skin = SkinCatalog.skin(id: pending),
+           skinStore.canSelect(skin) {
+            currentSkinId = pending
+            UserDefaults.standard.set(pending, forKey: Self.skinDefaultsKey)
+            onSkinChange?(pending)
+        }
+        if let current = SkinCatalog.skin(id: currentSkinId), !skinStore.canSelect(current) {
+            currentSkinId = SkinCatalog.defaultSkinId
+            UserDefaults.standard.set(currentSkinId, forKey: Self.skinDefaultsKey)
+            onSkinChange?(currentSkinId)
+        }
+        pendingSkinId = nil // applied once at startup; later updates revert-only.
+    }
+
+    /// An external transaction changed ownership — refresh the unlocked set and reconcile selection.
+    private func handleEntitlementChange() async {
+        await skinStore.refresh()
+        reconcileSkinSelection()
     }
 
     /// All triggers currently resolve to a full scan; the reason is retained for future routing.

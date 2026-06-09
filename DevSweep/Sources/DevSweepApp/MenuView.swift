@@ -2,10 +2,11 @@ import SwiftUI
 import DevSweepCore
 
 /// The popover content: the reclaimable total + last-scan time, the top modules by size, a
-/// "Scan now" action, a dry-run-toggled reclaim of the reviewed items, and placeholders for
-/// settings/donation (real behavior lands in M6).
+/// "Scan now" action, a dry-run-toggled reclaim of the reviewed items, the skin picker with IAP
+/// buy/restore, and reward-free donation links.
 struct MenuView: View {
     @ObservedObject var coordinator: AppCoordinator
+    @ObservedObject var skinStore: SkinStore
     @State private var dryRun = true
 
     var body: some View {
@@ -101,38 +102,108 @@ struct MenuView: View {
             Text("스킨")
                 .font(.caption)
                 .foregroundStyle(.secondary)
+
             ForEach(SkinCatalog.all, id: \.id) { skin in
-                HStack(spacing: 8) {
-                    Image(nsImage: skin.image(for: previewState, height: 16))
-                        .frame(width: 44, alignment: .leading)
-                    Text(skin.displayName)
-                        .font(.callout)
-                        .foregroundStyle(skin.isFree ? .primary : .secondary)
-                    Spacer()
-                    if skin.isFree {
-                        Image(systemName: skin.id == coordinator.currentSkinId ? "checkmark.circle.fill" : "circle")
-                            .foregroundStyle(skin.id == coordinator.currentSkinId ? Color.accentColor : Color.secondary)
-                    } else {
-                        Label("Pro", systemImage: "lock.fill")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
+                skinRow(skin)
+            }
+
+            allAccessRow
+
+            Button("구매 복원") {
+                Task { await skinStore.restorePurchases() }
+            }
+            .font(.caption)
+            .buttonStyle(.link)
+            .disabled(skinStore.purchaseInFlight)
+        }
+    }
+
+    /// One skin row: a live preview + name, then a selection radio (free / unlocked) or a "Buy $X"
+    /// button (locked, sold standalone) or a lock glyph (locked, pack/All-Access-only).
+    @ViewBuilder private func skinRow(_ skin: any SkinModule) -> some View {
+        let selectable = skinStore.canSelect(skin)
+        HStack(spacing: 8) {
+            Image(nsImage: skin.image(for: previewState, height: 16))
+                .frame(width: 44, alignment: .leading)
+            Text(skin.displayName)
+                .font(.callout)
+                .foregroundStyle(selectable ? .primary : .secondary)
+            Spacer()
+            if selectable {
+                Image(systemName: skin.id == coordinator.currentSkinId ? "checkmark.circle.fill" : "circle")
+                    .foregroundStyle(skin.id == coordinator.currentSkinId ? Color.accentColor : Color.secondary)
+            } else if let product = ProductCatalog.singleSkinProduct(skinId: skin.id) {
+                Button(price(for: product.id)) {
+                    Task {
+                        if await skinStore.buy(product.id) {
+                            coordinator.setSkin(id: skin.id) // unlocked now → auto-select ("Keep it")
+                        }
                     }
                 }
-                .contentShape(Rectangle())
-                .onTapGesture { coordinator.setSkin(id: skin.id) } // no-op for locked (paid) skins
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+                .disabled(skinStore.purchaseInFlight)
+            } else {
+                Image(systemName: "lock.fill")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if selectable { coordinator.setSkin(id: skin.id) } // no-op for locked skins
+        }
+    }
+
+    /// All-Access bundle row — shown until every paid skin is owned. Anchored against single prices.
+    @ViewBuilder private var allAccessRow: some View {
+        if let allAccess = ProductCatalog.product(id: ProductCatalog.allAccessId),
+           skinStore.unlockedSkinIds.count < SkinCatalog.paid.count {
+            HStack(spacing: 8) {
+                Image(systemName: "sparkles")
+                    .frame(width: 44, alignment: .leading)
+                    .foregroundStyle(.secondary)
+                Text("올 액세스 — 모든 스킨")
+                    .font(.callout)
+                Spacer()
+                Button(price(for: allAccess.id)) {
+                    Task { _ = await skinStore.buy(allAccess.id) }
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .disabled(skinStore.purchaseInFlight)
             }
         }
     }
 
+    /// Reward-free donation footer (Apple 3.2.1 vii): voluntary support only, no perks offered or
+    /// implied here, plus a reassurance that cleanup stays free.
     private var footer: some View {
-        HStack {
-            Text("설정")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
-            Spacer()
-            Text("기부")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
+        VStack(alignment: .leading, spacing: 6) {
+            Text("모든 정리 기능은 계속 무료입니다.")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            HStack(spacing: 14) {
+                Button {
+                    DonationLinks.open(DonationLinks.buyMeACoffee)
+                } label: {
+                    Label("커피 한 잔", systemImage: "cup.and.saucer")
+                }
+                Button {
+                    DonationLinks.open(DonationLinks.githubSponsors)
+                } label: {
+                    Label("GitHub Sponsors", systemImage: "heart")
+                }
+            }
+            .font(.caption)
+            .buttonStyle(.link)
         }
+    }
+
+    /// Localized StoreKit price when loaded, else the catalog's recommended USD price.
+    private func price(for productId: String) -> String {
+        skinStore.products.first { $0.id == productId }?.displayPrice
+            ?? ProductCatalog.product(id: productId)?.displayPrice
+            ?? ""
     }
 }

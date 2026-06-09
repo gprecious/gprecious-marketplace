@@ -22,7 +22,9 @@ final class StatusItemController: NSObject {
         super.init()
 
         popover.behavior = .transient
-        popover.contentViewController = NSHostingController(rootView: MenuView(coordinator: coordinator))
+        popover.contentViewController = NSHostingController(
+            rootView: MenuView(coordinator: coordinator, skinStore: coordinator.skinStore)
+        )
 
         if let button = statusItem.button {
             button.target = self
