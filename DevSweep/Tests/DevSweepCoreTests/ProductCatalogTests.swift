@@ -12,7 +12,7 @@ import Testing
     @Test func everyProductIdIsBundlePrefixedAndUnique() {
         let ids = ProductCatalog.all.map(\.id)
         for id in ids {
-            #expect(id.hasPrefix("kr.qplace.devsweep."))
+            #expect(id.hasPrefix("com.flowfinders.devsweep."))
         }
         #expect(Set(ids).count == ids.count) // no duplicates
     }
@@ -42,8 +42,8 @@ import Testing
     @Test func dotMatrixAndSynthwaveSoldAsSingles() {
         let dot = ProductCatalog.singleSkinProduct(skinId: "dot-matrix")
         let synth = ProductCatalog.singleSkinProduct(skinId: "synthwave")
-        #expect(dot?.id == "kr.qplace.devsweep.skin.dotmatrix")
-        #expect(synth?.id == "kr.qplace.devsweep.skin.synthwave")
+        #expect(dot?.id == "com.flowfinders.devsweep.skin.dotmatrix")
+        #expect(synth?.id == "com.flowfinders.devsweep.skin.synthwave")
     }
 
     @Test func themePackBundlesBothPaidSkins() {
@@ -61,6 +61,6 @@ import Testing
     }
 
     @Test func productLookupReturnsNilForUnknownId() {
-        #expect(ProductCatalog.product(id: "kr.qplace.devsweep.nope") == nil)
+        #expect(ProductCatalog.product(id: "com.flowfinders.devsweep.nope") == nil)
     }
 }

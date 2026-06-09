@@ -6,7 +6,7 @@ import Testing
 /// `EntitlementResolver`. Driven entirely by `MockPurchaseBackend` so the logic is verified without
 /// StoreKit. `canSelect` is the selection gate (free always; paid only when unlocked).
 @Suite @MainActor struct SkinStoreTests {
-    private let dotmatrixProduct = "kr.qplace.devsweep.skin.dotmatrix"
+    private let dotmatrixProduct = "com.flowfinders.devsweep.skin.dotmatrix"
     private let allAccessId = ProductCatalog.allAccessId
 
     @Test func loadPopulatesProductsFromBackend() async {
@@ -45,7 +45,7 @@ import Testing
     }
 
     @Test func restoreReinstatesPreviouslyOwnedSkins() async {
-        let backend = MockPurchaseBackend(restoreAdds: ["kr.qplace.devsweep.skin.synthwave"])
+        let backend = MockPurchaseBackend(restoreAdds: ["com.flowfinders.devsweep.skin.synthwave"])
         let store = SkinStore(backend: backend)
         await store.load()
         #expect(store.unlockedSkinIds.isEmpty)
@@ -107,7 +107,7 @@ import Testing
         await backend.waitUntilPurchaseStarted()
         #expect(store.purchaseInFlight)
 
-        let second = await store.buy("kr.qplace.devsweep.skin.synthwave")
+        let second = await store.buy("com.flowfinders.devsweep.skin.synthwave")
         #expect(second == false) // rejected by the in-flight guard, never reaches the backend
 
         await backend.releasePurchase()

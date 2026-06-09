@@ -13,7 +13,7 @@
           "locale" : "en_US"
         }
       ],
-      "productID" : "kr.qplace.devsweep.skin.dotmatrix",
+      "productID" : "com.flowfinders.devsweep.skin.dotmatrix",
       "referenceName" : "Dot Matrix Skin",
       "type" : "NonConsumable"
     },
@@ -28,7 +28,7 @@
           "locale" : "en_US"
         }
       ],
-      "productID" : "kr.qplace.devsweep.skin.synthwave",
+      "productID" : "com.flowfinders.devsweep.skin.synthwave",
       "referenceName" : "Synthwave Skin",
       "type" : "NonConsumable"
     },
@@ -43,7 +43,7 @@
           "locale" : "en_US"
         }
       ],
-      "productID" : "kr.qplace.devsweep.themepack.retro",
+      "productID" : "com.flowfinders.devsweep.themepack.retro",
       "referenceName" : "Retro Theme Pack",
       "type" : "NonConsumable"
     },
@@ -58,7 +58,7 @@
           "locale" : "en_US"
         }
       ],
-      "productID" : "kr.qplace.devsweep.allaccess",
+      "productID" : "com.flowfinders.devsweep.allaccess",
       "referenceName" : "All-Access",
       "type" : "NonConsumable"
     }

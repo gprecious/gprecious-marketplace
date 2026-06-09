@@ -30,7 +30,7 @@ final class WatcherService: @unchecked Sendable {
         self.clock = clock
         self.onTrigger = onTrigger
 
-        let scheduler = NSBackgroundActivityScheduler(identifier: "kr.qplace.devsweep.watcher")
+        let scheduler = NSBackgroundActivityScheduler(identifier: "com.flow-finders.devsweep.watcher")
         scheduler.repeats = true
         scheduler.interval = config.scanInterval
         scheduler.tolerance = min(config.scanInterval * 0.1, 30 * 60)

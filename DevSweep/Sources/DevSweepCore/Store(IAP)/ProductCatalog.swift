@@ -7,7 +7,7 @@ import Foundation
 /// setup and as a pre-load fallback); at runtime `StoreKit2Backend` rebuilds each product with the
 /// **localized** `Product.displayPrice`. `kind` maps a product to the skin id(s) it unlocks.
 public struct IAPProduct: Sendable, Equatable {
-    /// App Store Connect product identifier, e.g. `kr.qplace.devsweep.skin.dotmatrix`.
+    /// App Store Connect product identifier, e.g. `com.flowfinders.devsweep.skin.dotmatrix`.
     public let id: String
     /// Human-facing product name shown in the menu.
     public let displayName: String
@@ -43,24 +43,24 @@ public struct IAPProduct: Sendable, Equatable {
 /// paid single skins ($1.99 / $2.99), a retro theme pack ($3.99), and an anchoring All-Access ($9.99).
 public enum ProductCatalog {
     /// All-Access product id — owning it unlocks every skin in the catalog.
-    public static let allAccessId = "kr.qplace.devsweep.allaccess"
+    public static let allAccessId = "com.flowfinders.devsweep.allaccess"
 
     /// Every IAP product, in menu display order.
     public static let all: [IAPProduct] = [
         IAPProduct(
-            id: "kr.qplace.devsweep.skin.dotmatrix",
+            id: "com.flowfinders.devsweep.skin.dotmatrix",
             displayName: "도트 매트릭스",
             displayPrice: "$1.99",
             kind: .singleSkin("dot-matrix")
         ),
         IAPProduct(
-            id: "kr.qplace.devsweep.skin.synthwave",
+            id: "com.flowfinders.devsweep.skin.synthwave",
             displayName: "신스웨이브",
             displayPrice: "$2.99",
             kind: .singleSkin("synthwave")
         ),
         IAPProduct(
-            id: "kr.qplace.devsweep.themepack.retro",
+            id: "com.flowfinders.devsweep.themepack.retro",
             displayName: "레트로 테마팩",
             displayPrice: "$3.99",
             kind: .themePack(["dot-matrix", "synthwave"])

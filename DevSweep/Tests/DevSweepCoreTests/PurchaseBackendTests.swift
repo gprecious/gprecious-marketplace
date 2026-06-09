@@ -7,46 +7,46 @@ import Testing
 @Suite struct PurchaseBackendTests {
     @Test func loadProductsFiltersToRequestedIds() async throws {
         let backend = MockPurchaseBackend()
-        let loaded = try await backend.loadProducts(ids: ["kr.qplace.devsweep.skin.dotmatrix"])
-        #expect(loaded.map(\.id) == ["kr.qplace.devsweep.skin.dotmatrix"])
+        let loaded = try await backend.loadProducts(ids: ["com.flowfinders.devsweep.skin.dotmatrix"])
+        #expect(loaded.map(\.id) == ["com.flowfinders.devsweep.skin.dotmatrix"])
     }
 
     @Test func purchaseAddsToOwnedAndSucceeds() async throws {
         let backend = MockPurchaseBackend()
-        let ok = try await backend.purchase(id: "kr.qplace.devsweep.skin.synthwave")
+        let ok = try await backend.purchase(id: "com.flowfinders.devsweep.skin.synthwave")
         #expect(ok)
         let owned = await backend.currentEntitlementIds()
-        #expect(owned.contains("kr.qplace.devsweep.skin.synthwave"))
+        #expect(owned.contains("com.flowfinders.devsweep.skin.synthwave"))
     }
 
     @Test func purchaseFailsWithoutMutatingOwnedWhenConfiguredToFail() async throws {
         let backend = MockPurchaseBackend(purchaseSucceeds: false)
-        let ok = try await backend.purchase(id: "kr.qplace.devsweep.skin.synthwave")
+        let ok = try await backend.purchase(id: "com.flowfinders.devsweep.skin.synthwave")
         #expect(!ok)
         let owned = await backend.currentEntitlementIds()
         #expect(owned.isEmpty)
     }
 
     @Test func currentEntitlementsReflectsInjectedOwnedSet() async {
-        let backend = MockPurchaseBackend(owned: ["kr.qplace.devsweep.allaccess"])
+        let backend = MockPurchaseBackend(owned: ["com.flowfinders.devsweep.allaccess"])
         let owned = await backend.currentEntitlementIds()
-        #expect(owned == ["kr.qplace.devsweep.allaccess"])
+        #expect(owned == ["com.flowfinders.devsweep.allaccess"])
     }
 
     @Test func restoreGrantsPreviouslyOwnedProducts() async throws {
-        let backend = MockPurchaseBackend(restoreAdds: ["kr.qplace.devsweep.skin.dotmatrix"])
+        let backend = MockPurchaseBackend(restoreAdds: ["com.flowfinders.devsweep.skin.dotmatrix"])
         try await backend.restore()
         let owned = await backend.currentEntitlementIds()
-        #expect(owned.contains("kr.qplace.devsweep.skin.dotmatrix"))
+        #expect(owned.contains("com.flowfinders.devsweep.skin.dotmatrix"))
     }
 
     @Test func recordsPurchaseAndRestoreCalls() async throws {
         let backend = MockPurchaseBackend()
-        _ = try await backend.purchase(id: "kr.qplace.devsweep.skin.dotmatrix")
+        _ = try await backend.purchase(id: "com.flowfinders.devsweep.skin.dotmatrix")
         try await backend.restore()
         let purchases = await backend.purchaseCalls
         let restores = await backend.restoreCalls
-        #expect(purchases == ["kr.qplace.devsweep.skin.dotmatrix"])
+        #expect(purchases == ["com.flowfinders.devsweep.skin.dotmatrix"])
         #expect(restores == 1)
     }
 }

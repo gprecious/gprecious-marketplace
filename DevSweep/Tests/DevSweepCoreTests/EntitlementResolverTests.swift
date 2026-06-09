@@ -12,17 +12,17 @@ import Testing
     }
 
     @Test func singleSkinProductUnlocksThatSkin() {
-        let unlocked = resolver.unlockedSkinIds(ownedProductIds: ["kr.qplace.devsweep.skin.dotmatrix"])
+        let unlocked = resolver.unlockedSkinIds(ownedProductIds: ["com.flowfinders.devsweep.skin.dotmatrix"])
         #expect(unlocked == ["dot-matrix"])
     }
 
     @Test func otherSingleSkinProductUnlocksOnlyItsSkin() {
-        let unlocked = resolver.unlockedSkinIds(ownedProductIds: ["kr.qplace.devsweep.skin.synthwave"])
+        let unlocked = resolver.unlockedSkinIds(ownedProductIds: ["com.flowfinders.devsweep.skin.synthwave"])
         #expect(unlocked == ["synthwave"])
     }
 
     @Test func themePackUnlocksAllBundledSkins() {
-        let unlocked = resolver.unlockedSkinIds(ownedProductIds: ["kr.qplace.devsweep.themepack.retro"])
+        let unlocked = resolver.unlockedSkinIds(ownedProductIds: ["com.flowfinders.devsweep.themepack.retro"])
         #expect(unlocked == ["dot-matrix", "synthwave"])
     }
 
@@ -39,14 +39,14 @@ import Testing
     }
 
     @Test func unknownProductIdsAreIgnored() {
-        let unlocked = resolver.unlockedSkinIds(ownedProductIds: ["kr.qplace.devsweep.bogus"])
+        let unlocked = resolver.unlockedSkinIds(ownedProductIds: ["com.flowfinders.devsweep.bogus"])
         #expect(unlocked.isEmpty)
     }
 
     @Test func multipleSinglesUnionTheirSkins() {
         let unlocked = resolver.unlockedSkinIds(ownedProductIds: [
-            "kr.qplace.devsweep.skin.dotmatrix",
-            "kr.qplace.devsweep.skin.synthwave",
+            "com.flowfinders.devsweep.skin.dotmatrix",
+            "com.flowfinders.devsweep.skin.synthwave",
         ])
         #expect(unlocked == ["dot-matrix", "synthwave"])
     }
@@ -54,13 +54,13 @@ import Testing
     @Test func seasonalProductUnlocksItsSkinsViaInjectedCatalog() {
         // A seasonal drop isn't shipped yet (out of scope), but the resolver must handle the kind.
         let seasonal = IAPProduct(
-            id: "kr.qplace.devsweep.season.winter",
+            id: "com.flowfinders.devsweep.season.winter",
             displayName: "겨울 한정",
             displayPrice: "$2.99",
             kind: .seasonal(["frost", "aurora"])
         )
         let resolver = EntitlementResolver(catalog: [seasonal])
-        let unlocked = resolver.unlockedSkinIds(ownedProductIds: ["kr.qplace.devsweep.season.winter"])
+        let unlocked = resolver.unlockedSkinIds(ownedProductIds: ["com.flowfinders.devsweep.season.winter"])
         #expect(unlocked == ["frost", "aurora"])
     }
 

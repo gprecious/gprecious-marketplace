@@ -41,7 +41,7 @@ Package.swift: 필요 시 DevSweepApp 에 `.storekit` 리소스 처리(`resource
 ```swift
 // 순수 (Core)
 public struct IAPProduct: Sendable, Equatable {
-    public let id: String          // "kr.qplace.devsweep.skin.dotmatrix" 등
+    public let id: String          // "com.flowfinders.devsweep.skin.dotmatrix" 등
     public let displayName: String
     public let kind: Kind          // .singleSkin(skinId) / .themePack([skinId]) / .allAccess / .seasonal([skinId])
     public enum Kind: Sendable, Equatable { case singleSkin(String); case themePack([String]); case allAccess; case seasonal([String]) }
