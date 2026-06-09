@@ -40,6 +40,13 @@ final class AppCoordinator: ObservableObject {
     @Published private(set) var isScanning = false
     @Published private(set) var isReclaiming = false
 
+    /// Currently selected menubar skin id. SwiftUI (`MenuView`) observes this directly; the AppKit
+    /// status item is pushed updates via `onSkinChange`. Only free skins are selectable in M5.
+    @Published private(set) var currentSkinId: String = SkinCatalog.defaultSkinId
+
+    /// UserDefaults key for the persisted skin selection.
+    private static let skinDefaultsKey = "DevSweep.currentSkinId"
+
     /// Latest scan's candidate items, retained for the menu's review/approve reclaim action.
     private(set) var currentItems: [CleanupItem] = []
 
@@ -53,6 +60,10 @@ final class AppCoordinator: ObservableObject {
     /// Fired on the main actor whenever `reclaimableBytes` changes, so the AppKit status item
     /// (not a SwiftUI view) can re-render its title/tint.
     var onStateChange: ((Int64) -> Void)?
+
+    /// Fired on the main actor when the user picks a different skin, so the AppKit status item can
+    /// swap its rendered image (SwiftUI observes `currentSkinId` directly).
+    var onSkinChange: ((String) -> Void)?
 
     private let store: any Store
     private let scanCoordinator: ScanCoordinator
@@ -72,6 +83,12 @@ final class AppCoordinator: ObservableObject {
 
     init(config: AppConfig = .default) {
         self.config = config
+
+        // Restore the persisted skin selection if it's still a valid free skin.
+        if let persisted = UserDefaults.standard.string(forKey: Self.skinDefaultsKey),
+           SkinCatalog.skin(id: persisted)?.isFree == true {
+            currentSkinId = persisted
+        }
 
         // One shared module set drives both scanning (registry) and reclaim routing (router).
         let modules = DefaultDetectorRegistry.makeModules(deleter: TrashingFileSystemDeleter())
@@ -124,6 +141,15 @@ final class AppCoordinator: ObservableObject {
     /// User pressed "Scan now" in the menu — force a manual trigger through the watcher/policy.
     func requestManualScan() {
         watcher?.triggerManual()
+    }
+
+    /// Select a menubar skin. M5 only permits free skins (paid skins are shown locked); unknown or
+    /// paid ids are ignored. Persists the choice and notifies the status item.
+    func setSkin(id: String) {
+        guard id != currentSkinId, SkinCatalog.skin(id: id)?.isFree == true else { return }
+        currentSkinId = id
+        UserDefaults.standard.set(id, forKey: Self.skinDefaultsKey)
+        onSkinChange?(id)
     }
 
     /// All triggers currently resolve to a full scan; the reason is retained for future routing.

@@ -16,6 +16,8 @@ struct MenuView: View {
             Divider()
             actions
             Divider()
+            skinPicker
+            Divider()
             footer
         }
         .padding(16)
@@ -86,6 +88,39 @@ struct MenuView: View {
                 Label(dryRun ? "회수 미리보기" : "승인 회수 실행", systemImage: "trash")
             }
             .disabled(coordinator.currentItems.isEmpty || coordinator.isScanning || coordinator.isReclaiming)
+        }
+    }
+
+    /// Visual state used to preview each skin in the picker, mirroring the live reclaimable total.
+    private var previewState: ReclaimVisualState {
+        ReclaimVisualState(reclaimableBytes: coordinator.reclaimableBytes, config: coordinator.config)
+    }
+
+    private var skinPicker: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("스킨")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            ForEach(SkinCatalog.all, id: \.id) { skin in
+                HStack(spacing: 8) {
+                    Image(nsImage: skin.image(for: previewState, height: 16))
+                        .frame(width: 44, alignment: .leading)
+                    Text(skin.displayName)
+                        .font(.callout)
+                        .foregroundStyle(skin.isFree ? .primary : .secondary)
+                    Spacer()
+                    if skin.isFree {
+                        Image(systemName: skin.id == coordinator.currentSkinId ? "checkmark.circle.fill" : "circle")
+                            .foregroundStyle(skin.id == coordinator.currentSkinId ? Color.accentColor : Color.secondary)
+                    } else {
+                        Label("Pro", systemImage: "lock.fill")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .contentShape(Rectangle())
+                .onTapGesture { coordinator.setSkin(id: skin.id) } // no-op for locked (paid) skins
+            }
         }
     }
 

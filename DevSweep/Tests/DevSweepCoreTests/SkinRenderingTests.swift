@@ -169,3 +169,44 @@ private let renderHeight: CGFloat = 18
     let ids = SkinCatalog.all.map(\.id)
     #expect(Set(ids).count == ids.count)
 }
+
+// MARK: - SkinRenderer
+
+@Test func skinRendererDefaultsToGauge() {
+    let renderer = SkinRenderer(config: .default)
+    #expect(renderer.currentSkinId == "gauge")
+    #expect(renderer.currentSkin.id == "gauge")
+}
+
+@Test func skinRendererFallsBackToDefaultForUnknownInitialId() {
+    let renderer = SkinRenderer(config: .default, skinId: "bogus")
+    #expect(renderer.currentSkinId == SkinCatalog.defaultSkinId)
+}
+
+@Test func skinRendererHonoursValidInitialId() {
+    let renderer = SkinRenderer(config: .default, skinId: "battery")
+    #expect(renderer.currentSkinId == "battery")
+}
+
+@Test func skinRendererSelectsValidSkinAndRejectsUnknown() {
+    let renderer = SkinRenderer(config: .default)
+    #expect(renderer.select(id: "battery") == true)
+    #expect(renderer.currentSkinId == "battery")
+    #expect(renderer.select(id: "nope") == false)
+    #expect(renderer.currentSkinId == "battery") // unchanged
+}
+
+@Test func skinRendererRendersCurrentSkinAtRequestedHeight() {
+    let renderer = SkinRenderer(config: .default, skinId: "synthwave")
+    let image = renderer.image(forBytes: 30_000_000_000, height: 18)
+    #expect(image.size.height == 18)
+    #expect(PixelInspection.isNonEmpty(image))
+}
+
+@Test func skinRendererUsesConfigThresholdsForBandMapping() {
+    // With a tiny high threshold, even a small byte total renders the critical state.
+    let config = AppConfig(gaugeLowBytes: 1, gaugeHighBytes: 2)
+    let renderer = SkinRenderer(config: config, skinId: "gauge")
+    let image = renderer.image(forBytes: 100, height: 18)
+    #expect(PixelInspection.isNonEmpty(image)) // full gauge, drawn
+}
