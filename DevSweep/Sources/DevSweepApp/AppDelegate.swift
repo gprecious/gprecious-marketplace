@@ -1,15 +1,17 @@
 import AppKit
 
-/// Minimal status-bar app delegate. Phase 1 only installs a static status item so the
-/// app launches and survives in the menubar; the live `StatusItemController`, menu, and
-/// `AppCoordinator` wiring land in Phase 3.
+/// App entry delegate. Builds the live `AppCoordinator`, hooks it to the `StatusItemController`,
+/// and starts the watcher + initial scan. The accessory activation policy (set in `main.swift`)
+/// keeps the app menubar-only — no Dock icon, no main window.
+@MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    /// Retained so the status item is not deallocated immediately after launch.
-    private var statusItem: NSStatusItem?
+    private var coordinator: AppCoordinator?
+    private var statusController: StatusItemController?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        item.button?.title = "◌"
-        statusItem = item
+        let coordinator = AppCoordinator()
+        statusController = StatusItemController(coordinator: coordinator)
+        self.coordinator = coordinator
+        coordinator.start()
     }
 }
