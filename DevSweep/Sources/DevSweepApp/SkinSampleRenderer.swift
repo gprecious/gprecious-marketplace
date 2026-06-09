@@ -19,6 +19,15 @@ enum SkinSampleRenderer {
         let config = AppConfig.default
         let fileManager = FileManager.default
         let directory = URL(fileURLWithPath: outputDir, isDirectory: true)
+
+        // Refuse a pre-placed symlink at the output path (attributesOfItem uses lstat — it does not
+        // follow the final symlink), so the export can't be redirected elsewhere.
+        if let type = (try? fileManager.attributesOfItem(atPath: directory.path))?[.type] as? FileAttributeType,
+           type == .typeSymbolicLink {
+            reportError("refusing to write into a symlinked path: \(outputDir)")
+            return 1
+        }
+
         do {
             try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
         } catch {
