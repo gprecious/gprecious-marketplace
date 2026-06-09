@@ -8,7 +8,7 @@ let package = Package(
         .library(name: "DevSweepCore", targets: ["DevSweepCore"])
     ],
     targets: [
-        .target(name: "DevSweepCore"),
+        .target(name: "DevSweepCore", linkerSettings: [.linkedLibrary("sqlite3")]),
         .testTarget(name: "DevSweepCoreTests", dependencies: ["DevSweepCore"])
     ]
 )
