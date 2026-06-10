@@ -1,6 +1,6 @@
 {
   "name": "app-release",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Cross-stack mobile app store release pipeline for Expo, Capacitor, and Flutter projects.",
   "author": {
     "name": "gprecious",
