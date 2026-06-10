@@ -5,8 +5,10 @@ description: |
   병렬 spawn → prompt 주입 → 완료 대기 → 결과 회수 → 자동 정리 하는 경량
   orchestrator. 한 tab 당 최대 9 pane (3x3 grid), 9개 초과 시 새 tab 분기.
   사용자가 "herdr 로 claude+codex 같이", "두 에이전트 병렬", "둘한테 동시에 시켜",
-  "herdr orchestrator", "herdr pane 새로 띄워서 codex 한테도", "여러 worker 병렬"
-  같은 의도를 표현할 때 발동. herdr 안에서만 (HERDR_ENV=1) 동작.
+  "herdr orchestrator", "herdr pane 새로 띄워서 codex 한테도", "여러 worker 병렬",
+  "어려운 건 센 모델로 쉬운 건 싸게" 같은 의도를 표현할 때 발동. herdr 안에서만
+  (HERDR_ENV=1) 동작. worker 의 model·effort 는 난이도에 따라 orchestrator 가 자율
+  조정하고(최신 모델 확인 후 선택), goalcraft/`/goal` 도 재량껏 활용.
   Claude Code / Codex 어느 쪽에서 호출해도 호출자 = orchestrator, worker pane 은
   호출자 workspace 안의 새 tab 에 별도 spawn 하는 동일 절차 (workspace 는 새로
   만들지 않는다).
@@ -64,6 +66,91 @@ worker pane 에는 **항상 인터랙티브 TUI 세션**을 띄운다. prompt �
 
 즉 `pane run` 으로 띄우는 명령에는 **prompt 가 절대 포함되지 않는다**. 명령은 TUI 를
 띄우기만 하고, prompt 는 반드시 별도 prompt 주입 단계(4)에서 넣는다.
+
+> 예외 아님 — **model/effort 플래그는 prompt 가 아니라 launch 옵션**이므로 launch 명령에
+> 붙여도 된다 (`claude --model X`, `codex -m X -c model_reasoning_effort=Y`). 금지 대상은
+> 어디까지나 prompt(`-p` / `exec` / 인자 prompt)다.
+
+## 모델·effort 자율 조정 (v0.5 — 호출자 재량)
+
+orchestrator 는 각 worker pane 의 **model 과 effort 를 task 난이도에 따라 자율적으로
+고른다**. 어려운·장기·핵심 판단 작업엔 당시 가장 강한 모델 + 높은 effort 를, 단순·대량
+fan-out subworker 엔 싸고 빠른 모델 + 낮은 effort 를 배정해 비용·지능을 계층화한다.
+
+### 최신 모델 확인 (필수 — 구버전 하드코딩 금지)
+
+모델 라인업은 자주 바뀐다 (Claude 는 **Fable** 출시, Codex 도 신모델 릴리스). **worker 에
+모델을 배정하기 전에 반드시 그 시점의 실제 사용 가능 모델 목록을 런타임에 확인**하고,
+구버전을 박지 말 것. 아래 스냅샷은 작성 시점 참고용일 뿐 — 매번 검증한다.
+
+- **Claude 워커:** TUI 에서 `/model` (인자 없이) → 사용 가능 모델 목록. launch 플래그는
+  `claude --model <name>`. `claude --help` 로 현재 허용 이름 확인. mid-session 전환은
+  `/model <name>` 슬래시(4.6 `toggle_model`).
+- **Codex 워커:** `codex --help` / `codex -m <model>` (launch). reasoning effort 는
+  `-c model_reasoning_effort="<level>"` (레벨 집합은 codex 버전마다 다름 — `codex --help`/
+  config 로 확인). TUI `/model` 은 모델+effort picker.
+
+> 스냅샷 (검증 대상, 최신 우선 — 이름·존재 여부는 런타임 `/model`/`--help` 로 재확인):
+> - Claude 강함 순: **fable**(최상위·신규 티어) > opus(4.8) > sonnet(4.6) > haiku(4.5).
+>   "가장 강한 모델" 요청 = 사용 가능한 것 중 fable(없으면 최신 opus). opus-4-5 이하·
+>   sonnet-3.x·haiku-3.x 등 구버전 선택 금지.
+> - Claude effort: `low | medium | high | xhigh | max` (Claude Code 기본 xhigh,
+>   코딩·에이전트엔 xhigh, 최고 정확도엔 max).
+> - Codex 모델/effort 레벨: 버전 의존 → 반드시 `codex --help`/`/model` 로 확인.
+
+낯선 모델 이름이 보이면 (학습 컷오프 이후 출시라) 그게 최신일 가능성이 크다 — 목록에 있으면
+실재 모델이다. 자기 기억으로 모델 ID 를 지어내지 말 것.
+
+### 난이도 → 모델/effort 배정 (가이드, 고정 아님)
+
+| 난이도 / 역할 | 모델 | effort |
+| --- | --- | --- |
+| 매우 어려움 · 장기 자율 에이전트 · 핵심 판단 | 당시 최강(예: fable / 최신 opus) | high~xhigh~max |
+| 보통 구현·리뷰 | 중상위(최신 opus/sonnet) | high / medium |
+| 단순·대량 fan-out subworker | 싸고 빠른(haiku 등) | low / medium |
+
+아래 effort 계층 규약(1단계)과 합쳐: workflow subagent 는 low 로 두어 비용 절감, orchestrator
+pane(또는 핵심 worker)만 xhigh/max 로 깊게 판단.
+
+### ultracode — worker 를 워크플로 오케스트레이션 모드로 (Claude Code 전용)
+
+**ultracode 는 effort 레벨이 아니라 Claude Code 의 별도 설정**이다. 내부적으로 `xhigh` 를
+보내면서 + **substantive task 마다 Claude 가 알아서 Workflow(멀티에이전트 오케스트레이션)를
+구성·실행**한다 (이해→변경→검증을 여러 workflow 로 연쇄). 토큰 비용을 제약하지 않아 더 느리고
+비싸다 — 최대 철저함이 목표인 어려운 slot 에만 쓴다.
+
+**herdr 와의 결합 = 2단계 fan-out**: herdr 는 worker **pane** 을 펼치고, ultracode 워커 pane 은
+그 안에서 다시 Workflow **subagent** 를 펼친다. 어려운 단일 slot 을 ultracode 로 돌리면 그 pane
+하나가 통째로 멀티에이전트 오케스트레이션이 된다.
+
+켜는 법 (claude 워커 한정 — codex 엔 ultracode 없음, `/effort` 처럼 skip):
+
+- **세션 standing:** `/effort ultracode` (그 세션 내내 적용). `toggle_mode <i> ultracode` 로 주입
+  가능 — `/effort` 메뉴가 ultracode 옵션을 제공하므로 슬래시는 유효하다 (단 ultracode 는 effort
+  레벨이 아니라 별도 설정임을 유의). 해제는 `/effort high` 또는 `/effort auto`(모델 기본).
+- **단일 턴:** 주입 prompt 에 자연어로 "이 작업을 workflow 로 오케스트레이션해라" 를 넣는다.
+  리터럴 키워드 `ultracode` 도 단일-턴 트리거지만 `/config` 에서 꺼져 있거나 버전 차로 안 먹을
+  수 있어 — **worker 주입엔 자연어 워크플로 지시가 더 안정적**이다.
+
+비용 계층 규약(위 effort 계층 규약)과 결합: ultracode 워커가 펼치는 workflow subagent 는
+스크립트에서 low effort 로 두고 워커 본인만 깊게 — "비용 무제약" 이 subagent 까지 무분별하게
+번지지 않게 한다.
+
+## goalcraft / goal 활용 (v0.5 — 호출자 재량)
+
+orchestrator 는 거친 요구사항을 worker 에 던지기 전에 **goalcraft skill 로 goal 최적화
+프롬프트로 다듬거나, worker 에게 `/goal` 을 쓰게 할 수 있다** (Claude Code·Codex 양쪽 모두
+`/goal` 보유). 의무 아님 — 판단은 호출자 재량.
+
+- **prompt 정제:** 모호한 task 는 orchestrator 가 goalcraft 를 돌려(또는 동일 원리로 직접)
+  목표·범위·완료조건이 박힌 prompt 로 만들어 `WORKER_PROMPTS` 에 넣는다. 측정 가능한
+  "done" 이 있으면 worker 가 스스로 멈출 신호가 생겨 장기 자율 실행이 안정된다 — 높은
+  effort·강한 모델과 특히 잘 맞는다.
+- **worker 가 `/goal` 사용:** 장기·자율 작업을 맡길 땐 주입 prompt 에 "`/goal` 로 목표를
+  고정하고 진행하라" 를 넣을 수 있다 (`/goal` 본문 4000자 제한 — 상세는 파일로 빼고 goal 은
+  검증 가능한 종료상태·체크 커맨드에 쓴다).
+- **target 규약:** Claude Code worker → Claude 최적화 goal, Codex worker → Codex 최적화 goal
+  (goalcraft 는 executor-adaptive). 명시 target 이 있으면 그걸 우선.
 
 ## 위계 매핑
 
@@ -139,8 +226,19 @@ WORKER_PROMPTS=(
   "$PROMPT_FOR_SLOT_1"
   # ... slot 인덱스 정렬 = WORKER_CMDS 와 동일
 )
+# (v0.5) WORKER_MODELS = slot 별 모델 (선택). WORKER_CMDS 와 index 정렬.
+#   빈 문자열/미지정 = CLI 기본(당시 최신). 위 "최신 모델 확인" 절에서 검증한 이름만 사용.
+#   구버전(opus-4-5 이하 / sonnet-3.x / haiku-3.x) 하드코딩 금지.
+WORKER_MODELS=(
+  # "fable"   # 예: slot 0 = 가장 어려운 판단 → 당시 최강 모델
+  # ""        # 예: slot 1 = 기본(최신) 모델
+)
 # (v0.3) WORKER_MODES = slot 별 초기 effort/모드 (선택). WORKER_CMDS 와 index 정렬.
-#   plain(기본) | ultracode | max | xhigh | high | medium | low
+#   plain(기본) | max | xhigh | high | medium | low | auto   ← claude effort 레벨
+#   + ultracode  ← effort 레벨 아님! Claude Code 별도 설정(xhigh + 자동 Workflow 오케스트레이션).
+#                  toggle_mode 가 `/effort ultracode` 로 적용(유효). 상세는 아래 ultracode 절.
+#   주의: claude slot 은 claude effort 집합, codex slot 은 codex reasoning_effort 집합
+#   (서로 다름 — codex 는 `codex --help` 로 확인). codex effort 는 spawn 시 적용됨(아래 3단계).
 WORKER_MODES=(
   # "ultracode"   # 예: slot 0 은 깊은 fan-out → ultracode 로 시작
   # "plain"       # 예: slot 1 은 평소 effort
@@ -152,6 +250,10 @@ N=${#WORKER_CMDS[@]}
 # (v0.3) WORKER_MODES 길이 보정 — 미지정 slot 은 plain.
 declare -a WORKER_MODES=("${WORKER_MODES[@]}")
 for ((i=0; i<N; i++)); do : "${WORKER_MODES[$i]:=plain}"; done
+
+# (v0.5) WORKER_MODELS 길이 보정 — 미지정 slot 은 "" (CLI 기본 = 당시 최신).
+declare -a WORKER_MODELS=("${WORKER_MODELS[@]}")
+for ((i=0; i<N; i++)); do : "${WORKER_MODELS[$i]:=}"; done
 
 # 옵션
 : "${KEEP_TABS:=0}"        # 1 이면 close 확인 절차 생략하고 worker tab 항상 유지
@@ -249,9 +351,28 @@ while [ "$remaining" -gt 0 ]; do
   remaining=$(( remaining - this_count ))
 done
 
+# (v0.5) launch 명령 빌더 — base CLI + 모델/effort 플래그 (prompt 아님 → TUI only 규칙 준수).
+#   claude: 모델만 launch 플래그(--model), effort 는 spawn 후 toggle_mode(/effort)로 적용.
+#   codex : 모델(-m)·reasoning effort(-c) 모두 launch 플래그 (codex 는 /effort 슬래시 없음).
+build_launch() {
+  local I="$1"
+  local CMD="${WORKER_CMDS[$I]}" MODEL="${WORKER_MODELS[$I]:-}" MODE="${WORKER_MODES[$I]:-plain}"
+  case "$CMD" in
+    claude*)
+      [ -n "$MODEL" ] && CMD="$CMD --model $MODEL"
+      ;;
+    codex*)
+      [ -n "$MODEL" ] && CMD="$CMD -m $MODEL"
+      [ "$MODE" != "plain" ] && CMD="$CMD -c model_reasoning_effort=\"$MODE\""
+      ;;
+  esac
+  printf '%s' "$CMD"
+}
+
 # 각 slot 에 worker TUI 띄우기 (prompt 없이 — 인터랙티브 세션만 시작)
+# 모델/effort 플래그는 build_launch 가 base 명령에 덧붙인다 (위 "모델·effort 자율 조정").
 for ((i=0; i<N; i++)); do
-  herdr pane run "${PANES[$i]}" "${WORKER_CMDS[$i]}"
+  herdr pane run "${PANES[$i]}" "$(build_launch "$i")"
 done
 ```
 
@@ -318,7 +439,8 @@ mid-conversation system message 덕에, Claude Code 가 `/effort` 슬래시를 m
 
 ```bash
 # 사용: toggle_mode <slot_index> <mode>
-#   mode ∈ ultracode | max | xhigh | high | medium | low
+#   mode ∈ max | xhigh | high | medium | low | auto   (claude effort 레벨)
+#        | ultracode  (effort 레벨 아님 — /effort 메뉴의 별도 설정: xhigh + 자동 Workflow)
 # 전제:
 #   - 해당 slot 이 claude 워커일 것 (codex 는 /effort 슬래시 없음 → skip).
 #   - 호출 시점에 그 pane 이 입력 프롬프트 대기 상태일 것 (생성 중이면 슬래시가
@@ -333,9 +455,10 @@ toggle_mode() {
     *) echo "toggle_mode: slot $I 는 claude 가 아님 ($CMD) — skip"; return 0 ;;
   esac
 
-  # 2) 모드 화이트리스트 검증.
+  # 2) 모드 화이트리스트 검증. (effort 레벨 + ultracode 설정. ultracode 는 레벨이 아니라
+  #    별도 설정이지만 `/effort ultracode` 명령으로 적용되므로 여기서 함께 허용.)
   case "$MODE" in
-    ultracode|max|xhigh|high|medium|low) : ;;
+    max|xhigh|high|medium|low|auto|ultracode) : ;;
     *) echo "toggle_mode: 알 수 없는 mode '$MODE'"; return 1 ;;
   esac
 
@@ -362,12 +485,56 @@ toggle_mode() {
 1차 컨텍스트를 그대로 들고 깊이만 키운다:
 
 ```bash
-# slot 0 을 가볍게 1차 실행했다고 가정 (WORKER_MODES[0]=plain)
+# slot 0 을 가볍게 1차(싼 모델 + plain) 실행했다고 가정
 herdr wait agent-status "${PANES[0]}" --status done --timeout "$TIMEOUT_MS"
 
-# 2차: ultracode 로 올리고 심화 prompt 주입 (de-escalation 은 toggle_mode 0 high)
-toggle_mode 0 ultracode
+# 2차: (claude 면) 모델을 최강으로 + effort 를 올리고 심화 prompt 주입.
+#   1차 결과로 난이도를 재평가해 모델/effort 를 동적으로 상향한다.
+toggle_model 0 fable        # claude 전용; codex 는 skip (모델은 spawn 시 -m 로 고정)
+toggle_mode  0 xhigh        # de-escalation 은 toggle_mode 0 high / 모델 하향은 toggle_model
 send_prompt "${PANES[0]}" "1차 결과를 바탕으로, workflow 로 전 구간을 교차검증해줘."
+```
+
+### 4.6 toggle_model — 세션 중간 모델 전환 (v0.5, claude 전용)
+
+claude worker pane 의 **모델**을 세션 중간에 바꾸는 primitive. `/model <name>` 슬래시를 주입한다
+(effort 의 `/effort` 와 동형). codex 는 `/model` 이 인터랙티브 picker 라 send-text 로 못 몰아
+skip — codex 모델은 spawn 시 `-m` 플래그로만 정한다(`build_launch`). 모델 교체는 모델-스코프
+캐시를 새로 쓰므로 effort 슬래시만큼 cache 를 보존하진 않으나, 컨텍스트(메시지)는 유지된다.
+
+사용처: "가볍게 1차(싼 모델) → 깊게 2차(최강 모델)" 단계 escalation, 또는 1차 결과로 난이도를
+재평가해 모델을 올리/내릴 때.
+
+```bash
+# 사용: toggle_model <slot_index> <model_name>
+#   전제: "최신 모델 확인" 절에서 검증한 실제 모델 이름. 구버전 금지.
+toggle_model() {
+  local I="$1" MODEL="$2"
+  local PANE="${PANES[$I]}" CMD="${WORKER_CMDS[$I]}"
+
+  # 1) claude 워커만 /model 슬래시 가능. codex 는 spawn 시 -m 로 고정 → skip.
+  case "$CMD" in
+    claude*) : ;;
+    *) echo "toggle_model: slot $I 는 claude 가 아님 ($CMD) — skip (codex 는 -m 로 spawn 시 고정)"; return 0 ;;
+  esac
+
+  [ -n "$MODEL" ] || { echo "toggle_model: 빈 모델 이름"; return 1; }
+
+  # 2) 격리 가드 — pane 이 worker tab 에 속할 때만 송신 (send_prompt 와 동일 규칙).
+  local PANE_TAB
+  PANE_TAB=$(herdr pane list \
+             | jq -r --arg p "$PANE" '.result.panes[] | select(.pane_id==$p) | .tab_id')
+  is_worker_tab "$PANE_TAB" || { echo "toggle_model: pane $PANE tab($PANE_TAB) is not a worker tab — abort"; return 1; }
+
+  # 3) /model 슬래시 주입 (모델 turn 소비 없이 세션 모델만 전환).
+  echo "toggle_model: slot $I (tab:$PANE_TAB) → /model $MODEL"
+  herdr pane send-text "$PANE" "/model $MODEL"
+  herdr pane send-keys "$PANE" Enter
+
+  # 4) 적용 확인 — 모델 라벨이 TUI 에 뜰 때까지 짧게 대기 (best-effort).
+  herdr wait output "$PANE" --match "$MODEL" --timeout 8000 \
+    || echo "toggle_model: slot $I 모델 라벨 확인 실패 (계속 진행)"
+}
 ```
 
 ### 5. 병렬 대기
@@ -482,9 +649,13 @@ Codex 호출자도 본인은 orchestrator 로 남고, worker pane (claude/codex 
 6. **인터랙티브 TUI only** — worker 는 항상 TUI 로 띄우고 prompt 는 `send-text` 로
    주입. `claude -p` / `codex exec` 등 headless one-shot 금지. spawn 후 worker
    tab 으로 focus 전환해 사용자가 실시간 관찰 가능하게 함.
-7. **(v0.3) 모드 전환도 격리 가드 적용** — `toggle_mode` 는 `send_prompt` 와 동일하게
-   송신 직전 pane tab_id 가 worker tab 인지(`is_worker_tab`) 검증. codex pane 에는
-   `/effort` 를 보내지 않는다(no-op skip).
+7. **(v0.3) 모드/모델 전환도 격리 가드 적용** — `toggle_mode`·`toggle_model` 은
+   `send_prompt` 와 동일하게 송신 직전 pane tab_id 가 worker tab 인지(`is_worker_tab`)
+   검증. codex pane 에는 `/effort`·`/model` 슬래시를 보내지 않는다(no-op skip — codex
+   모델/effort 는 spawn 시 `-m`/`-c` 로만 고정).
+8. **(v0.5) 최신 모델 확인 후 선택** — worker 모델 배정 전 런타임에 사용 가능 목록을
+   `/model`·`--help` 로 확인하고 구버전(opus-4-5 이하·sonnet-3.x·haiku-3.x 등)을 박지
+   않는다. 자기 기억으로 모델 ID 추측 금지. goalcraft/`/goal` 활용은 호출자 재량(의무 아님).
 
 ## resume 한계 경고 (v0.3)
 
@@ -507,6 +678,15 @@ close 전 강한 경고" 를 안내할 것. (자동 감지는 v0.4 폴링 기능
 
 ## 변경 이력
 
+- **v0.5** (2026-06-10) — **worker model/effort 난이도별 자율 조정 + 최신 모델 확인 규약 +
+  goalcraft/`/goal` 활용**. `WORKER_MODELS`(slot 별 모델) 추가, `build_launch()` 로 launch 시
+  모델/effort 플래그 합성(claude `--model`, codex `-m`/`-c model_reasoning_effort`),
+  `toggle_model()`(claude `/model` mid-session 전환) 추가. "최신 모델 확인(구버전 하드코딩
+  금지 — Claude=Fable 출시, Codex 신모델)" 절·난이도→모델/effort 배정표·goalcraft 활용 절
+  신설. 격리 가드를 `toggle_model` 까지 확장. 또한 **ultracode**(Claude Code 별도 설정 =
+  `xhigh` + substantive task 자동 Workflow 오케스트레이션)를 effort 레벨과 분리 명시하고,
+  herdr 2단계 fan-out(pane→workflow subagent)·켜는 법(`/effort ultracode` 또는 자연어 워크플로
+  지시)·비용 계층을 다룬 ultracode 절 신설. effort 화이트리스트에 `auto` 추가.
 - **v0.4** (2026-06-09) — **workspace 격리 → tab 격리 전환**. 새 workspace 를 만들지
   않고 호출자 workspace 를 공유, worker 는 매번 새 tab(`SLUG-batch`)에 배치 (workspace
   누적 불편 해소). `LAUNCHER_TAB`(orchestrator 본인 tab) 기록·격리, 격리 가드/cleanup 을

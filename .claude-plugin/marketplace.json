@@ -1,6 +1,6 @@
 {
   "name": "gprecious-marketplace",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "owner": {
     "name": "gprecious",
     "email": "gprecious@users.noreply.github.com"
@@ -33,7 +33,7 @@
     },
     {
       "name": "herdr",
-      "description": "herdr 위에서 Claude Code + Codex 워커를 병렬 spawn / prompt 주입 / 완료 대기 / 결과 회수 / 자동 정리 하는 경량 orchestrator. 호출자 workspace 를 공유하고 worker 는 새 tab 에 배치 (한 tab 당 3x3 grid + 9개 초과 시 새 tab spillover).",
+      "description": "herdr 위에서 Claude Code + Codex 워커를 병렬 spawn / prompt 주입 / 완료 대기 / 결과 회수 / 자동 정리 하는 경량 orchestrator. 호출자 workspace 를 공유하고 worker 는 새 tab 에 배치 (한 tab 당 3x3 grid + 9개 초과 시 새 tab spillover). worker 의 model·effort 를 난이도에 따라 자율 조정(최신 모델 확인 후 선택), ultracode/goalcraft/goal 활용.",
       "source": "./claude-plugins/herdr",
       "category": "productivity"
     },
