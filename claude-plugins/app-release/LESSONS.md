@@ -19,6 +19,13 @@
 - **앱 카테고리, 스토어 등록정보 연락처(이메일/웹사이트), 앱 콘텐츠 선언은 Android Publisher API 미지원** → Play Console UI에서 수동. 대시보드 "앱 설정 완료" 체크리스트의 마지막 항목이 보통 이것.
 - 스크린샷 폴더 함정: 언어별 `phoneScreenshots/`는 **최대 8장**. 다른 언어 파일이 섞여 있으면(예: en-US 폴더에 ko-KR 8장) 초과로 실패하므로 업로드 경로 밖으로 빼둔다. Play 폰 스크린샷은 긴 변이 짧은 변의 2배 이하(1080×1920 OK, 1290×2796 불가 — iOS용 재사용 금지).
 
+### L8. `[일반]` "Play Console Requirements / 조직 계정 필요" 거부의 진짜 원인은 보통 **앱 콘텐츠 금융 기능 오선언** — 계정 이전·항소 불필요
+- 거부 메일 문구: "Action Required: Your app is not compliant... Some types of apps can only be distributed by organizations. You have selected an app category or declared your app offers certain features that require an organization account." → App Status: Rejected.
+- 조직 계정 강제 4유형 = 금융 서비스 / 건강(의료) / VPN(VpnService) / 정부 앱. 일반 앱이 이 거부를 받으면 거의 항상 **앱 콘텐츠(App content) 선언을 잘못 체크**한 것이지, 진짜로 계정을 이전할 필요가 없다.
+- **점검 순서**: Play Console → 모니터링 및 개선 → 정책 및 프로그램 → 앱 콘텐츠 → "조치됨" 탭 → `금융 기능`·`건강 앱`·`정부 앱` 세 선언을 펼쳐 현재 답을 확인. 가장 흔한 함정은 **금융 기능 > "결제 및 송금 > 모바일 결제 및 디지털 지갑"** 체크. 인앱결제(IAP)/구독이 있어도 이 항목은 핀테크(은행·송금·지갑·암호화폐)용이라 일반 앱은 **전부 해제 + "앱에서 금융 기능을 제공하지 않음"** 선택이 맞다.
+- 수정 후: 해당 선언 저장 → 팝업 "개요로 이동" → 게시 개요(Publishing overview)에서 "검토를 위해 변경사항 N개 전송" 재제출. 빠른 검사(최대 14분) 후 자동 검토 진입. 카테고리(예: 도서/참고자료)는 이 거부와 무관할 때가 많으니 카테고리부터 의심하지 말 것.
+- 메일 수신함 주의: Play 거부 메일은 **개발자 계정 소유 Gmail**(NeonNovel은 yprecious@gmail.com)로 가지, 콘솔 연락처/대표 메일(harry@qplace.kr)로 가지 않는다. 다른 계정 메일함을 뒤지기 전에 개발자 계정 Gmail부터 확인.
+
 ### L7. `[프로젝트:NeonNovel]` Play 개발자 계정은 yprecious@gmail.com(u/1)의 "Harry Yoo"
 - `play.google.com/console`을 기본 계정(harry@qplace.kr=u/0)으로 열면 **가입 페이지로 리디렉션**되어 계정이 없는 것처럼 보인다. `/console/u/1/`로 진입해 "Harry Yoo"(계정 ID 5304331449433740501) 선택. 같은 로그인에 "큐플레이스" 계정도 있으니 혼동 주의. 앱 ID 4973473367137245388.
 - 비공개 Alpha 제출(2026-06-10): AAB 버전코드 23(1.0.0), 국가=대한민국, 카테고리=앱/도서·참고자료, 연락처=harry@qplace.kr/https://neonnovel.app. 다음 단계 = 심사 통과 후 테스터 12명 모집·14일 운영 → 프로덕션 신청 → 공개 후 AdMob Android 스토어 연결.
