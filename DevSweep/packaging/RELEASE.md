@@ -82,23 +82,26 @@ These touch your Apple Developer account / Keychain — do them yourself:
 
 ## Remaining before public release
 
+- [x] Developer ID Application cert (already in the login Keychain — see step 1).
+- [x] Notary credentials stored (keychain profile `devsweep`, ASC API key auth) and a
+      full signed + **notarized** + stapled `--dmg` build produced (see "Verified" below).
 - [ ] Replace the **placeholder app icon** (`packaging/IconGen.swift` output) with a
       real designed icon.
-- [ ] Create the Developer ID Application cert (step 1 above).
-- [ ] Store notary credentials (steps 2–3) and run the full signed+notarized `--dmg` build.
 - [ ] Distribution channel: host the DMG (GitHub Releases) and/or author a Homebrew cask.
 - [ ] First-run onboarding that requests Full Disk Access.
 - [ ] (optional) `UNIVERSAL=1` if Intel Macs are in scope (current binary is arm64-only).
 
-## Verified this session (ad-hoc build)
+## Verified — notarized release build
 
 - Release build green (`swift build -c release`), 205 tests green prior.
-- `.app` assembles, codesign verifies, bundle id resolves to `com.flow-finders.devsweep`.
-- Launches as a menubar accessory; AX confirms one status item (`status menu`).
-- `sample` shows the main thread idle in the event loop while scanning runs on a
-  background thread (the prior du-on-main-thread freeze is not present).
-- SQLite history persists under `~/Library/Application Support/DevSweep/devsweep.sqlite`
-  (real store, not the in-memory fallback): the launch scan completed in ~162 s (cold)
-  and wrote a fresh row — ≈59.4 GB reclaimable (docker 18.7 / package-cache 17.5 /
-  node-modules 23.2 GB).
-- No crash reports, no error/fault logs.
+- Signed with **Developer ID Application: Yoo Taejin (ECXX8U4NXM)**, Hardened Runtime
+  (`flags=0x10000(runtime)`), secure timestamp; full cert chain to Apple Root CA.
+- **Notarized** via Apple notary service (status `Accepted`) and **stapled**:
+  `xcrun stapler validate` → "The validate action worked!".
+- Gatekeeper: `spctl -a -t exec` → `accepted, source=Notarized Developer ID`.
+- Distributable **`DevSweep-1.0.0.dmg`** is itself signed + notarized + stapled:
+  `spctl -a -t open` → `accepted, source=Notarized Developer ID` (clean on download).
+- Prior functional verification (ad-hoc build) still holds: launches as a menubar
+  accessory (AX confirms one status item), main thread idle while scanning on a
+  background thread, SQLite history persists under
+  `~/Library/Application Support/DevSweep/devsweep.sqlite` (real store), no crash/fault logs.
