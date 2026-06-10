@@ -156,12 +156,14 @@ orchestrator 는 거친 요구사항을 worker 에 던지기 전에 **goalcraft 
 
 | herdr 개념 | 용도                                                                          |
 | ---------- | ----------------------------------------------------------------------------- |
-| workspace  | 호출자(orchestrator) workspace 를 **그대로 공유**. 새로 만들지 않는다.        |
+| workspace  | 호출자(orchestrator) workspace 를 **그대로 공유** — `HERDR_PANE_ID` 로 확정(focused 추측 아님). 새로 만들지 않는다. |
 | tab        | worker pane 그룹. 한 task = 새 tab(들). 각 tab 최대 9 pane (3×3). label `SLUG-1`, `SLUG-2`, ... 호출자 tab 과 격리. |
 | pane       | 실제 worker (claude 또는 codex). slot 순서로 채움.                            |
 
-호출자(orchestrator) 본인 pane 이 있는 tab(`LAUNCHER_TAB`)은 그대로 두고 절대
-건드리지 않는다. worker tab_id ≠ `LAUNCHER_TAB` 를 매 send·close 직전 검증.
+호출자(orchestrator) 본인 pane(`LAUNCHER_PANE`)이 있는 tab(`LAUNCHER_TAB`)은 그대로 두고
+절대 건드리지 않는다. 이 셋(pane/tab/workspace)은 모두 Preflight 에서 `HERDR_PANE_ID` 로
+확정한다 — `focused`(사용자가 지금 보고 있는 pane)로 추정하지 않는다. worker tab_id ≠
+`LAUNCHER_TAB` 를 매 send·close 직전 검증.
 
 ### 3×3 grid 배치
 
@@ -202,12 +204,21 @@ command -v herdr  >/dev/null || { echo "herdr CLI missing";  exit 1; }
 command -v claude >/dev/null || { echo "claude CLI missing"; exit 1; }
 command -v codex  >/dev/null || { echo "codex CLI missing";  exit 1; }
 
-# focused pane = orchestrator 본인. workspace_id 와 tab_id 를 둘 다 기록.
-# (herdr 버전에 따라 .result.focused 가 null 일 수 있어 panes[] fallback 사용)
-LAUNCHER_WS=$(herdr pane list | jq -r '.result.focused.workspace_id // (.result.panes[] | select(.focused==true) | .workspace_id)')
-LAUNCHER_TAB=$(herdr pane list | jq -r '.result.focused.tab_id // (.result.panes[] | select(.focused==true) | .tab_id)')
-[ -n "$LAUNCHER_WS"  ] && [ "$LAUNCHER_WS"  != "null" ] || { echo "cannot resolve launcher workspace — stop"; exit 1; }
-[ -n "$LAUNCHER_TAB" ] && [ "$LAUNCHER_TAB" != "null" ] || { echo "cannot resolve launcher tab — stop"; exit 1; }
+# orchestrator 본인 pane = $HERDR_PANE_ID (herdr 가 "현재 실행 중인 pane" 을 주입하는 env).
+# 이것이 "내 pane" 의 유일하게 신뢰 가능한 신호다. focused(=사용자가 지금 보고 있는 pane)는
+# orchestrator 가 도는 동안 다른 workspace 의 pane 으로 옮겨갈 수 있어 launcher 식별에 절대
+# 쓰지 않는다 — focused 로 추정하면 worker 가 엉뚱한 workspace 에 생성된다 (v0.6 에서 수정한 버그).
+# 또한 `pane list` 출력에는 `.result.focused` 키 자체가 없다(과거 fallback 도 신뢰 불가).
+[ -n "${HERDR_PANE_ID:-}" ] || { echo "HERDR_PANE_ID 미설정 — 내 pane 식별 불가, stop (focused 추측으로 fallback 하지 않음)"; exit 1; }
+# `pane get` 은 p_NNN 형태의 env id 도 정규 pane 으로 해석해 ws/tab/pane_id 를 돌려준다.
+LAUNCHER_INFO=$(herdr pane get "$HERDR_PANE_ID")
+LAUNCHER_PANE=$(echo "$LAUNCHER_INFO" | jq -r '.result.pane.pane_id')
+LAUNCHER_WS=$(echo  "$LAUNCHER_INFO" | jq -r '.result.pane.workspace_id')
+LAUNCHER_TAB=$(echo "$LAUNCHER_INFO" | jq -r '.result.pane.tab_id')
+[ -n "$LAUNCHER_PANE" ] && [ "$LAUNCHER_PANE" != "null" ] || { echo "cannot resolve launcher pane from HERDR_PANE_ID — stop"; exit 1; }
+[ -n "$LAUNCHER_WS"   ] && [ "$LAUNCHER_WS"   != "null" ] || { echo "cannot resolve launcher workspace from HERDR_PANE_ID — stop"; exit 1; }
+[ -n "$LAUNCHER_TAB"  ] && [ "$LAUNCHER_TAB"  != "null" ] || { echo "cannot resolve launcher tab from HERDR_PANE_ID — stop"; exit 1; }
+echo "launcher: pane=$LAUNCHER_PANE  ws=$LAUNCHER_WS  tab=$LAUNCHER_TAB  (HERDR_PANE_ID=$HERDR_PANE_ID)"
 ```
 
 ### 1. 호출자 결정 변수
@@ -280,7 +291,7 @@ worker 는 호출자와 **같은 workspace** 에 둔다 (새 workspace 를 만�
 동일하게 `$PWD` 를 따른다.
 
 ```bash
-WS_ID="$LAUNCHER_WS"                       # 새 workspace 생성 없음 — 호출자 workspace 재사용
+WS_ID="$LAUNCHER_WS"                       # = HERDR_PANE_ID 로 확정한 내 workspace (focused 추측 아님). 새 workspace 생성 없음.
 SLUG="herdr-orc-$(date +%Y%m%d-%H%M%S)"   # worker tab label 식별자 (한 workspace 에 여러 task tab 공존 가능)
 ```
 
@@ -656,6 +667,13 @@ Codex 호출자도 본인은 orchestrator 로 남고, worker pane (claude/codex 
 8. **(v0.5) 최신 모델 확인 후 선택** — worker 모델 배정 전 런타임에 사용 가능 목록을
    `/model`·`--help` 로 확인하고 구버전(opus-4-5 이하·sonnet-3.x·haiku-3.x 등)을 박지
    않는다. 자기 기억으로 모델 ID 추측 금지. goalcraft/`/goal` 활용은 호출자 재량(의무 아님).
+9. **(v0.6) launcher 식별은 `HERDR_PANE_ID` 로 못 박는다** — `LAUNCHER_WS`/`LAUNCHER_TAB`/
+   `LAUNCHER_PANE` 은 Preflight 에서 `herdr pane get "$HERDR_PANE_ID"` 로 확정한다.
+   `focused`(사용자가 지금 보고 있는 pane)로 workspace/tab 을 **절대 추정하지 않는다** —
+   orchestrator 가 도는 동안 focus 가 다른 workspace 로 이동하면 worker 가 그 엉뚱한
+   workspace 에 생성되기 때문(이번에 수정한 버그). `HERDR_PANE_ID` 미설정이면 stop —
+   focused 추측으로 fallback 하지 않는다 (`pane list` 출력엔 `.result.focused` 키 자체가
+   없어 과거 fallback 도 신뢰 불가였다).
 
 ## resume 한계 경고 (v0.3)
 
@@ -678,6 +696,14 @@ close 전 강한 경고" 를 안내할 것. (자동 감지는 v0.4 폴링 기능
 
 ## 변경 이력
 
+- **v0.6** (2026-06-10) — **launcher 식별을 `focused` → `HERDR_PANE_ID` 로 전환 (worker 가
+  엉뚱한 workspace 에 생성되던 버그 수정)**. Preflight 가 `herdr pane get "$HERDR_PANE_ID"` 로
+  orchestrator 본인 pane 의 `workspace_id`/`tab_id`/`pane_id` 를 확정한다. 기존 코드는
+  `.result.focused.*` 를 먼저 보고 `select(.focused==true)` 로 fallback 했는데, (1) `pane list`
+  출력엔 `.result.focused` 키가 아예 없어 항상 fallback 으로 떨어졌고 (2) `focused` 는 "사용자가
+  지금 보고 있는 pane" 이라 orchestrator 가 도는 동안 다른 workspace 로 옮겨가면 worker tab 이
+  그 엉뚱한 workspace 에 만들어졌다. `LAUNCHER_PANE` 기록 추가, 안전 규칙 9 신설, `HERDR_PANE_ID`
+  미설정 시 stop(추측 fallback 금지). 위계 매핑·2단계 주석도 "focused 추측 아님" 으로 보강.
 - **v0.5** (2026-06-10) — **worker model/effort 난이도별 자율 조정 + 최신 모델 확인 규약 +
   goalcraft/`/goal` 활용**. `WORKER_MODELS`(slot 별 모델) 추가, `build_launch()` 로 launch 시
   모델/effort 플래그 합성(claude `--model`, codex `-m`/`-c model_reasoning_effort`),

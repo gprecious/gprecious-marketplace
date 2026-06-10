@@ -1,6 +1,6 @@
 {
   "name": "herdr",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "herdr workspace/tab/pane/agent orchestration. Parallel Claude Code + Codex workers; tunes worker model/effort by difficulty (latest-model check) with ultracode/goalcraft/goal support.",
   "author": {
     "name": "gprecious",
