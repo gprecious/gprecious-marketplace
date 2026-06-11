@@ -30,6 +30,8 @@ actor ScriptedCommandRunner: CommandRunner {
         return CommandResult(stdout: "", exitCode: 0)
     }
 
+    func override(_ key: String, _ responses: [Response]) { queues[key] = responses }
+
     var callCount: Int { calls.count }
 }
 
