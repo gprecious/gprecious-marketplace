@@ -31,8 +31,12 @@ public struct DetectorRegistry: Sendable {
             }
             return results
         }
-        return collected
+        let sorted = collected
             .sorted { $0.0 < $1.0 }
             .map { (module: $0.1, items: $0.2) }
+        let survivors = Set(NestedItemSuppressor.suppressNested(sorted.flatMap(\.items)).map(\.id))
+        return sorted
+            .map { (module: $0.module, items: $0.items.filter { survivors.contains($0.id) }) }
+            .filter { !$0.items.isEmpty }
     }
 }

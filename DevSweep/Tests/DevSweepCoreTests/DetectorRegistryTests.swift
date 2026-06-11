@@ -30,3 +30,25 @@ private func cliItem(_ id: String, _ bytes: Int64) -> CleanupItem {
     #expect(await reg.scanAll().isEmpty)
     #expect(await reg.scanGrouped().isEmpty)
 }
+
+private struct StubModule: CleanupModule {
+    let id: String; let displayName: String; let items: [CleanupItem]
+    func isAvailable() async -> Bool { true }
+    func scan() async -> [CleanupItem] { items }
+    func reclaim(_ items: [CleanupItem], dryRun: Bool) async -> [ReclaimOutcome] { [] }
+}
+
+@Test func scanGroupedSuppressesNestedAcrossModules() async {
+    let wt = CleanupItem(id: "/r/.worktrees/f", path: "/r/.worktrees/f", sizeBytes: 1, lastUsed: nil,
+                         safety: .reviewNeeded, reclaimMethod: .cliCommand(executable: "/usr/bin/env",
+                         arguments: ["git", "worktree", "remove", "/r/.worktrees/f"]))
+    let nm = CleanupItem(id: "/r/.worktrees/f/node_modules", path: "/r/.worktrees/f/node_modules", sizeBytes: 1,
+                         lastUsed: nil, safety: .reviewNeeded, reclaimMethod: .deletePath(toTrash: false))
+    let registry = DetectorRegistry(modules: [
+        StubModule(id: "git-worktrees", displayName: "Git Worktrees", items: [wt]),
+        StubModule(id: "node-modules", displayName: "node_modules", items: [nm])
+    ])
+    let grouped = await registry.scanGrouped()
+    let nodeGroup = grouped.first { $0.module == "node-modules" }
+    #expect(nodeGroup == nil)   // its only item was nested under the worktree => suppressed => group omitted
+}
