@@ -5,4 +5,5 @@ DerivedData/
 
 # packaging output
 build/
-packaging/icon-master.png
+# packaging/icon-master.png is now a real designed app-icon asset (AI-generated,
+# not regenerable from IconGen.swift) — tracked in git on purpose.

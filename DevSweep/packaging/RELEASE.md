@@ -85,8 +85,9 @@ These touch your Apple Developer account / Keychain — do them yourself:
 - [x] Developer ID Application cert (already in the login Keychain — see step 1).
 - [x] Notary credentials stored (keychain profile `devsweep`, ASC API key auth) and a
       full signed + **notarized** + stapled `--dmg` build produced (see "Verified" below).
-- [ ] Replace the **placeholder app icon** (`packaging/IconGen.swift` output) with a
-      real designed icon.
+- [x] App icon: real designed icon (teal→blue rounded-square tile, broom sweeping
+      disk/cache clutter into a pile) committed as `packaging/icon-master.png`.
+      `IconGen.swift` now serves only as a fallback if the master PNG is missing.
 - [ ] Distribution channel: host the DMG (GitHub Releases) and/or author a Homebrew cask.
 - [ ] First-run onboarding that requests Full Disk Access.
 - [ ] (optional) `UNIVERSAL=1` if Intel Macs are in scope (current binary is arm64-only).
