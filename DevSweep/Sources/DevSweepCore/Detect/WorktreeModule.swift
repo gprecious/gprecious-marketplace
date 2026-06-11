@@ -15,6 +15,7 @@ public struct WorktreeModule: CleanupModule, @unchecked Sendable {
     private let repoLocator: @Sendable ([String]) -> [String]
     private let executable: String
     private let argPrefix: [String]
+    private let fileExists: @Sendable (String) -> Bool
 
     public init(roots: [String],
                 runner: any CommandRunner,
@@ -22,7 +23,8 @@ public struct WorktreeModule: CleanupModule, @unchecked Sendable {
                 activitySignal: (any ActivitySignal)? = nil,
                 repoLocator: (@Sendable ([String]) -> [String])? = nil,
                 executable: String = "/usr/bin/env",
-                argPrefix: [String] = ["git"]) {
+                argPrefix: [String] = ["git"],
+                fileExists: (@Sendable (String) -> Bool)? = nil) {
         self.roots = roots
         self.runner = runner
         self.inspector = GitWorktreeInspector(runner: runner, executable: executable, argPrefix: argPrefix)
@@ -31,6 +33,7 @@ public struct WorktreeModule: CleanupModule, @unchecked Sendable {
         self.repoLocator = repoLocator ?? Self.defaultRepoLocator
         self.executable = executable
         self.argPrefix = argPrefix
+        self.fileExists = fileExists ?? { FileManager.default.fileExists(atPath: $0) }
     }
 
     public func isAvailable() async -> Bool {
@@ -102,5 +105,31 @@ public struct WorktreeModule: CleanupModule, @unchecked Sendable {
 }
 
 extension WorktreeModule {
-    func reclaimImpl(_ items: [CleanupItem], dryRun: Bool) async -> [ReclaimOutcome] { [] }
+    func reclaimImpl(_ items: [CleanupItem], dryRun: Bool) async -> [ReclaimOutcome] {
+        var outcomes: [ReclaimOutcome] = []
+        for item in items {
+            guard case let .cliCommand(exe, args) = item.reclaimMethod else {
+                outcomes.append(ReclaimOutcome(item: item, status: .failed(message: "WorktreeModule expects cliCommand items"))); continue
+            }
+            if args.contains("--force") {
+                outcomes.append(ReclaimOutcome(item: item, status: .failed(message: "refusing git worktree command with --force"))); continue
+            }
+            if dryRun {
+                outcomes.append(ReclaimOutcome(item: item, status: .dryRun(plannedBytes: item.sizeBytes))); continue
+            }
+            let isPrune = args.contains("prune")
+            let before: Int64 = item.path.map { sizer.size(of: $0) } ?? 0
+            guard let result = try? await runner.runResult(exe, args), result.exitCode == 0 else {
+                outcomes.append(ReclaimOutcome(item: item, status: .failed(message: "git worktree command failed"))); continue
+            }
+            if isPrune {
+                outcomes.append(ReclaimOutcome(item: item, status: .deleted(bytes: 0)))
+            } else if let path = item.path, fileExists(path) {
+                outcomes.append(ReclaimOutcome(item: item, status: .failed(message: "worktree path still present after remove")))
+            } else {
+                outcomes.append(ReclaimOutcome(item: item, status: .deleted(bytes: before)))
+            }
+        }
+        return outcomes
+    }
 }
