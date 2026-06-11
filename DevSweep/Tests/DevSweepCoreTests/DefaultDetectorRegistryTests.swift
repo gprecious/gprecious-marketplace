@@ -16,6 +16,14 @@ import Testing
         "/usr/bin/env uv --version": [.init(exitCode: 127)],
         "/usr/bin/env bun --version": [.init(exitCode: 127)]
     ])
+    let modules = DefaultDetectorRegistry.makeModules(
+        home: "/nonexistent-home",
+        devRoots: [],
+        commandRunner: runner,
+        deleter: RecordingDeleter()
+    )
+    #expect(modules.map(\.id) == ["docker", "package-cache", "node-modules", "git-worktrees"])
+
     let registry = DefaultDetectorRegistry.make(
         home: "/nonexistent-home",
         devRoots: [],

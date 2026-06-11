@@ -61,7 +61,8 @@ public enum DefaultDetectorRegistry {
             reclaimer: projectReclaimer,
             sizer: sizer
         )
+        let worktrees = WorktreeModule(roots: devRoots, runner: commandRunner, sizer: sizer)
 
-        return [docker, packageCache, nodeModules]
+        return [docker, packageCache, nodeModules, worktrees]
     }
 }
