@@ -91,6 +91,7 @@ fan-out subworker 엔 싸고 빠른 모델 + 낮은 effort 를 배정해 비용�
   config 로 확인). TUI `/model` 은 모델+effort picker.
 
 > 스냅샷 (검증 대상, 최신 우선 — 이름·존재 여부는 런타임 `/model`/`--help` 로 재확인):
+>
 > - Claude 강함 순: **fable**(최상위·신규 티어) > opus(4.8) > sonnet(4.6) > haiku(4.5).
 >   "가장 강한 모델" 요청 = 사용 가능한 것 중 fable(없으면 최신 opus). opus-4-5 이하·
 >   sonnet-3.x·haiku-3.x 등 구버전 선택 금지.
@@ -103,14 +104,44 @@ fan-out subworker 엔 싸고 빠른 모델 + 낮은 effort 를 배정해 비용�
 
 ### 난이도 → 모델/effort 배정 (가이드, 고정 아님)
 
-| 난이도 / 역할 | 모델 | effort |
-| --- | --- | --- |
+| 난이도 / 역할                                | 모델                             | effort         |
+| -------------------------------------------- | -------------------------------- | -------------- |
 | 매우 어려움 · 장기 자율 에이전트 · 핵심 판단 | 당시 최강(예: fable / 최신 opus) | high~xhigh~max |
-| 보통 구현·리뷰 | 중상위(최신 opus/sonnet) | high / medium |
-| 단순·대량 fan-out subworker | 싸고 빠른(haiku 등) | low / medium |
+| 보통 구현·리뷰                               | 중상위(최신 opus/sonnet)         | high / medium  |
+| 단순·대량 fan-out subworker                  | 싸고 빠른(haiku 등)              | low / medium   |
 
 아래 effort 계층 규약(1단계)과 합쳐: workflow subagent 는 low 로 두어 비용 절감, orchestrator
 pane(또는 핵심 worker)만 xhigh/max 로 깊게 판단.
+
+### 실측 라우팅 정책 (v0.7 — 2026-06-11 model-bench, easy tier n=8 paired)
+
+qplace 모노레포 실작업(api-cms tsc 에러 해소)으로 sonnet 4.6 / opus 4.8 / codex(gpt-5.5)
+를 paired 벤치마크한 결과 (원데이터: qplace repo `model-bench/results.jsonl`):
+
+- **품질**: opus 9.88 > codex 8.25 > sonnet 6.50 (paired Wilcoxon, opus>codex p=0.031 유의,
+  opus>sonnet p=0.0625 양측·0.031 단측). PASS@1 은 셋 다 100% — 격차는 "돌아가느냐"가
+  아니라 **해법 품질**(선례 준수·타입 안전)에서 남.
+- **opus 는 medium effort 로 낮춰도 품질 10 유지** + wall 최단(125~145s) — easy tier 에서
+  opus 기본 effort 는 medium 으로 충분 (high 대비 비용·시간 절감).
+- **sonnet 의 구조적 약점**: 제네릭 변성 등 "타입 설계 갈림길"에서 8회 중 7회
+  any-escape(`as any[]`/`TestBed<Hono<any>>` + biome 억제)를 선택. **effort 를 max 로
+  올려도 불안정**(2회 중 1회만 캐노니컬 해법) — effort 상향으로 sonnet 의 품질 문제를
+  풀려 하지 말 것. 반면 선례가 명확한 순수 기계적 수정에선 opus 와 바이트 동일 diff 를
+  1/8 비용으로 냄 (T3).
+- **codex**: 출력 토큰 최소(3~9k)·플랜 비용·품질 8~9 안정(제3의 타입 안전 변형을
+  자주 선택). 단 sandbox 가 git add/commit 을 막으면 orchestrator 대리 커밋 필요.
+
+| easy-tier task 유형                                  | 배정            | 비고                                   |
+| ---------------------------------------------------- | --------------- | -------------------------------------- |
+| 선례 명확·기계적 수정 (가드 추가, 단순 치환)         | sonnet medium   | 최저 비용. diff 게이트(아래) 필수      |
+| 타입 설계 판단 포함 (제네릭, 공유 fixture, 시그니처) | opus medium     | high 와 동품질, 더 빠르고 저렴         |
+| Claude 플랜 소진·토큰 절약 우선                      | codex high      | 품질 8+ 안정, 대리 커밋 준비           |
+| medium tier 이상 (기능 개발·리팩토링)                | opus high~xhigh | easy 외 데이터 부족 — 기존 가이드 유지 |
+
+**orchestrator diff 게이트**: worker 결과 회수 시 diff 에서 `as any`·`<any`·`biome-ignore`
+패턴을 grep — 검출 시 객관 기준 PASS 라도 리워크 대상으로 간주하고 한 단계 위 모델로
+재배정한다 (sonnet 산출물에서 특히 빈발). fable worker 는 정책상 금지 — 필요하다고
+판단되면 사용자 보고를 선행한다.
 
 ### ultracode — worker 를 워크플로 오케스트레이션 모드로 (Claude Code 전용)
 
@@ -154,11 +185,11 @@ orchestrator 는 거친 요구사항을 worker 에 던지기 전에 **goalcraft 
 
 ## 위계 매핑
 
-| herdr 개념 | 용도                                                                          |
-| ---------- | ----------------------------------------------------------------------------- |
+| herdr 개념 | 용도                                                                                                                |
+| ---------- | ------------------------------------------------------------------------------------------------------------------- |
 | workspace  | 호출자(orchestrator) workspace 를 **그대로 공유** — `HERDR_PANE_ID` 로 확정(focused 추측 아님). 새로 만들지 않는다. |
 | tab        | worker pane 그룹. 한 task = 새 tab(들). 각 tab 최대 9 pane (3×3). label `SLUG-1`, `SLUG-2`, ... 호출자 tab 과 격리. |
-| pane       | 실제 worker (claude 또는 codex). slot 순서로 채움.                            |
+| pane       | 실제 worker (claude 또는 codex). slot 순서로 채움.                                                                  |
 
 호출자(orchestrator) 본인 pane(`LAUNCHER_PANE`)이 있는 tab(`LAUNCHER_TAB`)은 그대로 두고
 절대 건드리지 않는다. 이 셋(pane/tab/workspace)은 모두 Preflight 에서 `HERDR_PANE_ID` 로
