@@ -47,6 +47,19 @@ orchestrator. 협업 패턴 (fan-out / split / 역할 분담) 은 호출자가 p
   직접 HTTP 호출 금지.
 - 이 정책을 어기는 PR/commit 은 거부 대상.
 
+### claude 워커 계정 분리 (v0.8 — 불변)
+
+claude 워커는 **두 OAuth 계정 프로필**을 슬롯별로 가른다 (둘 다 구독 인증 — API 키 아님):
+
+- **기본 = 개인 kangho (`ccp` · `~/.claude-personal`)** — claude 워커의 일반 작업 전부.
+  회사 플랜 소진을 막고 개인 한도로 분산한다.
+- **browser 슬롯만 = 회사 harry (`ccq` · `~/.claude`)** — `WORKER_BROWSER[i]=1` 로 표시한 슬롯.
+  claude-in-chrome / 브라우저 조작이 필요한 워커는 **반드시 ccq**. claude-in-chrome 인증
+  (`.credentials.json`)이 `~/.claude` 에만 있어 개인 프로필로는 브라우저 도구를 못 쓴다.
+- **codex 워커엔 무효** — ccq/ccp 는 claude 전용. codex 슬롯의 `WORKER_BROWSER` 는 무시된다.
+- 계정 prefix 는 `build_launch()` 가 `claude_acct_prefix()` 로 base 명령 앞에 합성 (ccq/ccp 함수
+  우선 + 함수 미정의 시 env 인라인 fallback). prefix 가 abort 하면 그 워커는 띄우지 않는다.
+
 ## 워커 실행 모드 (불변): 인터랙티브 TUI only
 
 worker pane 에는 **항상 인터랙티브 TUI 세션**을 띄운다. prompt 는 CLI 인자로 붙이지
@@ -70,6 +83,21 @@ worker pane 에는 **항상 인터랙티브 TUI 세션**을 띄운다. prompt �
 > 예외 아님 — **model/effort 플래그는 prompt 가 아니라 launch 옵션**이므로 launch 명령에
 > 붙여도 된다 (`claude --model X`, `codex -m X -c model_reasoning_effort=Y`). 금지 대상은
 > 어디까지나 prompt(`-p` / `exec` / 인자 prompt)다.
+
+## 메시지 송신 불변 (v0.9): send-text 직후 반드시 Enter
+
+워커(또는 다른 herdr 세션)에 메시지를 보낼 때는 **`send-text` 한 번에 끝내지 말고
+반드시 곧바로 `send-keys Enter` 로 제출한다.** Enter 가 빠지면 prompt 가 입력창에 그대로
+떠 있고 워커는 영원히 idle 상태라, "메시지는 들어갔는데 한참 작업이 안 됨" 사고가 난다
+(실제로 자주 발생). 이건 `send_prompt`·`toggle_mode`·`toggle_model` 뿐 아니라 orchestrator 가
+보내는 **모든 ad-hoc 메시지**에 예외 없이 적용되는 불변 규칙이다.
+
+- **순서 고정**: `send-text` → (텍스트가 입력창에 안착 확인) → `send-keys Enter`. Enter 가
+  paste 보다 앞서 레이스 나면 빈 줄만 제출되므로, 긴 prompt 일수록 안착 확인 후 Enter.
+- **제출 확인 + 재시도**: 송신 후 워커가 실제로 **실행을 시작**했는지(agent-status / pane
+  내용) 본다. 시작이 확인 안 되면(입력창에 prompt 가 남아 있으면) **Enter 를 한 번 더**
+  보내 제출을 강제한다. 이미 실행 중이면 빈 Enter 는 양 CLI 에서 no-op 라 안전하다.
+- **절대 금지**: 메시지를 입력창에 넣어두고 Enter 없이 다음 단계로 넘어가는 것.
 
 ## 모델·effort 자율 조정 (v0.5 — 호출자 재량)
 
@@ -285,6 +313,14 @@ WORKER_MODES=(
   # "ultracode"   # 예: slot 0 은 깊은 fan-out → ultracode 로 시작
   # "plain"       # 예: slot 1 은 평소 effort
 )
+# (v0.8) WORKER_BROWSER = slot 별 "claude-in-chrome/브라우저 조작 필요" 플래그 (선택).
+#   "1"        = 필요 → 회사 harry 계정(ccq · ~/.claude — claude-in-chrome 인증을 가진 유일 프로필)
+#   그 외/미지정 = 불필요 → 개인 kangho 계정(ccp · ~/.claude-personal) ← claude 워커 기본
+#   codex slot 에는 무효(ccq/ccp 는 claude 전용) — 무시된다. WORKER_CMDS 와 index 정렬.
+WORKER_BROWSER=(
+  # "1"   # 예: slot 0 = 브라우저 조작 워커 → ccq(회사)
+  # ""    # 예: slot 1 = 일반 작업 → ccp(개인, 기본)
+)
 N=${#WORKER_CMDS[@]}
 [ "$N" -eq "${#WORKER_PROMPTS[@]}" ] || { echo "len(WORKER_CMDS) != len(WORKER_PROMPTS)"; exit 1; }
 [ "$N" -ge 1 ] || { echo "N must be >= 1"; exit 1; }
@@ -297,8 +333,12 @@ for ((i=0; i<N; i++)); do : "${WORKER_MODES[$i]:=plain}"; done
 declare -a WORKER_MODELS=("${WORKER_MODELS[@]}")
 for ((i=0; i<N; i++)); do : "${WORKER_MODELS[$i]:=}"; done
 
+# (v0.8) WORKER_BROWSER 길이 보정 — 미지정 slot 은 0 (= ccp 개인 계정 기본).
+declare -a WORKER_BROWSER=("${WORKER_BROWSER[@]}")
+for ((i=0; i<N; i++)); do : "${WORKER_BROWSER[$i]:=0}"; done
+
 # 옵션
-: "${KEEP_TABS:=0}"        # 1 이면 close 확인 절차 생략하고 worker tab 항상 유지
+: "${KEEP_TABS:=0}"        # (v0.9) 기본 0 = 완료 시 worker tab 자동 close. 1 이면 자동 close 생략, 전부 유지
 : "${TIMEOUT_MS:=600000}"  # worker 당 대기 타임아웃 (ms)
 ```
 
@@ -393,15 +433,33 @@ while [ "$remaining" -gt 0 ]; do
   remaining=$(( remaining - this_count ))
 done
 
+# (v0.8) claude 워커 계정 prefix — 기본 ccp(개인 kangho), browser 슬롯만 ccq(회사 harry).
+#   ccq/ccp 는 ~/.zshrc 정의 함수다. herdr pane run 이 .zshrc 를 sourcing 하면 함수가 보이고,
+#   non-interactive 면 안 보이므로 "함수 우선 + env 인라인 fallback" 으로 양쪽을 모두 커버한다.
+#   prefix 전체를 single-quote 로 내보내 변수/명령치환($HOME · $(security ..))이 build 시점이
+#   아니라 worker pane 셸 실행 시점에 평가되게 한다. codex 워커엔 적용하지 않는다(claude 전용).
+claude_acct_prefix() {
+  local I="$1"
+  if [ "${WORKER_BROWSER[$I]:-0}" = "1" ]; then
+    # 회사 harry (~/.claude) — claude-in-chrome 인증을 가진 유일한 프로필
+    printf '%s' '{ type ccq >/dev/null 2>&1 && ccq >/dev/null || { export CLAUDE_CONFIG_DIR="$HOME/.claude"; unset CLAUDE_CODE_OAUTH_TOKEN; }; } && '
+  else
+    # 개인 kangho (~/.claude-personal) — claude 워커 기본. 토큰 없으면 abort.
+    printf '%s' '{ type ccp >/dev/null 2>&1 && ccp >/dev/null || { export CLAUDE_CONFIG_DIR="$HOME/.claude-personal"; export CLAUDE_CODE_OAUTH_TOKEN="$(security find-generic-password -s Claude-personal-oauth-token -w 2>/dev/null)"; }; [ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ] || { echo "ccp 개인 토큰 미설정 — 개인 계정으로 claude 못 띄움 (ccp-token-save 먼저)"; exit 1; }; } && '
+  fi
+}
+
 # (v0.5) launch 명령 빌더 — base CLI + 모델/effort 플래그 (prompt 아님 → TUI only 규칙 준수).
 #   claude: 모델만 launch 플래그(--model), effort 는 spawn 후 toggle_mode(/effort)로 적용.
 #   codex : 모델(-m)·reasoning effort(-c) 모두 launch 플래그 (codex 는 /effort 슬래시 없음).
+#   (v0.8) claude 갈래엔 계정 prefix(ccp 기본 / browser=ccq)를 base 명령 앞에 합성.
 build_launch() {
   local I="$1"
   local CMD="${WORKER_CMDS[$I]}" MODEL="${WORKER_MODELS[$I]:-}" MODE="${WORKER_MODES[$I]:-plain}"
   case "$CMD" in
     claude*)
       [ -n "$MODEL" ] && CMD="$CMD --model $MODEL"
+      CMD="$(claude_acct_prefix "$I")$CMD"
       ;;
     codex*)
       [ -n "$MODEL" ] && CMD="$CMD -m $MODEL"
@@ -461,6 +519,10 @@ send_prompt() {
   is_worker_tab "$PANE_TAB" || { echo "pane $PANE tab($PANE_TAB) is not a worker tab — abort"; return 1; }
   echo "send: from=orchestrator(tab:$LAUNCHER_TAB) to=$PANE(tab:$PANE_TAB)"
   herdr pane send-text "$PANE" "$PROMPT"
+  # (v0.9) Enter 누락 방지 (위 "메시지 송신 불변"): 텍스트가 입력창에 안착한 뒤 Enter 로
+  #   "반드시" 제출한다. send-text 만 하고 끝내면 prompt 가 입력창에 그대로 떠 워커가 멈춘다.
+  local TAIL; TAIL="$(printf '%s' "$PROMPT" | tail -c 24)"
+  herdr wait output "$PANE" --match "$TAIL" --timeout 5000 >/dev/null 2>&1 || true
   herdr pane send-keys "$PANE" Enter
 }
 
@@ -468,6 +530,14 @@ for ((i=0; i<N; i++)); do
   # (v0.3) plain 이 아니면 prompt 주입 전에 모드 먼저 전환 (cache 보존 escalation).
   [ "${WORKER_MODES[$i]}" != "plain" ] && toggle_mode "$i" "${WORKER_MODES[$i]}"
   send_prompt "${PANES[$i]}" "${WORKER_PROMPTS[$i]}" || exit 1
+done
+
+# (v0.9) 제출 확인 — 각 워커가 실제로 실행을 시작했는지 본다. Enter 가 먹지 않아 prompt 가
+#   입력창에 남아 있으면 워커는 영원히 idle 이다. 시작이 확인 안 되면 Enter 를 한 번 더 보내
+#   제출을 강제한다 (이미 실행 중이면 빈 Enter 는 no-op 라 안전).
+for ((i=0; i<N; i++)); do
+  herdr wait agent-status "${PANES[$i]}" --status running --timeout 15000 >/dev/null 2>&1 \
+    || { echo "slot $i 미시작 의심 (Enter 누락?) — Enter 재송신"; herdr pane send-keys "${PANES[$i]}" Enter; }
 done
 ```
 
@@ -615,45 +685,51 @@ herdr tab focus "$LAUNCHER_TAB"
 orchestrator (호출자) 가 `${OUTPUTS[@]}` 를 자연어로 사용자에게 정리 보고. 집계
 포맷은 호출자 재량 — 비교 / 합치기 / 요약 자유.
 
-### 7. Cleanup (사용자 확인 후 worker tab 만 close)
+### 7. Cleanup (v0.9 — 작업 완료 시 worker tab 자동 close)
 
-worker tab 은 **자동으로 닫지 않는다**. 사용자가 직접 worker pane 의 최종 상태를
-확인할 수 있어야 하므로, 성공해도 바로 close 하지 않는다. **호출자 workspace 와
-`LAUNCHER_TAB` 은 절대 닫지 않는다** — orchestrator 본인이 거기 있다. 정리 대상은 이
-task 가 만든 worker tab(`TAB_IDS`) 뿐이다.
+worker tab 은 이 task 가 만든 것이므로, **작업이 끝나면 기본적으로 orchestrator 가
+자기가 연 worker tab(`TAB_IDS`)을 닫는다.** tab 을 쌓아두지 않는 게 기본이다 (이전엔
+사용자 확인을 기다렸지만, 닫지 않은 tab 이 누적돼 불편 → 자동 close 로 전환). **호출자
+workspace 와 `LAUNCHER_TAB` 은 절대 닫지 않는다** — orchestrator 본인이 거기 있다.
+
+판정은 **tab 단위**로 한다: 그 tab 의 모든 slot 이 성공(`rc=0`)이면 close, 하나라도
+실패한 tab 은 디버깅용으로 보존한다. 전부 성공이면 worker tab 이 통째로 정리된다.
 
 절차:
 
 1. orchestrator 가 `${OUTPUTS[@]}` 를 자연어로 사용자에게 보고한다.
-2. 실패한 slot 이 있으면 (`WAIT_RCS` 에 비-0) tabs / panes / rcs 를 안내하고 보존.
-3. 사용자에게 worker tab 을 닫아도 되는지 확인한다 (`TAB_IDS` 안내).
-4. 사용자가 확인하면 **그때** worker tab 만 close:
+2. 성공한 tab 은 보고 직후 **자동 close**, 실패 slot 이 있는 tab 만 보존하고 tabs /
+   panes / rcs 를 안내한다.
+3. resume 한계: 닫으려는 pane 이 workflow 진행 중일 수 있으면 close 전 경고한다 (단,
+   여기서는 이미 5단계에서 `agent-status done` 까지 기다렸으므로 정상 흐름에선 안전).
 
 ```bash
-all_ok=1
-for rc in "${WAIT_RCS[@]}"; do
-  [ "$rc" = "0" ] || { all_ok=0; break; }
-done
-
-if [ "$all_ok" != "1" ]; then
-  echo "일부 worker 실패 — worker tab 보존 (확인용)"
-  echo "  tabs:  ${TAB_IDS[*]}"
-  echo "  panes: ${PANES[*]}"
-  echo "  rcs:   ${WAIT_RCS[*]}"
+# (v0.9) 기본 동작 — 완료 시 자기가 연 worker tab 을 닫는다 (tab 단위 성공 판정).
+#   KEEP_TABS=1 이면 자동 close 를 건너뛰고 전부 보존 (사용자 수동 정리).
+if [ "${KEEP_TABS:-0}" = "1" ]; then
+  echo "KEEP_TABS=1 — worker tab 자동 close 생략, 전부 보존: ${TAB_IDS[*]}"
+else
+  for ((b=0; b<${#TAB_IDS[@]}; b++)); do
+    t="${TAB_IDS[$b]}"
+    # 안전 가드 — LAUNCHER_TAB/workspace 는 절대 닫지 않는다.
+    [ "$t" = "$LAUNCHER_TAB" ] && { echo "guard: refuse to close LAUNCHER_TAB"; continue; }
+    # batch b = slot [b*9, b*9+8] — 이 tab 에 속한 slot 들의 rc 검사.
+    tab_ok=1
+    for ((i=b*9; i<(b+1)*9 && i<N; i++)); do
+      [ "${WAIT_RCS[$i]}" = "0" ] || { tab_ok=0; break; }
+    done
+    if [ "$tab_ok" = "1" ]; then
+      herdr tab close "$t" && echo "cleanup: worker tab $t closed (성공). workspace/LAUNCHER_TAB 보존."
+    else
+      echo "cleanup: worker tab $t 보존 — 실패 slot 있음(디버깅용)."
+      echo "  tab=$t  rcs(batch)=${WAIT_RCS[*]:$((b*9)):9}"
+    fi
+  done
 fi
-
-# 아래 close 는 사용자가 "닫아도 된다" 고 확인한 뒤에만 실행한다.
-# (orchestrator 가 다음 턴에서 사용자 응답을 받고 호출)
-# 절대 LAUNCHER_TAB / workspace 는 close 하지 않는다 — worker tab 만.
-#   for t in "${TAB_IDS[@]}"; do
-#     [ "$t" = "$LAUNCHER_TAB" ] && { echo "guard: refuse to close LAUNCHER_TAB"; continue; }
-#     herdr tab close "$t"
-#   done
-#   echo "cleanup: worker tabs ${TAB_IDS[*]} closed (${#PANES[@]} panes 통째 정리). workspace/LAUNCHER_TAB 보존."
 ```
 
-- default: 성공/실패와 무관하게 worker tab 을 유지하고 사용자 확인을 기다린 뒤 close.
-- `KEEP_TABS=1`: 확인 절차도 생략하고 항상 유지 (사용자가 수동 정리).
+- default: 작업 완료 후 성공한 worker tab 은 **자동 close**, 실패 slot 이 있는 tab 만 보존.
+- `KEEP_TABS=1`: 자동 close 를 생략하고 worker tab 을 전부 유지 (사용자가 수동 정리).
 
 ## 호출자별 진입점
 
@@ -684,9 +760,10 @@ Codex 호출자도 본인은 orchestrator 로 남고, worker pane (claude/codex 
    재사용·split 금지. 새 workspace 는 만들지 않는다 (workspace 누적 방지).
 3. **send 직전 worker-tab 검증** — pane 의 tab_id 가 worker `TAB_IDS` 에 속하고
    `LAUNCHER_TAB` 이 아닐 때만 송신 (`is_worker_tab`).
-4. **타임아웃 + 확인 후 정리** — 성공/실패 무관하게 자동 close 금지. 결과 보고 후
-   사용자 확인을 받고 **worker tab 만** close. workspace/LAUNCHER_TAB 은 보존.
-   실패 시 tabs / panes / rcs 안내.
+4. **(v0.9) 완료 시 자동 정리 (기본)** — 작업이 끝나면 orchestrator 가 자기가 연
+   worker tab 을 닫는 게 기본이다. tab 단위로 모든 slot 성공이면 close, 실패 slot 이 있는
+   tab 만 보존(디버깅용)하고 tabs / panes / rcs 안내. workspace/LAUNCHER_TAB 은 **절대**
+   닫지 않는다. `KEEP_TABS=1` 로 자동 close 비활성(전부 보존).
 5. **인증 정책 불변** — API 키 사용 금지. OAuth CLI 만.
 6. **인터랙티브 TUI only** — worker 는 항상 TUI 로 띄우고 prompt 는 `send-text` 로
    주입. `claude -p` / `codex exec` 등 headless one-shot 금지. spawn 후 worker
@@ -705,8 +782,15 @@ Codex 호출자도 본인은 orchestrator 로 남고, worker pane (claude/codex 
    workspace 에 생성되기 때문(이번에 수정한 버그). `HERDR_PANE_ID` 미설정이면 stop —
    focused 추측으로 fallback 하지 않는다 (`pane list` 출력엔 `.result.focused` 키 자체가
    없어 과거 fallback 도 신뢰 불가였다).
-
-## resume 한계 경고 (v0.3)
+10. **(v0.8) claude 워커 계정 분리** — claude 워커는 기본 개인(`ccp` · `~/.claude-personal`).
+    `WORKER_BROWSER[i]=1` 슬롯(claude-in-chrome/브라우저 조작)만 회사(`ccq` · `~/.claude`,
+    claude-in-chrome 인증 보유 유일 프로필). `build_launch()`→`claude_acct_prefix()` 가 base
+    명령 앞에 prefix 합성. codex 워커엔 무효(ccq/ccp 는 claude 전용). ccq/ccp 는 ~/.zshrc 함수라
+    pane 셸에서 미정의일 수 있어 env 인라인 fallback 을 동반한다.
+11. **(v0.9) send-text 직후 반드시 Enter** — 모든 pane 메시지(`send_prompt`·`toggle_mode`·
+    `toggle_model`·ad-hoc)는 `send-text` 후 곧바로 `send-keys Enter` 로 제출한다. Enter 가
+    빠지면 prompt 가 입력창에 남아 워커가 멈춘다(잦은 사고). 송신 후 워커 실행 시작을
+    확인하고, 미시작이면 Enter 를 재송신해 제출을 강제한다(빈 Enter 는 no-op 라 안전).
 
 dynamic workflow 는 **세션 종료 시 cross-session resume 불가** (다음 세션 fresh start).
 herdr 워커 pane = 그 세션 자체이므로, workflow 진행 중인 pane 을 죽이면 그 안의
@@ -727,6 +811,19 @@ close 전 강한 경고" 를 안내할 것. (자동 감지는 v0.4 폴링 기능
 
 ## 변경 이력
 
+- **v0.9** (2026-06-14) — **메시지 송신 Enter 강제 + 작업 완료 시 worker tab 자동 close(기본)**.
+  (1) "send-text 후 Enter 누락 → 워커 한참 멈춤" 사고 해소: `send_prompt` 가 텍스트 안착을
+  확인한 뒤 반드시 Enter 로 제출(paste 레이스 방지)하고, prompt 주입 후 각 워커의 실행 시작을
+  확인해 미시작이면 Enter 를 재송신한다. "메시지 송신 불변" 절·안전 규칙 11 신설.
+  (2) Cleanup(7단계)을 "사용자 확인 후 보존(기본)" → "완료 시 성공 tab 자동 close, 실패 tab 만
+  보존(tab 단위 판정)" 으로 전환. `KEEP_TABS` 의미를 "자동 close opt-out" 으로 바꾸고(`=1` 이면
+  전부 유지), 안전 규칙 4 갱신.
+- **v0.8** (2026-06-13) — **claude 워커 OAuth 계정 슬롯별 분리 (ccp 기본 / browser=ccq)**.
+  `WORKER_BROWSER`(slot 별 브라우저 필요 플래그) 추가, `claude_acct_prefix()` 신설(회사 ccq /
+  개인 ccp env prefix, ~/.zshrc 함수 우선 + env 인라인 fallback), `build_launch()` 의 claude
+  갈래가 prefix 를 base 명령 앞에 합성. claude-in-chrome 인증(`.credentials.json`)이
+  `~/.claude`(회사 harry)에만 있어 브라우저 워커는 회사 계정 필수 — 그 외 claude 워커는
+  개인(kangho) 한도로 분산. codex 워커엔 무효. "claude 워커 계정 분리" 인증 절·안전 규칙 10 신설.
 - **v0.6** (2026-06-10) — **launcher 식별을 `focused` → `HERDR_PANE_ID` 로 전환 (worker 가
   엉뚱한 workspace 에 생성되던 버그 수정)**. Preflight 가 `herdr pane get "$HERDR_PANE_ID"` 로
   orchestrator 본인 pane 의 `workspace_id`/`tab_id`/`pane_id` 를 확정한다. 기존 코드는
