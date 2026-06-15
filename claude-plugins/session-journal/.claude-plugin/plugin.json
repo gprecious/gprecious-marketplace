@@ -1,7 +1,7 @@
 {
   "name": "session-journal",
-  "version": "0.5.0",
-  "description": "Record Claude Code and Codex sessions to an Obsidian vault (or a subfolder of an existing one): an append-only raw event log plus one regenerated summary note per session — no verbatim transcript, no auto-generated wiki. Every note is tagged #ai-generated to stay distinct from hand-authored notes. Portable name-based vault resolution (with an explicit-pin guard against duplicate same-named vaults) for multi-machine setups synced via Obsidian Sync.",
+  "version": "0.6.0",
+  "description": "Record Claude Code and Codex sessions to an Obsidian vault (or a subfolder of an existing one): one daily journal note (Journal/<date>.md) with a chronological summary block per MEANINGFUL session (throwaway sessions skipped, no verbatim transcript, no auto-generated wiki). The bulky raw event log lives OUTSIDE the vault (under $XDG_STATE_HOME/session-journal) with retention. Every note is tagged #ai-generated to stay distinct from hand-authored notes. Portable name-based vault resolution (with an explicit-pin guard against duplicate same-named vaults) for multi-machine setups synced via Obsidian Sync.",
   "author": {
     "name": "gprecious",
     "email": "gprecious@users.noreply.github.com"
