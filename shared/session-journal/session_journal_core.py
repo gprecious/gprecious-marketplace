@@ -22,13 +22,12 @@ import json
 import os
 import pathlib
 import re
+import shutil
 import sys
 from typing import Any
 
 
 DEFAULT_VAULT = "~/Documents/Obsidian/llm-agent-vault"
-SECTION_START = "<!-- session-journal-summary:start -->"
-SECTION_END = "<!-- session-journal-summary:end -->"
 RELATED_KEYWORDS = [
     "Claude Code",
     "Codex",
@@ -44,6 +43,10 @@ RELATED_KEYWORDS = [
 # subfolder inside an existing Obsidian Sync vault). Filter/exclude in Obsidian
 # search or graph with `tag:#ai-generated`.
 AI_TAGS = ("ai-generated", "session-journal")
+# The journal is one note per day (Journal/<date>.md) holding a chronological,
+# upsert-able summary block per *meaningful* session — not one file per session.
+DAILY_DIR = "Journal"
+DEFAULT_RAW_RETENTION_DAYS = 30
 
 
 def now_iso() -> str:
@@ -61,6 +64,50 @@ def tags_block() -> str:
 
 def expand(path: str) -> pathlib.Path:
     return pathlib.Path(path).expanduser().resolve()
+
+
+def state_root() -> pathlib.Path:
+    """Where raw JSONL logs live — OUTSIDE any Obsidian vault.
+
+    Precedence: SESSION_JOURNAL_STATE -> $XDG_STATE_HOME/session-journal ->
+    ~/.local/state/session-journal. Keeping the bulky append-only trail here means
+    it never enters the vault (and never syncs via Obsidian Sync); the readable
+    daily note in the vault is rebuilt from it.
+    """
+    explicit = os.environ.get("SESSION_JOURNAL_STATE")
+    if explicit:
+        return expand(explicit)
+    xdg = os.environ.get("XDG_STATE_HOME")
+    base = pathlib.Path(xdg).expanduser() if xdg else pathlib.Path.home() / ".local" / "state"
+    return (base / "session-journal").resolve()
+
+
+def raw_path_for(session_id: str) -> pathlib.Path:
+    return state_root() / "Raw" / today() / f"{session_id}.jsonl"
+
+
+def prune_raw(retention_days: int | None = None) -> None:
+    """Delete Raw/<date>/ dirs older than the retention window. Best-effort."""
+    if retention_days is None:
+        try:
+            retention_days = int(
+                os.environ.get("SESSION_JOURNAL_RAW_RETENTION_DAYS", DEFAULT_RAW_RETENTION_DAYS)
+            )
+        except ValueError:
+            retention_days = DEFAULT_RAW_RETENTION_DAYS
+    raw_root = state_root() / "Raw"
+    if not raw_root.is_dir():
+        return
+    cutoff = dt.date.today() - dt.timedelta(days=retention_days)
+    for date_dir in raw_root.iterdir():
+        if not date_dir.is_dir():
+            continue
+        try:
+            d = dt.datetime.strptime(date_dir.name, "%Y-%m-%d").date()
+        except ValueError:
+            continue
+        if d < cutoff:
+            shutil.rmtree(date_dir, ignore_errors=True)
 
 
 def obsidian_config_paths() -> list[pathlib.Path]:
@@ -205,7 +252,7 @@ def redact(value: Any) -> Any:
 
 
 def ensure_layout(vault: pathlib.Path) -> None:
-    for rel in ("Sessions", "Raw", ".obsidian"):
+    for rel in (DAILY_DIR, ".obsidian"):
         (vault / rel).mkdir(parents=True, exist_ok=True)
     index = vault / "Index.md"
     if not index.exists():
@@ -219,19 +266,25 @@ def ensure_layout(vault: pathlib.Path) -> None:
             "> Every note under this folder is written by the session-journal plugin "
             "(Claude Code / Codex) and tagged `#ai-generated`. It is **not** hand-authored. "
             "Filter or exclude it from search/graph with `tag:#ai-generated`.\n\n"
-            "Session notes live under `Sessions/` (one per session — a regenerated "
-            "summary block only, not a verbatim transcript). The full append-only "
-            "event log lives under `Raw/`. Durable knowledge is curated on demand by "
-            "the `/session-journal` skill or research-engine `/wiki`, not written here.\n",
+            "Daily session logs live under `Journal/` — one note per day holding a "
+            "chronological, upsert-able summary block per *meaningful* session "
+            "(throwaway sessions are skipped). The bulky append-only raw event log "
+            "lives OUTSIDE this vault (under `$XDG_STATE_HOME/session-journal/Raw/`). "
+            "Durable knowledge is curated on demand by the `/session-journal` skill "
+            "or research-engine `/wiki`, not written here.\n",
             encoding="utf-8",
         )
 
 
+def daily_note_path(vault: pathlib.Path) -> pathlib.Path:
+    return vault / DAILY_DIR / f"{today()}.md"
+
+
 def paths_for(vault: pathlib.Path, session_id: str) -> dict[str, pathlib.Path]:
-    date = today()
-    session = vault / "Sessions" / date / f"{session_id}.md"
-    raw = vault / "Raw" / date / f"{session_id}.jsonl"
-    return {"session": session, "raw": raw}
+    return {
+        "daily": daily_note_path(vault),
+        "raw": raw_path_for(session_id),
+    }
 
 
 def wikilinks(cwd: str | None = None, extra: list[str] | None = None) -> list[str]:
@@ -258,28 +311,117 @@ def append_raw(path: pathlib.Path, record: dict[str, Any]) -> None:
         f.write(json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n")
 
 
-def init_session_note(path: pathlib.Path, session_id: str, event: dict[str, Any], agent: str) -> None:
+TMP_CWD_MARKERS = ("/tmp/", "/private/tmp/", "/var/folders/")
+
+
+def is_trivial_cwd(cwd: str | None) -> bool:
+    if not cwd:
+        return True
+    c = cwd if cwd.endswith("/") else cwd + "/"
+    return any(marker in c for marker in TMP_CWD_MARKERS)
+
+
+def session_is_meaningful(events: list[dict[str, Any]], cwd: str | None) -> bool:
+    """A session earns a journal block only when it is real work.
+
+    Skips throwaway sessions (tmp cwd, no substantive prompt/result) so the daily
+    note records meaningful sessions chronologically — not every session.
+    """
+    if is_trivial_cwd(cwd):
+        return False
+    has_prompt = has_tool = has_result = False
+    for record in events:
+        event = record.get("event", {})
+        if not isinstance(event, dict):
+            continue
+        name = event.get("hook_event_name") or record.get("hook_event_name")
+        if name == "UserPromptSubmit" and first_nonempty(str(event.get("prompt") or "")):
+            has_prompt = True
+        elif name == "PostToolUse" and event.get("tool_name"):
+            has_tool = True
+        elif name == "Stop" and first_nonempty(str(event.get("last_assistant_message") or "")):
+            has_result = True
+    return has_prompt and (has_tool or has_result)
+
+
+def session_started_at(events: list[dict[str, Any]]) -> str:
+    for record in events:
+        ts = record.get("recorded_at")
+        if isinstance(ts, str) and len(ts) >= 16:
+            return ts[11:16]  # HH:MM
+    return now_iso()[11:16]
+
+
+def build_session_block(events: list[dict[str, Any]], agent: str, cwd: str | None) -> str:
+    prompts: list[str] = []
+    results: list[str] = []
+    tools: list[str] = []
+    for record in events:
+        event = record.get("event", {})
+        if not isinstance(event, dict):
+            continue
+        name = event.get("hook_event_name") or record.get("hook_event_name")
+        if name == "UserPromptSubmit" and isinstance(event.get("prompt"), str):
+            line = first_nonempty(event["prompt"])
+            if line:
+                prompts.append(line)
+        elif name == "Stop" and isinstance(event.get("last_assistant_message"), str):
+            line = first_nonempty(event["last_assistant_message"])
+            if line:
+                results.append(line)
+        elif name == "PostToolUse" and event.get("tool_name"):
+            tools.append(str(event["tool_name"]))
+
+    workspace = pathlib.Path(cwd).name if cwd else "unknown-workspace"
+    lines = [
+        f"### {session_started_at(events)} — {workspace} · {agent}",
+        f"[[{agent}]] · [[{workspace}]]",
+        "",
+    ]
+    lines.extend(f"- prompt: {item}" for item in prompts[-5:])
+    lines.extend(f"- result: {item}" for item in results[-3:])
+    if tools:
+        lines.append(f"- tools: {', '.join(sorted(set(tools[-20:])))}")
+    lines.extend(["", f"Related: {' '.join(wikilinks(cwd))}"])
+    return "\n".join(lines).strip() + "\n"
+
+
+def ensure_daily_note(path: pathlib.Path) -> None:
     if path.exists():
         return
     path.parent.mkdir(parents=True, exist_ok=True)
-    cwd = event.get("cwd") or ""
+    date = path.stem
     path.write_text(
         "---\n"
-        f"session_id: {session_id}\n"
-        f"agent: {agent}\n"
-        f"created: {now_iso()}\n"
-        f"cwd: {json.dumps(cwd)}\n"
+        "type: journal\n"
+        f"date: {date}\n"
         f"{tags_block()}"
         "---\n\n"
-        f"# Session {session_id}\n\n"
-        f"Agent: [[{agent}]]\n\n"
-        f"Workspace: [[{pathlib.Path(cwd).name if cwd else 'unknown-workspace'}]]\n\n"
-        f"Related: {' '.join(wikilinks(cwd))}\n\n"
-        f"{SECTION_START}\n"
-        "No summary yet.\n"
-        f"{SECTION_END}\n",
+        f"# Journal {date}\n\n"
+        "> [!info] 🤖 AI-generated — chronological summaries of meaningful "
+        "Claude Code / Codex sessions on this day. Filter with `tag:#ai-generated`. "
+        "Full raw logs live outside the vault.\n\n",
         encoding="utf-8",
     )
+
+
+def upsert_session_block(daily_path: pathlib.Path, session_id: str, block: str) -> None:
+    """Insert or replace this session's block in the daily note (idempotent).
+
+    First-seen order is append order, so blocks read chronologically; later turns
+    of the same session replace its block in place instead of duplicating it.
+    """
+    ensure_daily_note(daily_path)
+    start = f"<!-- session:{session_id}:start -->"
+    end = f"<!-- session:{session_id}:end -->"
+    wrapped = f"{start}\n{block}{end}\n"
+    text = daily_path.read_text(encoding="utf-8")
+    if start in text and end in text:
+        pattern = re.compile(re.escape(start) + r".*?" + re.escape(end) + r"\n?", re.S)
+        text = pattern.sub(wrapped, text, count=1)
+    else:
+        text = text.rstrip() + "\n\n" + wrapped
+    daily_path.write_text(text, encoding="utf-8")
 
 
 def first_nonempty(text: str, limit: int = 180) -> str:
@@ -306,134 +448,83 @@ def load_raw(raw_path: pathlib.Path) -> list[dict[str, Any]]:
     return events
 
 
-def build_summary(events: list[dict[str, Any]], cwd: str | None = None) -> str:
-    prompts: list[str] = []
-    results: list[str] = []
-    tools: list[str] = []
+def first_cwd(events: list[dict[str, Any]], fallback: str | None = None) -> str | None:
     for record in events:
         event = record.get("event", {})
-        if not isinstance(event, dict):
-            continue
-        name = event.get("hook_event_name") or record.get("hook_event_name")
-        if name == "UserPromptSubmit" and isinstance(event.get("prompt"), str):
-            prompts.append(first_nonempty(event["prompt"]))
-        elif name == "Stop" and isinstance(event.get("last_assistant_message"), str):
-            results.append(first_nonempty(event["last_assistant_message"]))
-        elif name == "PostToolUse":
-            tool_name = event.get("tool_name")
-            if tool_name:
-                tools.append(str(tool_name))
-
-    lines = ["### Current Summary", ""]
-    if prompts:
-        lines.append("User prompts:")
-        lines.extend(f"- {item}" for item in prompts[-5:] if item)
-    if results:
-        lines.append("")
-        lines.append("Agent results:")
-        lines.extend(f"- {item}" for item in results[-5:] if item)
-    if tools:
-        recent = ", ".join(sorted(set(tools[-20:])))
-        lines.extend(["", f"Recent tool activity: {recent}"])
-    lines.extend(["", f"Related: {' '.join(wikilinks(cwd))}"])
-    return "\n".join(lines).strip() + "\n"
-
-
-def replace_summary(path: pathlib.Path, summary: str) -> None:
-    text = path.read_text(encoding="utf-8") if path.exists() else ""
-    block = f"{SECTION_START}\n{summary}{SECTION_END}"
-    if SECTION_START in text and SECTION_END in text:
-        pattern = re.compile(re.escape(SECTION_START) + r".*?" + re.escape(SECTION_END), re.S)
-        text = pattern.sub(block, text, count=1)
-    else:
-        text = text.rstrip() + "\n\n" + block + "\n"
-    path.write_text(text, encoding="utf-8")
+        if isinstance(event, dict) and isinstance(event.get("cwd"), str) and event["cwd"]:
+            return event["cwd"]
+    return fallback
 
 
 def handle_event(event: dict[str, Any], agent: str, vault: pathlib.Path) -> dict[str, Any]:
     ensure_layout(vault)
     event = redact(event)
     session_id = safe_id(event.get("session_id"))
-    paths = paths_for(vault, session_id)
-    init_session_note(paths["session"], session_id, event, agent)
+    raw = raw_path_for(session_id)
+    daily = daily_note_path(vault)
 
-    record = {
-        "recorded_at": now_iso(),
-        "agent": agent,
-        "event": event,
-    }
-    append_raw(paths["raw"], record)
+    if event.get("hook_event_name") == "SessionStart":
+        prune_raw()
 
-    # The session note carries a single regenerated summary block — no verbatim
-    # event-by-event append (the full trail is already in Raw/). Refresh it on the
-    # events that change the summary; PostToolUse only extends the raw log.
-    if event.get("hook_event_name") in {"Stop", "UserPromptSubmit", "SessionStart"}:
-        events = load_raw(paths["raw"])
-        replace_summary(paths["session"], build_summary(events, event.get("cwd")))
+    append_raw(raw, {"recorded_at": now_iso(), "agent": agent, "event": event})
+
+    # The daily note holds one upsert-able block per MEANINGFUL session (the full
+    # trail is already in the external Raw/). Refresh on the events that can change
+    # the block; PostToolUse only extends the raw log. SessionStart has no content
+    # yet, so it never writes a block.
+    recorded = False
+    if event.get("hook_event_name") in {"Stop", "UserPromptSubmit"}:
+        events = load_raw(raw)
+        cwd = first_cwd(events, event.get("cwd"))
+        if session_is_meaningful(events, cwd):
+            upsert_session_block(daily, session_id, build_session_block(events, agent, cwd))
+            recorded = True
 
     return {
         "session_id": session_id,
         "vault": str(vault),
-        "session_note": str(paths["session"]),
-        "raw_log": str(paths["raw"]),
+        "daily_note": str(daily),
+        "raw_log": str(raw),
+        "recorded": recorded,
     }
 
 
 def summarize_session(session_id: str, vault: pathlib.Path) -> dict[str, Any]:
     safe = safe_id(session_id)
-    session_paths = list((vault / "Sessions").glob(f"*/{safe}.md"))
-    raw_paths = list((vault / "Raw").glob(f"*/{safe}.jsonl"))
-    if not session_paths or not raw_paths:
+    raw_paths = sorted((state_root() / "Raw").glob(f"*/{safe}.jsonl"))
+    if not raw_paths:
         raise SystemExit(f"session not found: {safe}")
-    events = load_raw(raw_paths[-1])
-    cwd = None
+    raw = raw_paths[-1]
+    date = raw.parent.name
+    events = load_raw(raw)
+    cwd = first_cwd(events)
+    agent = "agent"
     for record in events:
-        event = record.get("event", {})
-        if isinstance(event, dict) and isinstance(event.get("cwd"), str):
-            cwd = event["cwd"]
+        if isinstance(record.get("agent"), str):
+            agent = record["agent"]
             break
-    summary = build_summary(events, cwd)
-    replace_summary(session_paths[-1], summary)
-    return {"session_note": str(session_paths[-1]), "raw_log": str(raw_paths[-1])}
+    daily = vault / DAILY_DIR / f"{date}.md"
+    upsert_session_block(daily, safe, build_session_block(events, agent, cwd))
+    return {"daily_note": str(daily), "raw_log": str(raw)}
 
 
 def run_self_test(vault: pathlib.Path) -> dict[str, Any]:
+    work = "/Users/dev/gprecious-marketplace"  # a non-tmp (meaningful) workspace
     events = [
-        {
-            "session_id": "self-test-codex",
-            "hook_event_name": "SessionStart",
-            "cwd": "/tmp/gprecious-marketplace",
-            "model": "gpt-5",
-            "source": "startup",
-        },
-        {
-            "session_id": "self-test-codex",
-            "hook_event_name": "UserPromptSubmit",
-            "cwd": "/tmp/gprecious-marketplace",
-            "prompt": "Implement session-journal capture for [[research-engine]] work.",
-            "turn_id": "turn-1",
-        },
-        {
-            "session_id": "self-test-codex",
-            "hook_event_name": "Stop",
-            "cwd": "/tmp/gprecious-marketplace",
-            "last_assistant_message": "Done. Shared hook core writes Obsidian summaries for [[Claude Code]] and [[Codex]].",
-            "turn_id": "turn-1",
-            "stop_hook_active": False,
-        },
-        {
-            "session_id": "self-test-claude",
-            "hook_event_name": "UserPromptSubmit",
-            "cwd": "/tmp/gprecious-marketplace",
-            "prompt": "Record this session. Raw events stay append-only and summaries are regenerated.",
-        },
-        {
-            "session_id": "self-test-claude",
-            "hook_event_name": "Stop",
-            "cwd": "/tmp/gprecious-marketplace",
-            "last_assistant_message": "Finished. The session note carries a summary block only.",
-            "stop_hook_active": False,
-        },
+        {"session_id": "self-test-codex", "hook_event_name": "SessionStart",
+         "cwd": work, "model": "gpt-5", "source": "startup"},
+        {"session_id": "self-test-codex", "hook_event_name": "UserPromptSubmit",
+         "cwd": work,
+         "prompt": "Implement session-journal capture for [[research-engine]] work."},
+        {"session_id": "self-test-codex", "hook_event_name": "PostToolUse",
+         "cwd": work, "tool_name": "Bash"},
+        {"session_id": "self-test-codex", "hook_event_name": "Stop",
+         "cwd": work,
+         "last_assistant_message": "Done. Daily journal note holds one block per meaningful session."},
+        # Throwaway session (tmp cwd, no real prompt) — must be skipped.
+        {"session_id": "self-test-trivial", "hook_event_name": "SessionStart", "cwd": "/tmp/scratch"},
+        {"session_id": "self-test-trivial", "hook_event_name": "Stop", "cwd": "/tmp/scratch",
+         "last_assistant_message": "ok"},
     ]
     results = []
     for item in events:
@@ -475,6 +566,10 @@ def diagnose(vault: pathlib.Path) -> dict[str, Any]:
         "named_vault_path": str(named) if named else None,
         "named_vault_candidates": [str(c) for c in candidates],
         "obsidian_config_found": [str(p) for p in obsidian_config_paths() if p.is_file()],
+        "raw_root": str(state_root() / "Raw"),
+        "raw_retention_days": os.environ.get(
+            "SESSION_JOURNAL_RAW_RETENTION_DAYS", str(DEFAULT_RAW_RETENTION_DAYS)
+        ),
         "warnings": warnings,
         "ok": bool(explicit or named),
     }
@@ -505,8 +600,8 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(diagnose(vault), ensure_ascii=False, indent=2))
         return 0
     if args.command == "hook":
-        result = handle_event(read_json_stdin(), args.agent, vault)
-        print(json.dumps({"continue": True, "sessionJournal": result}, ensure_ascii=False))
+        handle_event(read_json_stdin(), args.agent, vault)
+        print("{}")
         return 0
     if args.command == "summarize":
         print(json.dumps(summarize_session(args.session_id, vault), ensure_ascii=False))
