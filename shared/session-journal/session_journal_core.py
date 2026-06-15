@@ -3,11 +3,14 @@
 
 Capture-only by design: the hook is pure Python (no LLM), so it records a
 lightweight, append-only trail and a mechanical per-session summary — it does
-NOT try to author "knowledge". Two outputs per session:
+NOT try to author "knowledge". Two outputs:
 
-* ``Raw/<date>/<id>.jsonl`` — append-only full event log (source of truth).
-* ``Sessions/<date>/<id>.md`` — a single regenerated summary block (no verbatim
-  transcript; the full text lives in Raw).
+* ``<state>/Raw/<date>/<id>.jsonl`` — append-only full event log (source of
+  truth), kept OUTSIDE the Obsidian vault (under ``$XDG_STATE_HOME/session-journal``)
+  with retention, so the bulky trail never syncs.
+* ``<vault>/Journal/<date>.md`` — one daily note with a chronological,
+  upsert-able summary block per *meaningful* session (throwaway sessions are
+  skipped; no verbatim transcript — the full text lives in Raw).
 
 Durable wiki curation (distilling lessons / reusable knowledge) is an LLM task
 handled on demand by the ``/session-journal`` skill or by research-engine
@@ -91,7 +94,7 @@ def prune_raw(retention_days: int | None = None) -> None:
     if retention_days is None:
         try:
             retention_days = int(
-                os.environ.get("SESSION_JOURNAL_RAW_RETENTION_DAYS", DEFAULT_RAW_RETENTION_DAYS)
+                os.environ.get("SESSION_JOURNAL_RAW_RETENTION_DAYS", str(DEFAULT_RAW_RETENTION_DAYS))
             )
         except ValueError:
             retention_days = DEFAULT_RAW_RETENTION_DAYS
@@ -311,7 +314,8 @@ def append_raw(path: pathlib.Path, record: dict[str, Any]) -> None:
         f.write(json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n")
 
 
-TMP_CWD_MARKERS = ("/tmp/", "/private/tmp/", "/var/folders/")
+# macOS resolves $TMPDIR to /var/folders/... (often surfaced as /private/var/folders/...)
+TMP_CWD_MARKERS = ("/tmp/", "/private/tmp/", "/var/folders/", "/private/var/folders/")
 
 
 def is_trivial_cwd(cwd: str | None) -> bool:

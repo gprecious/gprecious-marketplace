@@ -30,7 +30,7 @@ env PLUGIN_ROOT="${CODEX_PLUGIN_ROOT}" python3 "${CODEX_HOOK}" hook --agent "Cod
 { "session_id": "codex-self-test", "hook_event_name": "PostToolUse", "cwd": "${WORK}", "tool_name": "Bash", "tool_input": { "command": "echo hi # this verbatim line must NOT appear" } }
 JSON
 env PLUGIN_ROOT="${CODEX_PLUGIN_ROOT}" python3 "${CODEX_HOOK}" hook --agent "Codex" <<JSON >/dev/null
-{ "session_id": "codex-self-test", "hook_event_name": "Stop", "cwd": "${WORK}", "turn_id": "t1", "stop_hook_active": false, "last_assistant_message": "Done. resolved: this whole line must NOT become a durable note." }
+{ "session_id": "codex-self-test", "hook_event_name": "Stop", "cwd": "${WORK}", "turn_id": "t1", "stop_hook_active": false, "last_assistant_message": "Done. Daily note keeps one upsert-able block per meaningful session." }
 JSON
 
 # --- trivial session (tmp cwd, no real prompt) → must be SKIPPED ---
@@ -82,5 +82,20 @@ test "${COUNT}" -eq 1
 # 7. Manual summarize still works against the external raw + daily note.
 python3 "${ROOT}/shared/session-journal/session_journal_core.py" summarize --vault "${VAULT}" --session-id codex-self-test >/tmp/session-journal-summary.json
 grep -q "daily_note" /tmp/session-journal-summary.json
+
+# 8. trivial-cwd classification: macOS real temp paths are trivial; "tmp" as a
+#    substring of a real project dir is NOT a false positive.
+python3 - "${ROOT}" <<'PY'
+import sys, importlib.util
+spec = importlib.util.spec_from_file_location("c", sys.argv[1] + "/shared/session-journal/session_journal_core.py")
+m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+assert m.is_trivial_cwd("/private/var/folders/ab/xyz/T/scratch"), "private var folders must be trivial"
+assert m.is_trivial_cwd("/var/folders/ab/xyz/T/scratch"), "var folders must be trivial"
+assert m.is_trivial_cwd("/tmp/scratch"), "/tmp must be trivial"
+assert m.is_trivial_cwd(None) and m.is_trivial_cwd(""), "empty cwd must be trivial"
+assert not m.is_trivial_cwd("/Users/x/mytmp-proj/work"), "false positive: mytmp-proj"
+assert not m.is_trivial_cwd("/Users/dev/gprecious-marketplace"), "false positive: real path"
+print("trivial-cwd unit checks ok")
+PY
 
 echo "session-journal self-test passed: vault=${VAULT} state=${STATE}"
