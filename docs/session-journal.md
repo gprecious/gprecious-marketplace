@@ -128,16 +128,35 @@ name vars.
 
 ```text
 Index.md
-Sessions/YYYY-MM-DD/<session-id>.md
-Raw/YYYY-MM-DD/<session-id>.jsonl
+Journal/YYYY-MM-DD.md      # one daily note: a chronological summary block per
+                           # MEANINGFUL session (throwaway sessions skipped)
 ```
 
-- `Raw/` is append-only JSONL from lifecycle hooks — the source of truth.
-- `Sessions/` is one markdown note per session carrying a **regenerated summary
-  block only** (recent prompt + result first-lines and the set of tool names) —
-  not a verbatim transcript. The full text lives in `Raw/`.
+- `Journal/<date>.md` is **one note per day**. Each meaningful session gets a
+  single upsert-able block (start time, workspace, agent, recent prompt + result
+  first-lines, tool names) delimited by `<!-- session:<id>:start -->` markers, so
+  later turns refresh the block in place instead of duplicating it. Sessions are
+  listed in first-seen (chronological) order; throwaway sessions (a tmp working
+  dir, or no real prompt/result) are skipped — not every session is listed.
+- The bulky append-only raw log no longer lives in the vault — see **Raw Logs**.
 
-There is **no** auto-generated `Wiki/` folder (removed in 0.5.0 — see below).
+There is **no** auto-generated `Wiki/` folder (removed in 0.5.0 — see below), and
+no per-session `Sessions/` files (replaced by the daily note in 0.6.0).
+
+## Raw Logs (outside the vault)
+
+The full append-only JSONL event trail — the source of truth the daily block is
+rebuilt from — lives **outside any Obsidian vault**, resolved in this order:
+
+1. `SESSION_JOURNAL_STATE` (explicit path)
+2. `$XDG_STATE_HOME/session-journal`
+3. `~/.local/state/session-journal` (default)
+
+under `Raw/YYYY-MM-DD/<session-id>.jsonl`. On `SessionStart` the core prunes
+`Raw/<date>/` directories older than `SESSION_JOURNAL_RAW_RETENTION_DAYS` (default
+30). Keeping raw out of the vault means Obsidian Sync only carries the readable
+`.md` daily notes, never the heavy logs. `where` reports `raw_root` and
+`raw_retention_days`.
 
 ## AI-Generated Tagging
 
@@ -160,15 +179,17 @@ in `AI_TAGS` in the shared core.
 
 The plugin registers:
 
-- `SessionStart` to create the vault and session note.
-- `UserPromptSubmit` to record the prompt to the raw log and refresh the summary.
-- `PostToolUse` to record the tool name + command snippet to the raw log only
-  (the verbatim command is never copied into the session note).
-- `Stop` to record the final assistant message to the raw log and refresh the
-  summary block.
+- `SessionStart` to ensure the vault layout and prune old raw logs (it writes no
+  journal block — there is no content yet).
+- `UserPromptSubmit` to record the prompt to the raw log and, for a meaningful
+  session, create/refresh that session's block in the daily note.
+- `PostToolUse` to record the tool name to the raw log only (the verbatim command
+  is never copied into the daily note).
+- `Stop` to record the final assistant message to the raw log and create/refresh
+  the session's block in the daily note.
 
-The session note itself is never appended to event-by-event; it holds a single
-summary block that is regenerated from the raw log. The shared core is
+The daily note is never appended to event-by-event; each session has a single
+block that is regenerated (upserted in place) from the raw log. The shared core is
 `shared/session-journal/session_journal_core.py`. Claude and Codex plugin wrappers call this same core from their own hook entrypoints. Each wrapper resolves the core by walking up from its plugin root / cwd and, as a fallback, by locating the full marketplace checkout under the host tool's plugin install roots — so resolution never depends on the hook's working directory (cached plugin copies do not bundle `shared/`). Override with `SESSION_JOURNAL_CORE` if needed.
 
 ## Known Limitations
@@ -214,8 +235,9 @@ Its cross-session learning layer uses:
 
 `session-journal` follows the same durable-local-artifact idea at session granularity:
 
-- raw hook events are the audit trail (`Raw/`)
-- session markdown is the readable per-session summary (`Sessions/`)
+- raw hook events are the audit trail (`Raw/`, kept outside the vault)
+- the readable layer is the per-day journal note (`Journal/<date>.md`), one block
+  per meaningful session
 - the durable insight layer is **research-engine `/wiki`** (`LLM-Wiki/`),
   populated on demand — not auto-written by this plugin
 - Obsidian wikilinks make related concepts inspectable through the graph

@@ -14,18 +14,25 @@ in the marketplace.
 ## What the hooks record (capture-only)
 
 The hook is **pure Python — no LLM**, so it only captures; it never auto-authors
-"knowledge". Each session produces exactly two artifacts:
+"knowledge". It produces two things, and only **meaningful** sessions reach the
+readable note (throwaway sessions — a tmp working dir, or no real prompt/result —
+are skipped, so not every session is listed):
 
-- **`Raw/YYYY-MM-DD/<id>.jsonl`** — append-only full event log (source of truth).
-- **`Sessions/YYYY-MM-DD/<id>.md`** — a single **regenerated summary block**, not
-  a verbatim transcript. `SessionStart` creates it; `UserPromptSubmit` / `Stop`
-  refresh the summary (last few prompt + result first-lines, plus the set of tool
-  names used); `PostToolUse` only extends the raw log. The full text stays in Raw.
+- **`Journal/YYYY-MM-DD.md`** (in the vault) — one daily note holding a
+  chronological, **upsert-able summary block per session** (start time, workspace,
+  agent, recent prompt + result first-lines, tool names). `UserPromptSubmit` /
+  `Stop` create or refresh that session's block in place — re-running never
+  duplicates it; `SessionStart` / `PostToolUse` only touch the raw log.
+- **`Raw/YYYY-MM-DD/<id>.jsonl`** (OUTSIDE the vault, under
+  `$XDG_STATE_HOME/session-journal/`) — append-only full event log, the source of
+  truth the daily block is built from. Pruned past
+  `SESSION_JOURNAL_RAW_RETENTION_DAYS` (default 30), so the bulky trail never
+  enters the vault and Obsidian Sync only carries the readable `.md`.
 
 ```text
-Index.md
-Sessions/YYYY-MM-DD/<session-id>.md
-Raw/YYYY-MM-DD/<session-id>.jsonl
+<vault>/Index.md
+<vault>/Journal/YYYY-MM-DD.md                              # readable daily journal (synced)
+$XDG_STATE_HOME/session-journal/Raw/YYYY-MM-DD/<id>.jsonl  # raw log, machine-local
 ```
 
 There is **no auto-generated `Wiki/`** folder and no marker-based note extraction.
@@ -57,8 +64,8 @@ the shared core sees them. (Claude Code uses the `env` block of
 ### Connecting to an existing vault, AI notes kept distinct
 
 Target a dedicated **subfolder** of the vault, never its root — e.g.
-`LLM_OBSIDIAN_SUBDIR=AI-Journal`. Every generated note (Index, session) is stamped
-with frontmatter `tags: [ai-generated, session-journal]` and the Index opens with
+`LLM_OBSIDIAN_SUBDIR=AI-Journal`. Every generated note (Index, daily journal note)
+is stamped with frontmatter `tags: [ai-generated, session-journal]` and the Index opens with
 a `🤖 AI-generated` callout. Filter or exclude all plugin output with
 `tag:#ai-generated` in search/graph. Subfolder + tag gives file-tree, search, and
 graph separation from hand-authored notes.
@@ -77,8 +84,9 @@ vault, in which case pin `LLM_OBSIDIAN_VAULT` explicitly there.
 - **Already-installed machine**: update the plugin, add the env vars, restart, verify.
 - **Headless (no Obsidian app)**: name resolution can't read `obsidian.json` and
   falls back to default — set an explicit `LLM_OBSIDIAN_VAULT` there instead.
-- **Selective sync**: keep `AI-Journal/` included; `.jsonl` raw logs only sync if
-  "Sync all other file types" is on — leave it off to sync just readable `.md`.
+- **Selective sync**: keep `AI-Journal/` included. Raw `.jsonl` logs now live
+  **outside the vault** (`$XDG_STATE_HOME/session-journal/`), so there's nothing
+  bulky to exclude — Obsidian Sync only carries the readable daily notes.
 
 ## Verifying setup
 
@@ -126,6 +134,8 @@ hook. When the user asks to "save what we learned" / "make a wiki note":
   same-named vault is on this machine. Run `where`; if `warnings` is non-empty or
   `resolution_mode` is `name`, pin `LLM_OBSIDIAN_VAULT` to the live vault's
   absolute subfolder path.
-- **Session notes huge / full of verbatim transcript, or `Wiki/` full of stubs** —
-  pre-0.5.0 behavior. Update the plugin; the session note is now a summary block
-  only and auto-wiki is removed.
+- **One note per session / a `Sessions/` folder / in-vault `Raw/`** — pre-0.6.0
+  behavior. Update the plugin; sessions now roll up into one `Journal/<date>.md`
+  daily note (meaningful sessions only) and the raw log moved outside the vault.
+- **Session notes huge or `Wiki/` full of stubs** — pre-0.5.0 behavior; verbatim
+  transcripts and auto-wiki were already removed.
