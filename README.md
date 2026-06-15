@@ -33,7 +33,7 @@ gprecious-marketplace/
 | hetzner-master | Hetzner Proxmox VE 8 lab 배포·운영 runbook. LXC, Terraform state safety, Ansible rollout, Tailscale, monitoring, Supabase self-hosted LXC 템플릿(프로젝트별 복제) 포함 | 외부 repo (`github.com/gprecious/hetzner-master`) |
 | growth-marketer | 모바일 앱·웹/SaaS 마케팅 자동화. 서비스 분석(ICP·VOC) → 채널 추천 → 카피·플레이북·CRO·draft 캠페인 | `claude-plugins/growth-marketer` |
 | goalcraft | 요구사항·버그·작업 설명을 실행 주체(Claude Code/Codex)에 맞춘 goal 최적화 프롬프트로 변환. executor-adaptive — 누락 필드(완료조건·범위·검증) 질문 후 복붙용 프롬프트 생성, 장기작업은 /goal 활용 | `claude-plugins/goalcraft` |
-| session-journal | Claude Code/Codex 세션을 Obsidian vault에 기록 — append-only raw 로그 + 세션당 요약 노트 1개(verbatim 전사·자동 wiki 없음), 모두 #ai-generated 태깅 | `claude-plugins/session-journal` |
+| session-journal | Claude Code/Codex 세션을 Obsidian vault에 기록 — 일자별 단일 노트(`Journal/<date>.md`)에 의미있는 세션만 시간순 요약(throwaway 세션 skip), raw 로그는 vault 밖(`$XDG_STATE_HOME`, retention), verbatim 전사·자동 wiki 없음, 모두 #ai-generated 태깅 | `claude-plugins/session-journal` |
 
 ### 설치 방법
 
@@ -74,7 +74,7 @@ Claude marketplace에 있는 플러그인은 모두 Codex marketplace에도 노�
 | hetzner-master | Hetzner Proxmox lab deploy/ops runbook | `.agents/plugins/plugins/hetzner-master` |
 | growth-marketer | 모바일 앱·웹/SaaS 마케팅 자동화. 서비스 분석 → 채널 추천 → 카피·플레이북 | `.agents/plugins/plugins/growth-marketer` |
 | goalcraft | 요구사항을 실행 주체(Claude Code/Codex)에 맞춘 goal 최적화 프롬프트로 변환. executor-adaptive + 누락 필드 질문 + /goal 장기작업 | `.agents/plugins/plugins/goalcraft` |
-| session-journal | Codex/Claude hook 이벤트를 Obsidian vault에 append-only raw log + 세션당 요약 노트 1개로 저장 (verbatim 전사·자동 wiki 없음, #ai-generated 태깅) | `.agents/plugins/plugins/session-journal` |
+| session-journal | Codex/Claude hook 이벤트를 일자별 단일 노트(`Journal/<date>.md`, 의미있는 세션만 시간순)로 저장, raw log는 vault 밖(`$XDG_STATE_HOME`, retention) (verbatim 전사·자동 wiki 없음, #ai-generated 태깅) | `.agents/plugins/plugins/session-journal` |
 
 ### 설치 방법
 
