@@ -6,11 +6,13 @@ import Foundation
 public struct WorktreeModule: CleanupModule, @unchecked Sendable {
     public let id = "git-worktrees"
     public let displayName = "Git Worktrees"
+    public static let defaultScanSizeDescendantLimit = 20_000
 
     private let roots: [String]
     private let runner: any CommandRunner
     private let inspector: GitWorktreeInspector
     private let sizer: DirectorySizer
+    private let scanSizeDescendantLimit: Int?
     private let activitySignal: any ActivitySignal
     private let repoLocator: @Sendable ([String]) -> [String]
     private let executable: String
@@ -22,6 +24,7 @@ public struct WorktreeModule: CleanupModule, @unchecked Sendable {
                 sizer: DirectorySizer = DirectorySizer(),
                 activitySignal: (any ActivitySignal)? = nil,
                 repoLocator: (@Sendable ([String]) -> [String])? = nil,
+                scanSizeDescendantLimit: Int? = Self.defaultScanSizeDescendantLimit,
                 executable: String = "/usr/bin/env",
                 argPrefix: [String] = ["git"],
                 fileExists: (@Sendable (String) -> Bool)? = nil) {
@@ -29,6 +32,7 @@ public struct WorktreeModule: CleanupModule, @unchecked Sendable {
         self.runner = runner
         self.inspector = GitWorktreeInspector(runner: runner, executable: executable, argPrefix: argPrefix)
         self.sizer = sizer
+        self.scanSizeDescendantLimit = scanSizeDescendantLimit
         self.activitySignal = activitySignal ?? ProcessReferenceSignal(runner: runner)
         self.repoLocator = repoLocator ?? Self.defaultRepoLocator
         self.executable = executable
@@ -59,7 +63,7 @@ public struct WorktreeModule: CleanupModule, @unchecked Sendable {
                 guard WorktreeClassifier.classify(facts).0 == .reviewNeeded else { continue }
                 items.append(CleanupItem(
                     id: entry.path, path: entry.path,
-                    sizeBytes: sizer.size(of: entry.path), lastUsed: nil,
+                    sizeBytes: sizer.size(of: entry.path, maxDescendantEntries: scanSizeDescendantLimit), lastUsed: nil,
                     safety: .reviewNeeded,
                     reclaimMethod: .cliCommand(executable: executable,
                                                arguments: argPrefix + ["-C", repo, "worktree", "remove", entry.path])))

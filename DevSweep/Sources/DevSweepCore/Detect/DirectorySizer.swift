@@ -11,13 +11,25 @@ public struct DirectorySizer: @unchecked Sendable {
     }
 
     /// Total bytes of regular files under `path`. `0` if the path is missing/unreadable.
-    public func size(of path: String) -> Int64 {
+    /// When `maxDescendantEntries` is set, the walk stops after visiting that many child
+    /// filesystem entries under `path`; this gives scan-time callers a bounded estimate.
+    public func size(of path: String, maxDescendantEntries: Int? = nil) -> Int64 {
         var total: Int64 = 0
-        accumulate(path, into: &total)
+        var remainingDescendantEntries = maxDescendantEntries.map { max(0, $0) }
+        accumulate(path, into: &total, remainingDescendantEntries: &remainingDescendantEntries, countsAgainstBudget: false)
         return total
     }
 
-    private func accumulate(_ path: String, into total: inout Int64) {
+    private func accumulate(
+        _ path: String,
+        into total: inout Int64,
+        remainingDescendantEntries: inout Int?,
+        countsAgainstBudget: Bool = true
+    ) {
+        if countsAgainstBudget, let remaining = remainingDescendantEntries {
+            guard remaining > 0 else { return }
+            remainingDescendantEntries = remaining - 1
+        }
         guard let attrs = try? fileManager.attributesOfItem(atPath: path) else { return }
         let type = attrs[.type] as? FileAttributeType
         switch type {
@@ -26,7 +38,12 @@ public struct DirectorySizer: @unchecked Sendable {
         case .typeDirectory:
             guard let entries = try? fileManager.contentsOfDirectory(atPath: path) else { return }
             for entry in entries {
-                accumulate((path as NSString).appendingPathComponent(entry), into: &total)
+                if let remaining = remainingDescendantEntries, remaining <= 0 { break }
+                accumulate(
+                    (path as NSString).appendingPathComponent(entry),
+                    into: &total,
+                    remainingDescendantEntries: &remainingDescendantEntries
+                )
             }
         case .typeRegular:
             if let size = attrs[.size] as? Int64 { total += size }

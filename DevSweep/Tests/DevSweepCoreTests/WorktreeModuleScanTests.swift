@@ -70,6 +70,27 @@ private func makeRunner(repo: String) -> ScriptedCommandRunner {
     #expect(items.allSatisfy { $0.path != repo })
 }
 
+@Test func scanBoundsWorktreeSizingDuringDetection() async {
+    let tmp = TempDir(); defer { tmp.cleanup() }
+    let repo = tmp.makeDir("repo")
+    tmp.writeFile("repo/.worktrees/cand/a.txt", String(repeating: "a", count: 10))
+    tmp.writeFile("repo/.worktrees/cand/b.txt", String(repeating: "b", count: 10))
+    tmp.writeFile("repo/.worktrees/cand/c.txt", String(repeating: "c", count: 10))
+    let runner = makeRunner(repo: repo)
+    let module = WorktreeModule(
+        roots: [],
+        runner: runner,
+        activitySignal: InactiveSignal(),
+        repoLocator: { _ in [repo] },
+        scanSizeDescendantLimit: 2
+    )
+
+    let items = await module.scan()
+
+    #expect(items.count == 1)
+    #expect(items[0].sizeBytes == 20)
+}
+
 @Test func scanUnavailableWhenGitMissing() async {
     let runner = ScriptedCommandRunner(["/usr/bin/env git --version": [.init(exitCode: 127)]])
     let module = WorktreeModule(roots: [], runner: runner, activitySignal: InactiveSignal(), repoLocator: { _ in [] })

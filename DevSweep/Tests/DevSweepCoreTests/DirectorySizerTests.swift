@@ -24,3 +24,13 @@ import Testing
     let sizer = DirectorySizer()
     #expect(sizer.size(of: "/nonexistent/devsweep/path") == 0)
 }
+
+@Test func directorySizerStopsAtDescendantEntryBudget() {
+    let tmp = TempDir(); defer { tmp.cleanup() }
+    tmp.writeFile("a.txt", String(repeating: "a", count: 10))
+    tmp.writeFile("b.txt", String(repeating: "b", count: 10))
+    tmp.writeFile("c.txt", String(repeating: "c", count: 10))
+
+    let sizer = DirectorySizer()
+    #expect(sizer.size(of: tmp.url.path, maxDescendantEntries: 2) == 20)
+}
