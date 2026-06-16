@@ -40,6 +40,10 @@ final class AppCoordinator: ObservableObject {
     @Published private(set) var isScanning = false
     @Published private(set) var isReclaiming = false
 
+    /// FDA 권한 유무. SwiftUI(`MenuView` 배너)가 직접 관찰; status item은 `onFDAStateChange`로 푸시.
+    /// 최초 probe 전엔 낙관적 `true`(권한 있는 사용자에게 경고 플래시 방지) — `start()`의 `refreshFDA()`가 즉시 보정.
+    @Published private(set) var hasFullDiskAccess: Bool = true
+
     /// Currently selected menubar skin id. SwiftUI (`MenuView`) observes this directly; the AppKit
     /// status item is pushed updates via `onSkinChange`. Free skins are always selectable; paid skins
     /// only once owned (gated by `skinStore.canSelect`).
@@ -60,6 +64,14 @@ final class AppCoordinator: ObservableObject {
 
     /// Pure decision logic for re-applying a persisted paid skin / reverting a refunded one.
     private let skinReconciler = SkinSelectionReconciler()
+
+    /// 주입 가능한 FDA probe(기본 실제 구현) + 순수 decider + 직전 권한 상태(전환 감지용).
+    private let fdaProbe: FullDiskAccessProbe
+    private let fdaDecider = FDAOnboardingDecider()
+    private var previousHasAccess: Bool?
+
+    /// 자동 팝오버 1회 게이팅 flag의 UserDefaults 키.
+    private static let fdaDidAutoShowKey = "DevSweep.didAutoShowFDAOnboarding"
 
     /// Free skin ids, precomputed for the reconciler (free skins are always selectable).
     private static let freeSkinIds = Set(SkinCatalog.free.map(\.id))
@@ -92,6 +104,12 @@ final class AppCoordinator: ObservableObject {
     /// swap its rendered image (SwiftUI observes `currentSkinId` directly).
     var onSkinChange: ((String) -> Void)?
 
+    /// FDA 상태가 갱신될 때 발화(메뉴바 아이콘 경고 tint 토글). status item이 구독.
+    var onFDAStateChange: ((Bool) -> Void)?
+
+    /// 첫 실행 1회 자동 팝오버 요청. status item이 구독해 프로그램적으로 팝오버를 연다.
+    var requestAutoOpenPopover: (() -> Void)?
+
     private let store: any Store
     private let scanCoordinator: ScanCoordinator
     private let reclaimRouter: ReclaimRouter
@@ -108,8 +126,9 @@ final class AppCoordinator: ObservableObject {
     /// more before settling — guarantees the post-reclaim re-scan is never silently dropped.
     private var rescanPending = false
 
-    init(config: AppConfig = .default) {
+    init(config: AppConfig = .default, fdaProbe: FullDiskAccessProbe = TCCDatabaseProbe()) {
         self.config = config
+        self.fdaProbe = fdaProbe
         self.skinStore = SkinStore(backend: purchaseBackend)
 
         // Restore the persisted skin selection. A free skin applies immediately; a persisted *paid*
@@ -155,6 +174,7 @@ final class AppCoordinator: ObservableObject {
     /// and run one initial scan so the indicator reflects reality at launch.
     func start() {
         notifier.requestAuthorizationIfPossible()
+        refreshFDA()
 
         // Load IAP products + entitlements, then reconcile the persisted skin selection against what
         // the user actually owns (re-apply a persisted paid skin; revert a refunded one). The
@@ -179,7 +199,33 @@ final class AppCoordinator: ObservableObject {
         self.watcher = watcher
         watcher.start()
 
-        Task { await self.scanNow() }
+        // 권한이 있을 때만 초기 스캔(denied면 0 반환이라 강행 안 함). 이후 granted 전환은 refreshFDA가 재스캔.
+        if hasFullDiskAccess {
+            Task { await self.scanNow() }
+        }
+    }
+
+    /// probe로 FDA 상태를 최신화하고, decision을 발행/콜백으로 전파한다. denied→granted 전환을
+    /// 감지하면 즉시 재스캔(1회). 자동 팝오버는 첫 실행에만(decider가 게이트); flag는 콜백 발화 *전에*
+    /// 저장해, 팝오버 오픈이 유발하는 재진입 refreshFDA가 같은 자동 팝오버를 다시 띄우지 못하게 한다.
+    func refreshFDA() {
+        let status = fdaProbe.check()
+        let granted = (status == .granted)
+        let didAutoShowBefore = UserDefaults.standard.bool(forKey: Self.fdaDidAutoShowKey)
+        let decision = fdaDecider.decide(status: status, didAutoShowBefore: didAutoShowBefore)
+        let shouldRescan = fdaDecider.shouldRescanOnTransition(previousHasAccess: previousHasAccess, newStatus: status)
+
+        previousHasAccess = granted
+        hasFullDiskAccess = granted
+        onFDAStateChange?(granted)
+
+        if decision.autoOpenPopover {
+            UserDefaults.standard.set(true, forKey: Self.fdaDidAutoShowKey)
+            requestAutoOpenPopover?()
+        }
+        if shouldRescan {
+            Task { await scanNow() }
+        }
     }
 
     /// User pressed "Scan now" in the menu — force a manual trigger through the watcher/policy.
