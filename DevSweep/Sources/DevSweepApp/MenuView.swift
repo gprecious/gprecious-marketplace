@@ -9,8 +9,16 @@ struct MenuView: View {
     @ObservedObject var skinStore: SkinStore
     @State private var dryRun = true
 
+    /// FDA 설정 딥링크 런처(기본 실제 구현) + "나중에" 팝오버 닫기 콜백(status item이 주입).
+    var settingsLauncher: SettingsLauncher = SystemSettingsLauncher()
+    var onDismiss: () -> Void = {}
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
+            if !coordinator.hasFullDiskAccess {
+                fdaBanner
+                Divider()
+            }
             header
             Divider()
             moduleList
@@ -23,6 +31,32 @@ struct MenuView: View {
         }
         .padding(16)
         .frame(width: 300)
+    }
+
+    /// 권한 없을 때만 노출되는 경고 배너 — ⚠ + 설명 + [설정 열기]/[나중에]. "나중에"는 영구 dismiss 아님
+    /// (불변식 3): 권한 없으면 다음 팝오버 오픈 시 재등장.
+    private var fdaBanner: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.orange)
+                Text("전체 디스크 접근 권한 필요")
+                    .font(.callout)
+                    .fontWeight(.semibold)
+            }
+            Text("권한이 없으면 디스크 스캔이 빈 결과를 반환합니다. 시스템 설정에서 DevSweep을 허용해 주세요.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 8) {
+                Button("설정 열기") { settingsLauncher.openFullDiskAccessSettings() }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+                Button("나중에") { onDismiss() }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+            }
+        }
     }
 
     private var header: some View {
