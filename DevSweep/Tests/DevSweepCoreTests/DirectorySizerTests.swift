@@ -34,3 +34,7 @@ import Testing
     let sizer = DirectorySizer()
     #expect(sizer.size(of: tmp.url.path, maxDescendantEntries: 2) == 20)
 }
+
+@Test func defaultScanDescendantBudgetIsSmallEnoughForMenuBarLaunch() {
+    #expect(DirectorySizer.defaultScanDescendantLimit <= 1_000)
+}
