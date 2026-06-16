@@ -4,7 +4,7 @@ import Foundation
 /// ParentProjectActivitySignal) so behavior is deterministic: symlinks are NOT
 /// followed (attributesOfItem uses lstat), unreadable entries are skipped.
 public struct DirectorySizer: @unchecked Sendable {
-    public static let defaultScanDescendantLimit = 1_000
+    public static let defaultScanDescendantLimit = 0
 
     private let fileManager: FileManager
 
@@ -38,6 +38,7 @@ public struct DirectorySizer: @unchecked Sendable {
         case .typeSymbolicLink:
             return  // never follow links
         case .typeDirectory:
+            if let remaining = remainingDescendantEntries, remaining <= 0 { return }
             guard let entries = try? fileManager.contentsOfDirectory(atPath: path) else { return }
             for entry in entries {
                 if let remaining = remainingDescendantEntries, remaining <= 0 { break }

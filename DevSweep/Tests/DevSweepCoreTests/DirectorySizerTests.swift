@@ -36,5 +36,5 @@ import Testing
 }
 
 @Test func defaultScanDescendantBudgetIsSmallEnoughForMenuBarLaunch() {
-    #expect(DirectorySizer.defaultScanDescendantLimit <= 1_000)
+    #expect(DirectorySizer.defaultScanDescendantLimit == 0)
 }
