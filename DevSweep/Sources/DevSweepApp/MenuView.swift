@@ -113,7 +113,15 @@ struct MenuView: View {
     }
 
     private var actions: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        let actionPresentation = MenuActionPresentation(
+            hasFullDiskAccess: coordinator.hasFullDiskAccess,
+            isScanning: coordinator.isScanning,
+            isReclaiming: coordinator.isReclaiming,
+            currentItemCount: coordinator.currentItems.count,
+            hasDisplayedResults: coordinator.reclaimableBytes > 0 || !coordinator.topModules.isEmpty
+        )
+
+        return VStack(alignment: .leading, spacing: 8) {
             Button {
                 coordinator.requestManualScan()
             } label: {
@@ -128,7 +136,7 @@ struct MenuView: View {
                     Text(coordinator.isScanning ? "스캔 중…" : "지금 스캔")
                 }
             }
-            .disabled(coordinator.isScanning)
+            .disabled(actionPresentation.scanDisabled)
             .animation(.default, value: coordinator.isScanning)
 
             Toggle("드라이런(미삭제 시뮬레이션)", isOn: $dryRun)
@@ -142,7 +150,14 @@ struct MenuView: View {
             } label: {
                 Label(dryRun ? "회수 미리보기" : "승인 회수 실행", systemImage: "trash")
             }
-            .disabled(coordinator.currentItems.isEmpty || coordinator.isScanning || coordinator.isReclaiming)
+            .disabled(actionPresentation.reclaimDisabled)
+
+            if let unavailableMessage = actionPresentation.unavailableMessage {
+                Label(unavailableMessage, systemImage: "info.circle")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
     }
 

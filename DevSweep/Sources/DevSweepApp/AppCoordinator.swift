@@ -68,6 +68,8 @@ final class AppCoordinator: ObservableObject {
     /// 주입 가능한 FDA probe(기본 실제 구현) + 순수 decider + 직전 권한 상태(전환 감지용).
     private let fdaProbe: FullDiskAccessProbe
     private let fdaDecider = FDAOnboardingDecider()
+    private let startupScanPresentation = StartupScanPresentation()
+    private let scanPermissionPolicy = ScanPermissionPolicy()
     private var previousHasAccess: Bool?
 
     /// 자동 팝오버 1회 게이팅 flag의 UserDefaults 키.
@@ -199,9 +201,14 @@ final class AppCoordinator: ObservableObject {
         self.watcher = watcher
         watcher.start()
 
-        // 권한이 있을 때만 초기 스캔(denied면 0 반환이라 강행 안 함). 이후 granted 전환은 refreshFDA가 재스캔.
-        if hasFullDiskAccess {
-            Task { await self.scanNow() }
+        // 먼저 저장된 마지막 스캔을 복원해 시작 화면이 "0 bytes"로 퇴행하지 않게 한다.
+        // 권한이 있으면 곧바로 실제 스캔으로 최신화하고, denied면 마지막 정상 결과를 유지한다.
+        Task { [weak self] in
+            guard let self else { return }
+            await self.restoreLatestScan()
+            if self.scanPermissionPolicy.canRunScan(hasFullDiskAccess: self.hasFullDiskAccess) {
+                await self.scanNow()
+            }
         }
     }
 
@@ -230,6 +237,10 @@ final class AppCoordinator: ObservableObject {
 
     /// User pressed "Scan now" in the menu — force a manual trigger through the watcher/policy.
     func requestManualScan() {
+        guard scanPermissionPolicy.canRunScan(hasFullDiskAccess: hasFullDiskAccess) else {
+            refreshFDA()
+            return
+        }
         watcher?.triggerManual()
     }
 
@@ -284,6 +295,7 @@ final class AppCoordinator: ObservableObject {
     /// re-runs once more) rather than dropped, so a watcher trigger can't shadow a post-reclaim
     /// refresh.
     func scanNow() async {
+        guard scanPermissionPolicy.canRunScan(hasFullDiskAccess: hasFullDiskAccess) else { return }
         if isScanning {
             rescanPending = true
             return
@@ -347,6 +359,21 @@ final class AppCoordinator: ObservableObject {
             lastNotifiedAt = Date()
         }
 
+        onStateChange?(reclaimableBytes)
+    }
+
+    private func restoreLatestScan() async {
+        guard let snapshot = startupScanPresentation.restore(
+            from: await store.latestScan(),
+            moduleNames: moduleNames
+        ) else { return }
+
+        reclaimableBytes = snapshot.reclaimableBytes
+        topModules = snapshot.topModules.map {
+            TopModule(module: $0.module, name: $0.name, bytes: $0.bytes)
+        }
+        lastScanDate = snapshot.lastScanDate
+        lastScanBox.date = snapshot.lastScanDate
         onStateChange?(reclaimableBytes)
     }
 }

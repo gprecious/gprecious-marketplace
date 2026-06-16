@@ -2,41 +2,50 @@ import AppKit
 import SwiftUI
 import DevSweepCore
 
-/// Owns the `NSStatusItem` and its click-through popover. The button shows the reclaimable total;
+/// Owns the `NSStatusItem` and its click-through menu. The button shows the reclaimable total;
 /// its icon tint escalates with the gauge thresholds (grey `< low`, yellow `low–high`, red
-/// `>= high`) while the title stays readable on dark menubars. Clicking toggles a transient
-/// popover hosting the SwiftUI `MenuView`.
+/// `>= high`) while the title stays readable on dark menubars. Clicking opens a system menu hosting
+/// the SwiftUI `MenuView`.
 @MainActor
-final class StatusItemController: NSObject {
+final class StatusItemController: NSObject, NSMenuDelegate {
     /// Menubar icon height in points (Apple's status item images are ~18pt tall).
     private static let iconHeight: CGFloat = 18
 
     private let coordinator: AppCoordinator
     private let statusItem: NSStatusItem
-    private let popover = NSPopover()
+    private let menu = NSMenu()
+    private let menuItem = NSMenuItem()
+    private let hostingView: NSHostingView<MenuView>
     private let skinRenderer: SkinRenderer
 
     init(coordinator: AppCoordinator) {
         self.coordinator = coordinator
         self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         self.skinRenderer = SkinRenderer(config: coordinator.config, skinId: coordinator.currentSkinId)
-        super.init()
-
-        popover.behavior = .transient
-        popover.contentViewController = NSHostingController(
+        self.hostingView = NSHostingView(
             rootView: MenuView(
                 coordinator: coordinator,
                 skinStore: coordinator.skinStore,
-                settingsLauncher: SystemSettingsLauncher(),
-                onDismiss: { [weak self] in self?.popover.performClose(nil) }
+                settingsLauncher: SystemSettingsLauncher()
             )
         )
+        super.init()
+
+        hostingView.rootView = MenuView(
+            coordinator: coordinator,
+            skinStore: coordinator.skinStore,
+            settingsLauncher: SystemSettingsLauncher(),
+            onDismiss: { [weak self] in self?.menu.cancelTracking() }
+        )
+        menu.delegate = self
+        menu.addItem(menuItem)
+        menuItem.view = hostingView
 
         if let button = statusItem.button {
-            button.target = self
-            button.action = #selector(togglePopover)
             button.imagePosition = .imageLeading
         }
+        statusItem.menu = menu
+        updateMenuSize()
         render(bytes: coordinator.reclaimableBytes)
 
         // The status item isn't a SwiftUI view, so the coordinator pushes byte updates here.
@@ -54,9 +63,9 @@ final class StatusItemController: NSObject {
             guard let self else { return }
             self.render(bytes: self.coordinator.reclaimableBytes)
         }
-        // 첫 실행 1회 자동 팝오버 — refresh를 다시 부르지 않는 show 경로(재진입 방지).
+        // 첫 실행 1회 자동 메뉴 — refresh를 다시 부르지 않는 show 경로(재진입 방지).
         coordinator.requestAutoOpenPopover = { [weak self] in
-            self?.showPopover()
+            self?.showMenu()
         }
     }
 
@@ -74,47 +83,22 @@ final class StatusItemController: NSObject {
         button.contentTintColor = style.imageTint
     }
 
-    @objc private func togglePopover() {
-        if popover.isShown {
-            popover.performClose(nil)
-        } else {
-            // 사용자가 열 때마다 권한 재확인 → granted 전환 시 배너 즉시 제거 + 재스캔(spec §4.3).
-            coordinator.refreshFDA()
-            showPopover()
-        }
+    func menuWillOpen(_ menu: NSMenu) {
+        // 사용자가 열 때마다 권한 재확인 → granted 전환 시 배너 즉시 제거 + 재스캔(spec §4.3).
+        coordinator.refreshFDA()
+        updateMenuSize()
     }
 
-    /// 팝오버를 연다(재진입 방지를 위해 refresh는 호출하지 않음 — 자동 팝오버 경로가 이 메서드를 직접 쓴다).
-    private func showPopover() {
-        guard let button = statusItem.button, !popover.isShown else { return }
-        let anchor = StatusItemPresentation.popoverAnchorRect(in: button.bounds)
-        popover.show(relativeTo: anchor, of: button, preferredEdge: .minY)
-        popover.contentViewController?.view.window?.makeKey()
-        keepPopoverInsideVisibleScreen(relativeTo: button)
+    /// 메뉴를 연다(재진입 방지를 위해 refresh는 호출하지 않음 — 자동 권한 안내 경로가 이 메서드를 직접 쓴다).
+    private func showMenu() {
+        guard let button = statusItem.button else { return }
+        updateMenuSize()
+        menu.popUp(positioning: nil, at: NSPoint(x: button.bounds.midX, y: button.bounds.minY), in: button)
     }
 
-    private func keepPopoverInsideVisibleScreen(relativeTo button: NSStatusBarButton) {
-        guard let window = popover.contentViewController?.view.window,
-              let screen = button.window?.screen ?? NSScreen.main else { return }
-
-        let visible = screen.visibleFrame.insetBy(dx: 8, dy: 8)
-        var frame = window.frame
-
-        if frame.maxY > visible.maxY {
-            frame.origin.y -= frame.maxY - visible.maxY
-        }
-        if frame.minY < visible.minY {
-            frame.origin.y += visible.minY - frame.minY
-        }
-        if frame.minX < visible.minX {
-            frame.origin.x += visible.minX - frame.minX
-        }
-        if frame.maxX > visible.maxX {
-            frame.origin.x -= frame.maxX - visible.maxX
-        }
-
-        if frame != window.frame {
-            window.setFrame(frame, display: true)
-        }
+    private func updateMenuSize() {
+        hostingView.layoutSubtreeIfNeeded()
+        let fitting = hostingView.fittingSize
+        hostingView.frame.size = NSSize(width: max(300, fitting.width), height: fitting.height)
     }
 }
