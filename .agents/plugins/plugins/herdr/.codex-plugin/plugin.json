@@ -1,7 +1,7 @@
 {
   "name": "herdr",
-  "version": "0.9.0",
-  "description": "herdr workspace/tab/pane/agent orchestration. Parallel Claude Code + Codex workers; tunes worker model/effort by difficulty (latest-model check) with ultracode/goalcraft/goal support.",
+  "version": "0.10.0",
+  "description": "herdr workspace/tab/pane orchestration for visible Claude Code + Codex worker panes. Prefers subagent/lightweight delegation first; opens a new herdr pane only when a visible TUI, separate CLI/account/browser state, or an explicit pane fan-out is needed (v0.10 routing gate). Tunes worker model/effort by difficulty (latest-model check) with ultracode/goalcraft/goal support.",
   "author": {
     "name": "gprecious",
     "email": "gprecious@users.noreply.github.com",
@@ -19,7 +19,7 @@
   "interface": {
     "displayName": "herdr",
     "shortDescription": "Control herdr multi-pane agent workflows.",
-    "longDescription": "Use herdr to create isolated workspaces, split panes, spawn Claude Code or Codex workers, inject prompts, wait for agent status, and collect verification output. v0.5 adds difficulty-based autonomous tuning of each worker's model and effort (with a runtime latest-model check, no stale hardcoding), ultracode (Claude Code setting = xhigh + auto Workflow orchestration, 2-level fan-out), and goalcraft/goal usage.",
+    "longDescription": "Use herdr to create isolated workspaces, split panes, spawn Claude Code or Codex workers, inject prompts, wait for agent status, and collect verification output. v0.5 adds difficulty-based autonomous tuning of each worker's model and effort (with a runtime latest-model check, no stale hardcoding), ultracode (Claude Code setting = xhigh + auto Workflow orchestration, 2-level fan-out), and goalcraft/goal usage. v0.10 adds a routing gate that prefers subagents/lightweight delegation and only opens herdr panes when a visible TUI, separate CLI/account/browser state, or an explicit pane fan-out is required.",
     "developerName": "gprecious",
     "category": "Productivity",
     "capabilities": [

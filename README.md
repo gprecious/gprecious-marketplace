@@ -29,7 +29,7 @@ gprecious-marketplace/
 | research-engine | YouTube/arXiv/GitHub/blog/topic 심층 분석 + Notion 미러링 + /research-visualize (차트·Mermaid·PPT 슬라이드) | 외부 repo (`github.com/gprecious/research-engine`) |
 | app-release | 크로스 스택 모바일 스토어 릴리즈 파이프라인 (Expo/Capacitor). ASC + Play 메타데이터/스크린샷/상태/승격/거절대응 자동화 | `claude-plugins/app-release` |
 | cmux | cmux 멀티페인 위에서 Claude Code/Codex 세션을 역할별 페인(plan/design/test/dev/review)으로 자동 오케스트레이션. 패널 간 메시지 송수신 skill 포함 | `claude-plugins/cmux` |
-| herdr | herdr 위에서 Claude Code + Codex 워커 N개를 3×3 grid (한 탭 최대 9개) + 탭 spillover 로 병렬 spawn / 대기 / 결과 회수 / 자동 정리 | `claude-plugins/herdr` |
+| herdr | herdr 위에서 Claude Code + Codex 워커를 visible TUI pane 으로 병렬 실행. v0.10 라우팅 게이트로 subagent/lightweight delegation 을 먼저 검토하고, visible TUI·별도 CLI/account/browser state·명시적 pane fan-out 이 필요할 때만 새 pane 생성 (3×3 grid + 탭 spillover, 자동 정리) | `claude-plugins/herdr` |
 | hetzner-master | Hetzner Proxmox VE 8 lab 배포·운영 runbook. LXC, Terraform state safety, Ansible rollout, Tailscale, monitoring, Supabase self-hosted LXC 템플릿(프로젝트별 복제) 포함 | 외부 repo (`github.com/gprecious/hetzner-master`) |
 | growth-marketer | 모바일 앱·웹/SaaS 마케팅 자동화. 서비스 분석(ICP·VOC) → 채널 추천 → 카피·플레이북·CRO·draft 캠페인 | `claude-plugins/growth-marketer` |
 | goalcraft | 요구사항·버그·작업 설명을 실행 주체(Claude Code/Codex)에 맞춘 goal 최적화 프롬프트로 변환. executor-adaptive — 누락 필드(완료조건·범위·검증) 질문 후 복붙용 프롬프트 생성, 장기작업은 /goal 활용 | `claude-plugins/goalcraft` |
@@ -69,7 +69,7 @@ Claude marketplace에 있는 플러그인은 모두 Codex marketplace에도 노�
 | research-engine | URL/topic 리서치 → cited markdown report | `.agents/plugins/plugins/research-engine` |
 | app-release | 모바일 앱 스토어 릴리즈 workflow | `.agents/plugins/plugins/app-release` |
 | cmux | cmux 기반 멀티-agent orchestration | `.agents/plugins/plugins/cmux` |
-| herdr | herdr 기반 worker pane orchestration | `.agents/plugins/plugins/herdr` |
+| herdr | herdr 기반 worker pane orchestration (v0.10 subagent-우선 라우팅 게이트) | `.agents/plugins/plugins/herdr` |
 | youtube-shorts-orchestrator | YouTube Shorts 제작 workflow | `.agents/plugins/plugins/youtube-shorts-orchestrator` |
 | hetzner-master | Hetzner Proxmox lab deploy/ops runbook | `.agents/plugins/plugins/hetzner-master` |
 | growth-marketer | 모바일 앱·웹/SaaS 마케팅 자동화. 서비스 분석 → 채널 추천 → 카피·플레이북 | `.agents/plugins/plugins/growth-marketer` |

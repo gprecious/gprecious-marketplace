@@ -1,40 +1,62 @@
 ---
 name: herdr-orchestrator
 description: |
-  herdr (terminal-native agent multiplexer) 위에서 Claude Code 와 Codex 워커를
-  병렬 spawn → prompt 주입 → 완료 대기 → 결과 회수 → 자동 정리 하는 경량
-  orchestrator. 한 tab 당 최대 9 pane (3x3 grid), 9개 초과 시 새 tab 분기.
-  사용자가 "herdr 로 claude+codex 같이", "두 에이전트 병렬", "둘한테 동시에 시켜",
-  "herdr orchestrator", "herdr pane 새로 띄워서 codex 한테도", "여러 worker 병렬",
-  "어려운 건 센 모델로 쉬운 건 싸게" 같은 의도를 표현할 때 발동. herdr 안에서만
-  (HERDR_ENV=1) 동작. worker 의 model·effort 는 난이도에 따라 orchestrator 가 자율
-  조정하고(최신 모델 확인 후 선택), goalcraft/`/goal` 도 재량껏 활용.
-  Claude Code / Codex 어느 쪽에서 호출해도 호출자 = orchestrator, worker pane 은
-  호출자 workspace 안의 새 tab 에 별도 spawn 하는 동일 절차 (workspace 는 새로
-  만들지 않는다).
+  Use when the user explicitly asks for herdr-based multi-agent orchestration,
+  multiple visible Claude/Codex worker panes, or cross-CLI comparison inside
+  herdr, especially when workers need distinct CLI/account/browser state.
 ---
 
 # herdr-orchestrator
 
-herdr 위에서 다수 worker (`claude`, `codex`) 를 병렬 호출하기 위한 free-form
-orchestrator. 협업 패턴 (fan-out / split / 역할 분담) 은 호출자가 prompt 로
-결정 — 이 skill 은 spawn·대기·회수·정리 primitive 만 제공한다.
+herdr 위에서 다수 worker (`claude`, `codex`) 를 **visible TUI pane** 으로 병렬
+호출하기 위한 free-form orchestrator. 기본 판단은 "subagent/lightweight delegation 먼저,
+herdr pane 은 필요할 때만" 이다. pane 을 만들기로 결정한 뒤의 협업 패턴 (fan-out / split /
+역할 분담) 은 호출자가 prompt 로 결정 — 이 skill 은 spawn·대기·회수·정리 primitive 를
+제공한다.
 
 ## 발동 / 비발동
 
 발동:
 
 - "herdr 로 claude+codex 둘 다 시켜봐"
-- "두 에이전트 병렬로 같은 task 던져봐"
 - "herdr pane 새로 띄워서 codex 한테도 시켜"
+- "여러 visible worker pane 으로 동시에 보여줘"
+- "브라우저 조작이 필요한 claude 워커와 일반 codex 워커를 분리해"
+- 서로 다른 CLI/OAuth 계정/브라우저 세션/샌드박스 상태가 필요한 worker 병렬 실행
+- 사용자가 herdr pane fan-out 자체를 명시
+
+아래 표현만으로는 발동하지 않음 (조건부 발동):
+
+- "두 에이전트 병렬로 같은 task 던져봐"
 - "한쪽은 plan, 다른쪽은 dev 로 나눠서 동시에"
-- worker 3개 이상 (예: claude 2 + codex 1, codex 9개 fan-out 등)
+- "여러 worker 병렬"
+- worker 3개 이상 fan-out
+
+이 경우 visible pane, 별도 CLI/account/browser state, 사용자의 herdr 지정이 추가로 없으면
+새 herdr pane 을 만들지 말고 subagent/lightweight delegation 으로 처리한다. 즉 "병렬"이라는
+단어만으로는 pane 생성 사유가 되지 않는다.
 
 비발동:
 
 - 단일 worker 만 필요 — `herdr` 공식 skill 직접 호출.
 - 단순 pane 송수신 — 다른 가벼운 skill.
+- visible TUI 가 필요 없는 코드 탐색/리뷰/계획 분담 — subagent/lightweight delegation 우선.
+- 같은 repo·같은 계정·같은 권한에서 독립 분석만 병렬화하면 충분한 경우 — subagent 우선.
 - herdr 밖 환경 — 이 skill 범위 밖.
+
+### Pane 생성 라우팅 게이트 (v0.10 — 토큰 절감)
+
+`WORKER_CMDS` 를 만들기 전에 다음 질문을 순서대로 통과해야 한다.
+
+1. 사용자가 **herdr**, **pane**, **visible TUI**, **Claude+Codex CLI 비교**를 명시했나?
+2. worker 마다 서로 다른 CLI/OAuth 계정/browser 인증/sandbox/cwd 관찰 상태가 필요한가?
+3. 사용자가 각 worker 진행 상황을 herdr pane 에서 직접 봐야 하는가?
+4. in-process subagent 나 기존 pane 메시지 송수신으로는 목표를 달성할 수 없는가?
+
+하나도 해당하지 않으면 이 skill 로 새 tab/pane 을 만들지 않는다. subagent 를 쓰되
+task 를 좁게 나누고, 필요하면 low/medium effort 를 우선한다. 하나 이상 해당해도 pane 수는
+최소화한다: 같은 목적의 3~9개 fan-out 보다 **1개 핵심 pane + 내부 subagent** 를 먼저 고려하고,
+실패·불일치·사용자 명시가 있을 때만 추가 pane 을 연다.
 
 ## 인증 / 과금 정책 (불변)
 
@@ -101,9 +123,10 @@ worker pane 에는 **항상 인터랙티브 TUI 세션**을 띄운다. prompt �
 
 ## 모델·effort 자율 조정 (v0.5 — 호출자 재량)
 
-orchestrator 는 각 worker pane 의 **model 과 effort 를 task 난이도에 따라 자율적으로
-고른다**. 어려운·장기·핵심 판단 작업엔 당시 가장 강한 모델 + 높은 effort 를, 단순·대량
-fan-out subworker 엔 싸고 빠른 모델 + 낮은 effort 를 배정해 비용·지능을 계층화한다.
+orchestrator 는 새 pane 이 필요하다고 판단한 경우에만 각 worker pane 의 **model 과 effort 를
+task 난이도에 따라 자율적으로 고른다**. 어려운·장기·핵심 판단 작업엔 당시 가장 강한 모델 +
+높은 effort 를, 단순·대량 병렬 분석은 가능하면 pane fan-out 대신 subagent/lightweight
+delegation 으로 낮은 effort 를 배정해 비용·지능을 계층화한다.
 
 ### 최신 모델 확인 (필수 — 구버전 하드코딩 금지)
 
@@ -136,10 +159,11 @@ fan-out subworker 엔 싸고 빠른 모델 + 낮은 effort 를 배정해 비용�
 | -------------------------------------------- | -------------------------------- | -------------- |
 | 매우 어려움 · 장기 자율 에이전트 · 핵심 판단 | 당시 최강(예: fable / 최신 opus) | high~xhigh~max |
 | 보통 구현·리뷰                               | 중상위(최신 opus/sonnet)         | high / medium  |
-| 단순·대량 fan-out subworker                  | 싸고 빠른(haiku 등)              | low / medium   |
+| visible TUI 가 꼭 필요한 단순 worker         | 싸고 빠른(haiku 등)              | low / medium   |
 
-아래 effort 계층 규약(1단계)과 합쳐: workflow subagent 는 low 로 두어 비용 절감, orchestrator
-pane(또는 핵심 worker)만 xhigh/max 로 깊게 판단.
+아래 라우팅 게이트와 effort 계층 규약(1단계)과 합쳐: 먼저 subagent 로 해결 가능한지 보고,
+workflow subagent 는 low 로 두어 비용 절감, orchestrator pane(또는 핵심 worker)만 xhigh/max 로
+깊게 판단.
 
 ### 실측 라우팅 정책 (v0.7 — 2026-06-11 model-bench, easy tier n=8 paired)
 
@@ -176,11 +200,13 @@ qplace 모노레포 실작업(api-cms tsc 에러 해소)으로 sonnet 4.6 / opus
 **ultracode 는 effort 레벨이 아니라 Claude Code 의 별도 설정**이다. 내부적으로 `xhigh` 를
 보내면서 + **substantive task 마다 Claude 가 알아서 Workflow(멀티에이전트 오케스트레이션)를
 구성·실행**한다 (이해→변경→검증을 여러 workflow 로 연쇄). 토큰 비용을 제약하지 않아 더 느리고
-비싸다 — 최대 철저함이 목표인 어려운 slot 에만 쓴다.
+비싸다 — 라우팅 게이트를 통과한 뒤에도 최대 철저함이 목표인 어려운 slot 에만 쓴다.
 
-**herdr 와의 결합 = 2단계 fan-out**: herdr 는 worker **pane** 을 펼치고, ultracode 워커 pane 은
-그 안에서 다시 Workflow **subagent** 를 펼친다. 어려운 단일 slot 을 ultracode 로 돌리면 그 pane
-하나가 통째로 멀티에이전트 오케스트레이션이 된다.
+**herdr 와의 결합 = 필요할 때만 2단계 fan-out**: 먼저 pane 없이 subagent/lightweight
+delegation 으로 충분한지 본다. visible TUI 또는 별도 CLI/account/browser state 때문에 herdr
+worker **pane** 을 열어야 할 때만, ultracode 워커 pane 이 그 안에서 다시 Workflow **subagent** 를
+펼친다. 어려운 단일 slot 을 ultracode 로 돌리면 그 pane 하나가 통째로 멀티에이전트
+오케스트레이션이 되므로, 여러 pane 을 여는 것보다 이 형태를 먼저 고려한다.
 
 켜는 법 (claude 워커 한정 — codex 엔 ultracode 없음, `/effort` 처럼 skip):
 
@@ -191,9 +217,9 @@ qplace 모노레포 실작업(api-cms tsc 에러 해소)으로 sonnet 4.6 / opus
   리터럴 키워드 `ultracode` 도 단일-턴 트리거지만 `/config` 에서 꺼져 있거나 버전 차로 안 먹을
   수 있어 — **worker 주입엔 자연어 워크플로 지시가 더 안정적**이다.
 
-비용 계층 규약(위 effort 계층 규약)과 결합: ultracode 워커가 펼치는 workflow subagent 는
-스크립트에서 low effort 로 두고 워커 본인만 깊게 — "비용 무제약" 이 subagent 까지 무분별하게
-번지지 않게 한다.
+비용 계층 규약(위 effort 계층 규약)과 결합: pane 밖 subagent 도, ultracode 워커가 펼치는 workflow
+subagent 도 가능한 한 low/medium effort 로 두고 핵심 orchestrator/pane 만 깊게 판단한다.
+"비용 무제약" 이 subagent 까지 무분별하게 번지지 않게 한다.
 
 ## goalcraft / goal 활용 (v0.5 — 호출자 재량)
 
@@ -255,6 +281,17 @@ worker 수 N 분배:
 
 ## 워크플로우
 
+### -1. Routing gate (필수)
+
+Preflight 와 `WORKER_CMDS` 구성 전에 **새 herdr pane 이 꼭 필요한지** 먼저 판정한다.
+
+- subagent/lightweight delegation 으로 충분하면 여기서 멈추고 이 skill 의 spawn 절차를
+  실행하지 않는다.
+- herdr pane 을 여는 경우에도 필요한 외부 세션 경계만 worker 로 센다. 예: "브라우저 인증을
+  가진 claude 1개 + codex 비교 1개" 는 2 pane 이지만, "리뷰 관점 6개" 는 보통 subagent 6개다.
+- 사용자가 "herdr 로", "pane 새로", "Claude/Codex 둘 다 visible 하게" 처럼 명시했거나,
+  worker 별 CLI/OAuth/browser/cwd 관찰 상태가 달라야 할 때만 다음 단계로 간다.
+
 ### 0. Preflight (필수)
 
 ```bash
@@ -282,14 +319,16 @@ echo "launcher: pane=$LAUNCHER_PANE  ws=$LAUNCHER_WS  tab=$LAUNCHER_TAB  (HERDR_
 
 ### 1. 호출자 결정 변수
 
-호출자(Claude Code 또는 Codex)는 skill body 진입 전에 두 배열을 정의한다.
+호출자(Claude Code 또는 Codex)는 routing gate 를 통과한 뒤에만 두 배열을 정의한다.
+배열에는 subagent 로 처리할 작업을 넣지 않고, 실제 visible TUI/session boundary 가 필요한
+worker 만 넣는다.
 
 ```bash
 # WORKER_CMDS = TUI 를 띄우는 명령만. prompt 절대 포함 금지 (-p / exec 금지 — 위 불변 규칙).
 WORKER_CMDS=(
   "claude --dangerously-skip-permissions"
   "codex --dangerously-bypass-approvals-and-sandbox"
-  # ... 최대 N 개. 동일 CLI 반복 OK (예: claude x4 + codex x2).
+  # ... 꼭 필요한 visible TUI/session boundary 만. 단순 리뷰 관점 fan-out 은 subagent 우선.
 )
 WORKER_PROMPTS=(
   "$PROMPT_FOR_SLOT_0"
@@ -344,15 +383,16 @@ for ((i=0; i<N; i++)); do : "${WORKER_BROWSER[$i]:=0}"; done
 
 협업 패턴 예시 (호출자가 prompt 단계에서 결정):
 
-- **fan-out** (같은 task) → `WORKER_PROMPTS` 모두 동일 문자열.
-- **split** → 호출자가 task 를 N 조각으로 쪼개 각 slot 에 다른 prompt.
-- **역할 분담** → slot 별로 claude/codex 비율 + prompt 를 호출자가 매핑.
+- **visible CLI 비교** → claude/codex 각각이 실제 TUI 세션이어야 할 때만 각 slot 에 배치.
+- **external state split** → browser 인증·계정·cwd 관찰 상태가 다른 worker 만 slot 에 배치.
+- **단순 fan-out / 리뷰 관점 분리** → 새 pane 대신 subagent/lightweight delegation 우선.
+- **역할 분담** → slot 별로 claude/codex 비율 + prompt 를 매핑하되, pane 이 필요한 역할만 포함.
 
 (v0.3) **effort 계층 규약** — `ultracode`/`xhigh` 워커에 prompt 를 줄 때 다음 한 줄을
 접미로 포함해 비용을 계층화한다: _"workflow 를 쓸 때 subagent 는 low effort 로 생성해
 비용을 절감하고, 너(orchestrator pane)만 xhigh 로 판단해라."_ — pane(세션) effort 는
-herdr 가 `WORKER_MODES`/`toggle_mode` 로 제어하지만, 워커가 띄우는 workflow subagent 의
-effort 는 워커가 작성하는 스크립트가 정하므로 prompt 규약으로 강제.
+herdr 가 `WORKER_MODES`/`toggle_mode` 로 제어하지만, pane 밖 subagent 와 워커가 띄우는
+workflow subagent 의 effort 는 별도 delegation/prompt 규약으로 강제.
 
 ### 2. workspace 결정 (호출자 workspace 공유 — 새로 만들지 않음)
 
@@ -735,9 +775,10 @@ fi
 
 ### Claude Code 호출자
 
-이 SKILL.md 자체가 발동. 위 워크플로우를 그대로 따라 bash 스니펫을 단계별 실행.
-호출자는 `WORKER_CMDS` / `WORKER_PROMPTS` 를 본인 컨텍스트 기반으로 구성하고,
-최종 `${OUTPUTS[@]}` 을 자연어로 사용자에게 보고.
+이 SKILL.md 자체가 발동하더라도 먼저 routing gate 를 통과해야 한다. 통과하지 못하면
+subagent/lightweight delegation 으로 처리하고, 통과한 경우에만 위 워크플로우의 bash 스니펫을
+단계별 실행한다. 호출자는 필요한 visible TUI/session boundary 만 `WORKER_CMDS` /
+`WORKER_PROMPTS` 로 구성하고, 최종 `${OUTPUTS[@]}` 을 자연어로 사용자에게 보고.
 
 ### Codex 호출자
 
@@ -749,45 +790,48 @@ Codex CLI 는 SKILL.md 자동 발동 메커니즘이 없으므로, 사용자가 
 2. 또는 호출자 codex 세션에서 `cat claude-plugins/herdr/skills/herdr-orchestrator/SKILL.md`
    를 먼저 읽고 동일 절차 수행.
 
-Codex 호출자도 본인은 orchestrator 로 남고, worker pane (claude/codex 어느 쪽이든)
-은 호출자 workspace 안의 새 tab 에 별도 spawn 한다.
+Codex 호출자도 본인은 orchestrator 로 남는다. routing gate 를 통과한 경우에만 worker pane
+(claude/codex 어느 쪽이든)을 호출자 workspace 안의 새 tab 에 별도 spawn 한다.
 
 ## 안전 / 격리 규칙 (요약)
 
-1. **HERDR_ENV 가드** — skill 시작점에서 무조건 확인. 실패 시 stop.
-2. **새 tab 강제 + LAUNCHER_TAB 격리** — 호출자 workspace 를 공유하되, worker 는
+1. **Routing gate 먼저** — `WORKER_CMDS` 를 만들기 전에 subagent/lightweight delegation 으로
+   충분한지 판정한다. visible TUI, 별도 CLI/OAuth/browser/cwd 상태, 명시적 herdr pane 요청 중
+   하나도 없으면 새 tab/pane 을 만들지 않는다.
+2. **HERDR_ENV 가드** — pane 생성 절차에 들어가면 skill 시작점에서 무조건 확인. 실패 시 stop.
+3. **새 tab 강제 + LAUNCHER_TAB 격리** — 호출자 workspace 를 공유하되, worker 는
    매번 **새 tab** 에 만든다. `LAUNCHER_TAB`(orchestrator 본인 pane) 및 기존 tab 은
    재사용·split 금지. 새 workspace 는 만들지 않는다 (workspace 누적 방지).
-3. **send 직전 worker-tab 검증** — pane 의 tab_id 가 worker `TAB_IDS` 에 속하고
+4. **send 직전 worker-tab 검증** — pane 의 tab_id 가 worker `TAB_IDS` 에 속하고
    `LAUNCHER_TAB` 이 아닐 때만 송신 (`is_worker_tab`).
-4. **(v0.9) 완료 시 자동 정리 (기본)** — 작업이 끝나면 orchestrator 가 자기가 연
+5. **(v0.9) 완료 시 자동 정리 (기본)** — 작업이 끝나면 orchestrator 가 자기가 연
    worker tab 을 닫는 게 기본이다. tab 단위로 모든 slot 성공이면 close, 실패 slot 이 있는
    tab 만 보존(디버깅용)하고 tabs / panes / rcs 안내. workspace/LAUNCHER_TAB 은 **절대**
    닫지 않는다. `KEEP_TABS=1` 로 자동 close 비활성(전부 보존).
-5. **인증 정책 불변** — API 키 사용 금지. OAuth CLI 만.
-6. **인터랙티브 TUI only** — worker 는 항상 TUI 로 띄우고 prompt 는 `send-text` 로
+6. **인증 정책 불변** — API 키 사용 금지. OAuth CLI 만.
+7. **인터랙티브 TUI only** — worker 는 항상 TUI 로 띄우고 prompt 는 `send-text` 로
    주입. `claude -p` / `codex exec` 등 headless one-shot 금지. spawn 후 worker
    tab 으로 focus 전환해 사용자가 실시간 관찰 가능하게 함.
-7. **(v0.3) 모드/모델 전환도 격리 가드 적용** — `toggle_mode`·`toggle_model` 은
+8. **(v0.3) 모드/모델 전환도 격리 가드 적용** — `toggle_mode`·`toggle_model` 은
    `send_prompt` 와 동일하게 송신 직전 pane tab_id 가 worker tab 인지(`is_worker_tab`)
    검증. codex pane 에는 `/effort`·`/model` 슬래시를 보내지 않는다(no-op skip — codex
    모델/effort 는 spawn 시 `-m`/`-c` 로만 고정).
-8. **(v0.5) 최신 모델 확인 후 선택** — worker 모델 배정 전 런타임에 사용 가능 목록을
+9. **(v0.5) 최신 모델 확인 후 선택** — worker 모델 배정 전 런타임에 사용 가능 목록을
    `/model`·`--help` 로 확인하고 구버전(opus-4-5 이하·sonnet-3.x·haiku-3.x 등)을 박지
    않는다. 자기 기억으로 모델 ID 추측 금지. goalcraft/`/goal` 활용은 호출자 재량(의무 아님).
-9. **(v0.6) launcher 식별은 `HERDR_PANE_ID` 로 못 박는다** — `LAUNCHER_WS`/`LAUNCHER_TAB`/
+10. **(v0.6) launcher 식별은 `HERDR_PANE_ID` 로 못 박는다** — `LAUNCHER_WS`/`LAUNCHER_TAB`/
    `LAUNCHER_PANE` 은 Preflight 에서 `herdr pane get "$HERDR_PANE_ID"` 로 확정한다.
    `focused`(사용자가 지금 보고 있는 pane)로 workspace/tab 을 **절대 추정하지 않는다** —
    orchestrator 가 도는 동안 focus 가 다른 workspace 로 이동하면 worker 가 그 엉뚱한
    workspace 에 생성되기 때문(이번에 수정한 버그). `HERDR_PANE_ID` 미설정이면 stop —
    focused 추측으로 fallback 하지 않는다 (`pane list` 출력엔 `.result.focused` 키 자체가
    없어 과거 fallback 도 신뢰 불가였다).
-10. **(v0.8) claude 워커 계정 분리** — claude 워커는 기본 개인(`ccp` · `~/.claude-personal`).
+11. **(v0.8) claude 워커 계정 분리** — claude 워커는 기본 개인(`ccp` · `~/.claude-personal`).
     `WORKER_BROWSER[i]=1` 슬롯(claude-in-chrome/브라우저 조작)만 회사(`ccq` · `~/.claude`,
     claude-in-chrome 인증 보유 유일 프로필). `build_launch()`→`claude_acct_prefix()` 가 base
     명령 앞에 prefix 합성. codex 워커엔 무효(ccq/ccp 는 claude 전용). ccq/ccp 는 ~/.zshrc 함수라
     pane 셸에서 미정의일 수 있어 env 인라인 fallback 을 동반한다.
-11. **(v0.9) send-text 직후 반드시 Enter** — 모든 pane 메시지(`send_prompt`·`toggle_mode`·
+12. **(v0.9) send-text 직후 반드시 Enter** — 모든 pane 메시지(`send_prompt`·`toggle_mode`·
     `toggle_model`·ad-hoc)는 `send-text` 후 곧바로 `send-keys Enter` 로 제출한다. Enter 가
     빠지면 prompt 가 입력창에 남아 워커가 멈춘다(잦은 사고). 송신 후 워커 실행 시작을
     확인하고, 미시작이면 Enter 를 재송신해 제출을 강제한다(빈 Enter 는 no-op 라 안전).
@@ -811,6 +855,12 @@ close 전 강한 경고" 를 안내할 것. (자동 감지는 v0.4 폴링 기능
 
 ## 변경 이력
 
+- **v0.10** (2026-06-16) — **subagent 우선 라우팅 + herdr pane 생성 최소화**.
+  `WORKER_CMDS` 구성 전 필수 routing gate 를 추가해 visible TUI, 별도 CLI/OAuth/browser/cwd
+  상태, 명시적 herdr pane 요청 중 하나가 없으면 새 tab/pane 을 만들지 않도록 했다. "두 에이전트
+  병렬", "여러 worker 병렬", 리뷰 관점 fan-out 은 기본적으로 subagent/lightweight delegation 으로
+  처리하고, pane 이 필요한 경우에도 1개 핵심 pane + 내부 subagent 를 먼저 고려한다. interactive
+  TUI only, send-text 후 Enter, tab 격리, 자동 cleanup 불변 규칙은 pane 생성 이후 절차로 보존.
 - **v0.9** (2026-06-14) — **메시지 송신 Enter 강제 + 작업 완료 시 worker tab 자동 close(기본)**.
   (1) "send-text 후 Enter 누락 → 워커 한참 멈춤" 사고 해소: `send_prompt` 가 텍스트 안착을
   확인한 뒤 반드시 Enter 로 제출(paste 레이스 방지)하고, prompt 주입 후 각 워커의 실행 시작을
