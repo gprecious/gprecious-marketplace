@@ -37,6 +37,22 @@ private func emptyLayerReclaimer(_ deleter: any FileSystemDeleter) -> Reclaimer 
     #expect(item.reclaimMethod == .deletePath(toTrash: false))
 }
 
+@Test func nodeModulesScanBoundsTargetSizingDuringDetection() async {
+    let tmp = TempDir(); defer { tmp.cleanup() }
+    tmp.writeFile("proj/node_modules/a.txt", String(repeating: "a", count: 10))
+    tmp.writeFile("proj/node_modules/b.txt", String(repeating: "b", count: 10))
+    tmp.writeFile("proj/node_modules/c.txt", String(repeating: "c", count: 10))
+    let module = NodeModulesModule(
+        roots: [tmp.url.path],
+        reclaimer: emptyLayerReclaimer(RecordingDeleter()),
+        scanSizeDescendantLimit: 2
+    )
+
+    let item = await module.scan().first!
+
+    #expect(item.sizeBytes == 20)
+}
+
 @Test func nodeModulesReclaimDeletesWhenLayerHasNoSignals() async {
     let tmp = TempDir(); defer { tmp.cleanup() }
     tmp.makeDir("proj/node_modules")

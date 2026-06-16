@@ -13,6 +13,7 @@ import Foundation
 public struct NodeModulesModule: CleanupModule, @unchecked Sendable {
     public let id = "node-modules"
     public let displayName = "Project dependencies (node_modules, venv)"
+    public static let defaultScanSizeDescendantLimit = DirectorySizer.defaultScanDescendantLimit
 
     private let roots: [String]
     private let excludedProjectNames: Set<String>
@@ -20,6 +21,7 @@ public struct NodeModulesModule: CleanupModule, @unchecked Sendable {
     private let prunedDirNames: Set<String>
     private let maxDepth: Int
     private let sizer: DirectorySizer
+    private let scanSizeDescendantLimit: Int?
     private let fileManager: FileManager
     private let reclaimer: Reclaimer
 
@@ -34,6 +36,7 @@ public struct NodeModulesModule: CleanupModule, @unchecked Sendable {
         ],
         maxDepth: Int = 8,
         sizer: DirectorySizer = DirectorySizer(),
+        scanSizeDescendantLimit: Int? = Self.defaultScanSizeDescendantLimit,
         fileManager: FileManager = .default
     ) {
         self.roots = roots
@@ -43,6 +46,7 @@ public struct NodeModulesModule: CleanupModule, @unchecked Sendable {
         self.prunedDirNames = prunedDirNames
         self.maxDepth = maxDepth
         self.sizer = sizer
+        self.scanSizeDescendantLimit = scanSizeDescendantLimit
         self.fileManager = fileManager
     }
 
@@ -82,7 +86,7 @@ public struct NodeModulesModule: CleanupModule, @unchecked Sendable {
                 items.append(CleanupItem(
                     id: full,
                     path: full,
-                    sizeBytes: sizer.size(of: full),
+                    sizeBytes: sizer.size(of: full, maxDescendantEntries: scanSizeDescendantLimit),
                     lastUsed: nil,
                     safety: .reviewNeeded,
                     reclaimMethod: .deletePath(toTrash: false)

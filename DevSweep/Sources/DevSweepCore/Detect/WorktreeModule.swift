@@ -6,7 +6,7 @@ import Foundation
 public struct WorktreeModule: CleanupModule, @unchecked Sendable {
     public let id = "git-worktrees"
     public let displayName = "Git Worktrees"
-    public static let defaultScanSizeDescendantLimit = 20_000
+    public static let defaultScanSizeDescendantLimit = DirectorySizer.defaultScanDescendantLimit
 
     private let roots: [String]
     private let runner: any CommandRunner

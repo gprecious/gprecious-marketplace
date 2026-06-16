@@ -6,6 +6,7 @@ import Foundation
 public struct PackageCacheModule: CleanupModule, @unchecked Sendable {
     public let id = "package-cache"
     public let displayName = "Package manager caches"
+    public static let defaultScanSizeDescendantLimit = DirectorySizer.defaultScanDescendantLimit
 
     /// How a tool's presence is detected.
     public enum ProbeMethod: Sendable {
@@ -29,6 +30,7 @@ public struct PackageCacheModule: CleanupModule, @unchecked Sendable {
     private let runner: any CommandRunner
     private let reclaimer: Reclaimer
     private let sizer: DirectorySizer
+    private let scanSizeDescendantLimit: Int?
     private let fileManager: FileManager
 
     public init(
@@ -36,12 +38,14 @@ public struct PackageCacheModule: CleanupModule, @unchecked Sendable {
         runner: any CommandRunner,
         reclaimer: Reclaimer,
         sizer: DirectorySizer = DirectorySizer(),
+        scanSizeDescendantLimit: Int? = Self.defaultScanSizeDescendantLimit,
         fileManager: FileManager = .default
     ) {
         self.tools = tools
         self.runner = runner
         self.reclaimer = reclaimer
         self.sizer = sizer
+        self.scanSizeDescendantLimit = scanSizeDescendantLimit
         self.fileManager = fileManager
     }
 
@@ -57,7 +61,7 @@ public struct PackageCacheModule: CleanupModule, @unchecked Sendable {
             items.append(CleanupItem(
                 id: "package-cache:\(tool.id)",
                 path: path,
-                sizeBytes: sizer.size(of: tool.cachePath),
+                sizeBytes: sizer.size(of: tool.cachePath, maxDescendantEntries: scanSizeDescendantLimit),
                 lastUsed: nil,
                 safety: .autoSafe,
                 reclaimMethod: tool.reclaim
