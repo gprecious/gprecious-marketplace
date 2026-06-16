@@ -3,8 +3,9 @@ import SwiftUI
 import DevSweepCore
 
 /// Owns the `NSStatusItem` and its click-through popover. The button shows the reclaimable total;
-/// its tint escalates with the gauge thresholds (grey `< low`, yellow `low–high`, red + bold
-/// `>= high`). Clicking toggles a transient popover hosting the SwiftUI `MenuView`.
+/// its icon tint escalates with the gauge thresholds (grey `< low`, yellow `low–high`, red
+/// `>= high`) while the title stays readable on dark menubars. Clicking toggles a transient
+/// popover hosting the SwiftUI `MenuView`.
 @MainActor
 final class StatusItemController: NSObject {
     /// Menubar icon height in points (Apple's status item images are ~18pt tall).
@@ -47,16 +48,15 @@ final class StatusItemController: NSObject {
 
     func render(bytes: Int64) {
         guard let button = statusItem.button else { return }
-        button.image = skinRenderer.image(forBytes: bytes, height: Self.iconHeight)
-        button.title = humanBytes(bytes)
-        button.contentTintColor = StatusIndicator.tint(
+        let style = StatusItemPresentation.style(
             forBytes: bytes,
             low: coordinator.config.gaugeLowBytes,
             high: coordinator.config.gaugeHighBytes
         )
-        button.font = bytes >= coordinator.config.gaugeHighBytes
-            ? .boldSystemFont(ofSize: NSFont.systemFontSize)
-            : .systemFont(ofSize: NSFont.systemFontSize)
+        button.image = skinRenderer.image(forBytes: bytes, height: Self.iconHeight)
+        button.imageScaling = .scaleProportionallyDown
+        button.attributedTitle = StatusItemPresentation.attributedTitle(humanBytes(bytes), style: style)
+        button.contentTintColor = style.imageTint
     }
 
     @objc private func togglePopover() {
@@ -64,18 +64,35 @@ final class StatusItemController: NSObject {
         if popover.isShown {
             popover.performClose(nil)
         } else {
-            popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+            let anchor = StatusItemPresentation.popoverAnchorRect(in: button.bounds)
+            popover.show(relativeTo: anchor, of: button, preferredEdge: .minY)
             popover.contentViewController?.view.window?.makeKey()
+            keepPopoverInsideVisibleScreen(relativeTo: button)
         }
     }
-}
 
-/// Pure mapping from a reclaimable-byte total to the status item's tint colour. `nil`-safe edges:
-/// `>= high` red, `>= low` yellow, otherwise the muted secondary label colour.
-enum StatusIndicator {
-    static func tint(forBytes bytes: Int64, low: Int64, high: Int64) -> NSColor? {
-        if bytes >= high { return .systemRed }
-        if bytes >= low { return .systemYellow }
-        return .secondaryLabelColor
+    private func keepPopoverInsideVisibleScreen(relativeTo button: NSStatusBarButton) {
+        guard let window = popover.contentViewController?.view.window,
+              let screen = button.window?.screen ?? NSScreen.main else { return }
+
+        let visible = screen.visibleFrame.insetBy(dx: 8, dy: 8)
+        var frame = window.frame
+
+        if frame.maxY > visible.maxY {
+            frame.origin.y -= frame.maxY - visible.maxY
+        }
+        if frame.minY < visible.minY {
+            frame.origin.y += visible.minY - frame.minY
+        }
+        if frame.minX < visible.minX {
+            frame.origin.x += visible.minX - frame.minX
+        }
+        if frame.maxX > visible.maxX {
+            frame.origin.x -= frame.maxX - visible.maxX
+        }
+
+        if frame != window.frame {
+            window.setFrame(frame, display: true)
+        }
     }
 }

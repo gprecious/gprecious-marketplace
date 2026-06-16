@@ -47,9 +47,19 @@ struct MenuView: View {
 
     @ViewBuilder private var moduleList: some View {
         if coordinator.topModules.isEmpty {
-            Text(coordinator.isScanning ? "스캔 중…" : "회수할 항목이 없습니다")
+            if coordinator.isScanning {
+                HStack(spacing: 8) {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text("스캔 중…")
+                }
                 .font(.callout)
                 .foregroundStyle(.secondary)
+            } else {
+                Text("회수할 항목이 없습니다")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
         } else {
             VStack(alignment: .leading, spacing: 6) {
                 ForEach(coordinator.topModules) { module in
@@ -73,9 +83,19 @@ struct MenuView: View {
             Button {
                 coordinator.requestManualScan()
             } label: {
-                Label("지금 스캔", systemImage: "arrow.clockwise")
+                HStack(spacing: 8) {
+                    if coordinator.isScanning {
+                        ProgressView()
+                            .controlSize(.small)
+                    } else {
+                        Image(systemName: "arrow.clockwise")
+                            .frame(width: 16)
+                    }
+                    Text(coordinator.isScanning ? "스캔 중…" : "지금 스캔")
+                }
             }
             .disabled(coordinator.isScanning)
+            .animation(.default, value: coordinator.isScanning)
 
             Toggle("드라이런(미삭제 시뮬레이션)", isOn: $dryRun)
                 .toggleStyle(.switch)
