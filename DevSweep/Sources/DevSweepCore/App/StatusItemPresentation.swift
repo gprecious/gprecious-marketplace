@@ -12,9 +12,11 @@ public enum StatusItemPresentation {
         public let titleFont: NSFont
     }
 
-    public static func style(forBytes bytes: Int64, low: Int64, high: Int64) -> Style {
+    public static func style(forBytes bytes: Int64, low: Int64, high: Int64, hasFullDiskAccess: Bool = true) -> Style {
         Style(
-            imageTint: imageTint(forBytes: bytes, low: low, high: high),
+            imageTint: hasFullDiskAccess
+                ? imageTint(forBytes: bytes, low: low, high: high)
+                : .systemOrange, // FDA 경고가 게이지 tint보다 우선
             titleColor: .labelColor,
             titleFont: bytes >= high
                 ? .boldSystemFont(ofSize: NSFont.systemFontSize)

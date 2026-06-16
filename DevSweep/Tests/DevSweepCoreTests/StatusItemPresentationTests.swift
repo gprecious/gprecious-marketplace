@@ -40,3 +40,21 @@ import Testing
     #expect(anchor.origin.x.isFinite)
     #expect(anchor.origin.y.isFinite)
 }
+
+@Test func statusItemPresentationUsesWarnTintWhenFullDiskAccessMissing() {
+    let style = StatusItemPresentation.style(forBytes: 0, low: 5, high: 20, hasFullDiskAccess: false)
+    #expect(style.imageTint.isEqual(NSColor.systemOrange))
+    #expect(style.titleColor.isEqual(NSColor.labelColor)) // 제목은 여전히 가독 색
+}
+
+@Test func statusItemPresentationWarnTintOverridesHighPressureRed() {
+    // FDA 경고가 게이지(high=red)보다 우선.
+    let style = StatusItemPresentation.style(forBytes: 999, low: 5, high: 20, hasFullDiskAccess: false)
+    #expect(style.imageTint.isEqual(NSColor.systemOrange))
+    #expect(style.imageTint.isEqual(NSColor.systemRed) == false)
+}
+
+@Test func statusItemPresentationGrantedAccessKeepsGaugeTint() {
+    let style = StatusItemPresentation.style(forBytes: 0, low: 5, high: 20, hasFullDiskAccess: true)
+    #expect(style.imageTint.isEqual(NSColor.secondaryLabelColor)) // 기존 동작 보존
+}
