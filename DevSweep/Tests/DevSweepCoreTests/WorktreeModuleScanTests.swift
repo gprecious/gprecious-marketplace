@@ -91,6 +91,24 @@ private func makeRunner(repo: String) -> ScriptedCommandRunner {
     #expect(items[0].sizeBytes == 20)
 }
 
+@Test func scanDefaultReportsNonZeroForNonEmptyWorktree() async {
+    let tmp = TempDir(); defer { tmp.cleanup() }
+    let repo = tmp.makeDir("repo")
+    tmp.writeFile("repo/.worktrees/cand/payload.txt", String(repeating: "x", count: 10))
+    let runner = makeRunner(repo: repo)
+    let module = WorktreeModule(
+        roots: [],
+        runner: runner,
+        activitySignal: InactiveSignal(),
+        repoLocator: { _ in [repo] }
+    )
+
+    let items = await module.scan()
+
+    #expect(items.count == 1)
+    #expect(items[0].sizeBytes > 0)
+}
+
 @Test func scanUnavailableWhenGitMissing() async {
     let runner = ScriptedCommandRunner(["/usr/bin/env git --version": [.init(exitCode: 127)]])
     let module = WorktreeModule(roots: [], runner: runner, activitySignal: InactiveSignal(), repoLocator: { _ in [] })

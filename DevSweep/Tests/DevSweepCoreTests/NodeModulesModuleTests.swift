@@ -53,6 +53,16 @@ private func emptyLayerReclaimer(_ deleter: any FileSystemDeleter) -> Reclaimer 
     #expect(item.sizeBytes == 20)
 }
 
+@Test func nodeModulesScanDefaultReportsNonZeroForNonEmptyTarget() async {
+    let tmp = TempDir(); defer { tmp.cleanup() }
+    tmp.writeFile("proj/node_modules/payload.txt", String(repeating: "x", count: 10))
+    let module = NodeModulesModule(roots: [tmp.url.path], reclaimer: emptyLayerReclaimer(RecordingDeleter()))
+
+    let item = await module.scan().first!
+
+    #expect(item.sizeBytes > 0)
+}
+
 @Test func nodeModulesReclaimDeletesWhenLayerHasNoSignals() async {
     let tmp = TempDir(); defer { tmp.cleanup() }
     tmp.makeDir("proj/node_modules")

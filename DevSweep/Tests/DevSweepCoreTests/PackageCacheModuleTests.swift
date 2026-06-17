@@ -75,6 +75,25 @@ private func emptyLayerReclaimer(_ deleter: any FileSystemDeleter) -> Reclaimer 
     #expect(items[0].sizeBytes == 20)
 }
 
+@Test func packageCacheScanDefaultReportsNonZeroForNonEmptyCache() async {
+    let tmp = TempDir(); defer { tmp.cleanup() }
+    let pnpmCache = tmp.makeDir("pnpm-store")
+    tmp.writeFile("pnpm-store/payload.txt", String(repeating: "x", count: 10))
+    let runner = ScriptedCommandRunner([
+        "/usr/bin/env pnpm --version": [.init(stdout: "9", exitCode: 0)]
+    ])
+    let tools: [PackageCacheModule.Tool] = [
+        .init(id: "pnpm", probe: .cli(executable: "/usr/bin/env", arguments: ["pnpm", "--version"]),
+              cachePath: pnpmCache, reclaim: .cliCommand(executable: "/usr/bin/env", arguments: ["pnpm", "store", "prune"]))
+    ]
+    let module = PackageCacheModule(tools: tools, runner: runner, reclaimer: emptyLayerReclaimer(RecordingDeleter()))
+
+    let items = await module.scan()
+
+    #expect(items.count == 1)
+    #expect(items[0].sizeBytes > 0)
+}
+
 @Test func packageCacheGradleUnavailableWhenCacheMissing() async {
     let tools: [PackageCacheModule.Tool] = [
         .init(id: "gradle", probe: .pathExists, cachePath: "/nope/gradle", reclaim: .deletePath(toTrash: false))

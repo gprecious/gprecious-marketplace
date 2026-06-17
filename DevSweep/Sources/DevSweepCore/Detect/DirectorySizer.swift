@@ -4,7 +4,7 @@ import Foundation
 /// ParentProjectActivitySignal) so behavior is deterministic: symlinks are NOT
 /// followed (attributesOfItem uses lstat), unreadable entries are skipped.
 public struct DirectorySizer: @unchecked Sendable {
-    public static let defaultScanDescendantLimit = 0
+    public static let defaultScanDescendantLimit = 64
 
     private let fileManager: FileManager
 

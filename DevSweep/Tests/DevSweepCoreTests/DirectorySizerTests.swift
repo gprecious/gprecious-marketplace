@@ -36,5 +36,21 @@ import Testing
 }
 
 @Test func defaultScanDescendantBudgetIsSmallEnoughForMenuBarLaunch() {
-    #expect(DirectorySizer.defaultScanDescendantLimit == 0)
+    #expect(DirectorySizer.defaultScanDescendantLimit > 0)
+    #expect(DirectorySizer.defaultScanDescendantLimit <= 256)
+}
+
+@Test func defaultScanDescendantBudgetReportsNonZeroForNonEmptyDirectory() {
+    let tmp = TempDir(); defer { tmp.cleanup() }
+    tmp.writeFile("payload.txt", String(repeating: "x", count: 10))
+
+    let sizer = DirectorySizer()
+    #expect(sizer.size(of: tmp.url.path, maxDescendantEntries: DirectorySizer.defaultScanDescendantLimit) > 0)
+}
+
+@Test func defaultScanDescendantBudgetReportsZeroForEmptyDirectory() {
+    let tmp = TempDir(); defer { tmp.cleanup() }
+
+    let sizer = DirectorySizer()
+    #expect(sizer.size(of: tmp.url.path, maxDescendantEntries: DirectorySizer.defaultScanDescendantLimit) == 0)
 }
