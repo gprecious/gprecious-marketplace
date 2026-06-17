@@ -1,0 +1,7 @@
+{
+  "name": "e2e-harness",
+  "version": "0.1.0",
+  "description": "대상 프로젝트의 스택을 감지해 그에 맞는 E2E/검증 하네스를 대화형으로 생성하는 Claude Code + Codex 공용 스킬. harness-engineering 메타패턴(크리티컬 플로우 선택, 통제 가능한 것만 모킹, 결정론적 시딩, 에이전트 heal 루프)을 한 번 인코딩하고 레시피로 스택별 구현을 찍어낸다.",
+  "author": { "name": "gprecious" },
+  "keywords": ["e2e", "playwright", "testing", "harness", "claude-code", "codex"]
+}
