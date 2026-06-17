@@ -148,7 +148,15 @@ struct MenuView: View {
                 let runDry = dryRun
                 Task { _ = await coordinator.reclaim(approved: items, dryRun: runDry) }
             } label: {
-                Label(dryRun ? "회수 미리보기" : "승인 회수 실행", systemImage: "trash")
+                if coordinator.isReclaiming {
+                    HStack(spacing: 8) {
+                        ProgressView()
+                            .controlSize(.small)
+                        Text(dryRun ? "미리보기 중…" : "회수 중…")
+                    }
+                } else {
+                    Label(dryRun ? "회수 미리보기" : "승인 회수 실행", systemImage: "trash")
+                }
             }
             .disabled(actionPresentation.reclaimDisabled)
 
@@ -157,6 +165,30 @@ struct MenuView: View {
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if let summary = coordinator.lastReclaimSummary {
+                reclaimSummaryView(summary)
+            }
+        }
+    }
+
+    private func reclaimSummaryView(_ summary: ReclaimRunSummary) -> some View {
+        let primaryBytes = summary.kind == .dryRun ? summary.plannedBytes : summary.reclaimedBytes
+        let primaryText = summary.kind == .dryRun ? "삭제 예정" : "회수"
+        let title = summary.kind == .dryRun ? "미리보기 완료" : "회수 완료"
+
+        return VStack(alignment: .leading, spacing: 3) {
+            Label("\(title): \(summary.actionCount)개, \(primaryText) \(humanBytes(primaryBytes))",
+                  systemImage: summary.failedCount > 0 ? "exclamationmark.triangle" : "checkmark.circle")
+                .font(.caption)
+                .foregroundStyle(summary.failedCount > 0 ? .orange : .secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if summary.protectedCount > 0 || summary.failedCount > 0 {
+                Text("보호됨 \(summary.protectedCount)개 · 실패 \(summary.failedCount)개")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
             }
         }
     }

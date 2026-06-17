@@ -39,6 +39,7 @@ final class AppCoordinator: ObservableObject {
     @Published private(set) var lastScanDate: Date?
     @Published private(set) var isScanning = false
     @Published private(set) var isReclaiming = false
+    @Published private(set) var lastReclaimSummary: ReclaimRunSummary?
 
     /// FDA 권한 유무. SwiftUI(`MenuView` 배너)가 직접 관찰; status item은 `onFDAStateChange`로 푸시.
     /// 최초 probe 전엔 낙관적 `true`(권한 있는 사용자에게 경고 플래시 방지) — `start()`의 `refreshFDA()`가 즉시 보정.
@@ -301,6 +302,7 @@ final class AppCoordinator: ObservableObject {
             return
         }
         isScanning = true
+        lastReclaimSummary = nil
         repeat {
             rescanPending = false
             // The recursive DirectorySizer `du` over tens of GB of node_modules is heavy and
@@ -328,6 +330,7 @@ final class AppCoordinator: ObservableObject {
         guard !isReclaiming else { return [] }
         isReclaiming = true
         defer { isReclaiming = false }
+        lastReclaimSummary = nil
 
         let approvedIds = Set(items.map(\.id))
         let grouped = currentGrouped
@@ -338,6 +341,7 @@ final class AppCoordinator: ObservableObject {
         if !dryRun {
             await scanNow()
         }
+        lastReclaimSummary = ReclaimRunSummary(kind: dryRun ? .dryRun : .live, outcomes: outcomes)
         return outcomes
     }
 
