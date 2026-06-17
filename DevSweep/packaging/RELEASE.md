@@ -20,18 +20,19 @@ the same reason CleanMyMac and similar disk tools ship Developer ID, not App Sto
 
 ### Consequence for StoreKit / In-App Purchases
 
-StoreKit IAPs only work for App Store builds. Under Developer ID:
+Under Developer ID the active monetization path is a **LemonSqueezy license key** (see
+`docs/LICENSING.md`):
 
-- The App Store Connect app record (`com.flow-finders.devsweep`, Apple App ID
-  `6778351839`) and the **4 IAP products** registered there
-  (`com.flowfinders.devsweep.{skin.dotmatrix, skin.synthwave, themepack.retro, allaccess}`)
-  are **dormant / unused**. They are not deleted — left as drafts in case the
-  decision is ever revisited — but they are not part of this distribution.
-- The M6 StoreKit code (`StoreKit2Backend`, `EntitlementResolver`, `SkinStore`) stays
-  in the tree but is not the active monetization path.
-- Monetization on this path = **voluntary donation** (`DonationLinks`, external URLs,
-  already in the app). A paid-skin unlock, if wanted later, needs a non-StoreKit
-  mechanism (e.g. Paddle / LemonSqueezy / Gumroad + license keys) — a separate decision.
+- **DevSweep Pro** — a $9.99 (launch) lifetime license unlocks scheduled auto-clean (autoSafe caches
+  only), all skins, and one-click "reclaim all". Bought on an external LemonSqueezy checkout; activated
+  in-app via the keyless License API (`LicenseStore` / `LemonSqueezyLicenseClient` /
+  `KeychainLicenseStorage`). Validation is client-side ("casual licensing", not anti-piracy).
+- The free tier keeps the tool's core promise: manual scan + per-module reclaim of EVERY module
+  (node_modules / package caches / worktrees / **Docker**) and the free skins.
+- The **M6 StoreKit code** (`StoreKit2Backend`, the StoreKit `SkinStore`, IAP `ProductCatalog`,
+  `DevSweep.storekit`) stays in-tree but **dormant** — not wired into `AppCoordinator`. Kept for a
+  possible Mac App Store SKU; its unit tests still run. (Revisit deleting it after the license path ships.)
+- Donation links (`DonationLinks`) remain a secondary voluntary path.
 
 ## Build pipeline — `packaging/build_app.sh`
 

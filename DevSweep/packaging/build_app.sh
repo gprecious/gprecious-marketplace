@@ -48,6 +48,15 @@ done
 ARCH_FLAGS=()
 if [ "${UNIVERSAL:-0}" = "1" ]; then ARCH_FLAGS=(--arch arm64 --arch x86_64); fi
 
+# Release gate: a notarized/dmg build must NOT ship a placeholder LicenseConfig (dead Pro).
+if [ "${ADHOC:-0}" != "1" ]; then
+  CFG="$PROJ/Sources/DevSweepCore/License/LicenseConfig.swift"
+  if grep -q "REPLACE_ME" "$CFG" || grep -Eq "expectedStoreId: 0\b" "$CFG"; then
+    echo "RELEASE BLOCKED: LicenseConfig.production still has placeholders (see docs/LICENSING.md)."
+    exit 1
+  fi
+fi
+
 echo "==> DevSweep build pipeline (adhoc=$ADHOC dmg=$MAKE_DMG)"
 
 # 1. Build release binary
