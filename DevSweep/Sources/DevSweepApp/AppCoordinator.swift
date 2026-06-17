@@ -41,21 +41,31 @@ final class AppCoordinator: ObservableObject {
     @Published private(set) var isReclaiming = false
     @Published private(set) var lastReclaimSummary: ReclaimRunSummary?
 
+    /// Set to a Pro-gated action's label when a non-Pro user triggers it, so the menu can surface a
+    /// purchase prompt. The menu clears it after presenting.
+    @Published var proGateHit: String?
+
     /// FDA 권한 유무. SwiftUI(`MenuView` 배너)가 직접 관찰; status item은 `onFDAStateChange`로 푸시.
     /// 최초 probe 전엔 낙관적 `true`(권한 있는 사용자에게 경고 플래시 방지) — `start()`의 `refreshFDA()`가 즉시 보정.
     @Published private(set) var hasFullDiskAccess: Bool = true
 
     /// Currently selected menubar skin id. SwiftUI (`MenuView`) observes this directly; the AppKit
     /// status item is pushed updates via `onSkinChange`. Free skins are always selectable; paid skins
-    /// only once owned (gated by `skinStore.canSelect`).
+    /// only once unlocked (gated by `licenseStore.canSelect`).
     @Published private(set) var currentSkinId: String = SkinCatalog.defaultSkinId
 
-    /// IAP state: loaded products, unlocked-skin set, buy/restore. The menu observes it directly; the
-    /// coordinator consults it to gate skin selection. The real `StoreKit2Backend` is injected here.
+    /// License state: tier, unlocked-skin set, activation flow. The menu observes it directly; the
+    /// coordinator consults `isPro`/`canSelect` to gate skin selection + reclaim. Real
+    /// `LemonSqueezyLicenseClient` + `KeychainLicenseStorage` injected here.
+    let licenseStore: LicenseStore
+
+    /// Dormant StoreKit `SkinStore` — retained only so the not-yet-migrated menu UI
+    /// (`StatusItemController`/`MenuView`, Task 9) keeps compiling. The coordinator no longer loads or
+    /// consults it; all gating now flows through `licenseStore`. Removed once the UI swaps over.
     let skinStore: SkinStore
 
     /// Persisted skin id awaiting an entitlements load — a persisted *paid* skin can't be validated
-    /// until `skinStore.load()` resolves ownership, so it's re-applied in `reconcileSkinSelection`.
+    /// until `licenseStore.validate()` resolves the tier, so it's re-applied in `reconcileSkinSelection`.
     private var pendingSkinId: String?
 
     /// `true` once the initial entitlements load has completed. Gates the refund-revert branch so a
@@ -79,12 +89,13 @@ final class AppCoordinator: ObservableObject {
     /// Free skin ids, precomputed for the reconciler (free skins are always selectable).
     private static let freeSkinIds = Set(SkinCatalog.free.map(\.id))
 
-    /// Production purchase backend — one stateless instance shared by `skinStore` and the
-    /// `Transaction.updates` observer.
-    private let purchaseBackend = StoreKit2Backend()
-
-    /// Long-lived `Transaction.updates` listener (Ask-to-Buy, family sharing, other devices).
-    private var transactionObserver: Task<Void, Never>?
+    /// Pure free/Pro gating rules consulted by the reclaim entry points + the auto-clean path.
+    private let reclaimGate = ReclaimGate()
+    private let autoReclaimPolicy = AutoReclaimPolicy()
+    /// UserDefaults key for the Pro-only "auto-clean on scan" opt-in toggle.
+    private static let autoCleanKey = "DevSweep.autoCleanEnabled"
+    /// Max age before a menu-open triggers re-validation (rev #6).
+    private static let revalidateStaleness: TimeInterval = 6 * 3600
 
     /// UserDefaults key for the persisted skin selection.
     private static let skinDefaultsKey = "DevSweep.currentSkinId"
@@ -132,7 +143,14 @@ final class AppCoordinator: ObservableObject {
     init(config: AppConfig = .default, fdaProbe: FullDiskAccessProbe = TCCDatabaseProbe()) {
         self.config = config
         self.fdaProbe = fdaProbe
-        self.skinStore = SkinStore(backend: purchaseBackend)
+        self.licenseStore = LicenseStore(
+            client: LemonSqueezyLicenseClient(baseURL: LicenseConfig.production.apiBaseURL),
+            storage: KeychainLicenseStorage(),
+            config: .production,
+            deviceName: Host.current().localizedName ?? "Mac"
+        )
+        // Dormant StoreKit store, constructed only to keep the Task-9-pending menu UI compiling.
+        self.skinStore = SkinStore(backend: StoreKit2Backend())
 
         // Restore the persisted skin selection. A free skin applies immediately; a persisted *paid*
         // skin is held in `pendingSkinId` and re-applied (or reverted) once entitlements load.
@@ -179,18 +197,13 @@ final class AppCoordinator: ObservableObject {
         notifier.requestAuthorizationIfPossible()
         refreshFDA()
 
-        // Load IAP products + entitlements, then reconcile the persisted skin selection against what
-        // the user actually owns (re-apply a persisted paid skin; revert a refunded one). The
+        // Validate the stored license, then reconcile the persisted skin selection against the
+        // resulting tier (a persisted paid skin re-locks to default when not Pro). The
         // `didLoadEntitlements` flag is set before reconciling so the revert branch is now armed.
         Task { [weak self] in
-            await self?.skinStore.load()
+            await self?.licenseStore.validate()
             self?.didLoadEntitlements = true
             self?.reconcileSkinSelection()
-        }
-        // React to transactions completed outside an explicit buy (Ask-to-Buy, family sharing, other
-        // devices) so an external unlock/refund is reflected without a relaunch.
-        transactionObserver = purchaseBackend.observeTransactionUpdates { [weak self] in
-            await self?.handleEntitlementChange()
         }
 
         let watcher = WatcherService(
@@ -246,14 +259,21 @@ final class AppCoordinator: ObservableObject {
     }
 
     /// Select a menubar skin. Free skins are always allowed; paid skins only when unlocked
-    /// (`skinStore.canSelect`). Unknown or still-locked ids are ignored. Persists + notifies.
+    /// (`licenseStore.canSelect`). Unknown or still-locked ids are ignored. Persists + notifies.
     func setSkin(id: String) {
         guard id != currentSkinId,
               let skin = SkinCatalog.skin(id: id),
-              skinStore.canSelect(skin) else { return }
+              licenseStore.canSelect(skin) else { return }
         currentSkinId = id
         UserDefaults.standard.set(id, forKey: Self.skinDefaultsKey)
         onSkinChange?(id)
+    }
+
+    /// Pro-only "auto-clean after scan" opt-in (persisted). The auto-clean path also checks
+    /// `licenseStore.isPro`, so a stale `true` never cleans for a free user.
+    var autoCleanEnabled: Bool {
+        get { UserDefaults.standard.bool(forKey: Self.autoCleanKey) }
+        set { UserDefaults.standard.set(newValue, forKey: Self.autoCleanKey) }
     }
 
     /// Reconcile the selected skin against current entitlements via the pure `SkinSelectionReconciler`.
@@ -266,7 +286,7 @@ final class AppCoordinator: ObservableObject {
             currentSelection: currentSkinId,
             pendingSelection: pendingSkinId,
             freeSkinIds: Self.freeSkinIds,
-            unlockedSkinIds: skinStore.unlockedSkinIds,
+            unlockedSkinIds: licenseStore.unlockedSkinIds,
             didLoadEntitlements: didLoadEntitlements,
             defaultSkinId: SkinCatalog.defaultSkinId
         )
@@ -280,10 +300,26 @@ final class AppCoordinator: ObservableObject {
         }
     }
 
-    /// An external transaction changed ownership — refresh the unlocked set and reconcile selection.
-    private func handleEntitlementChange() async {
-        await skinStore.refresh()
+    /// Activate a key from the menu, then reconcile the skin selection against the new tier.
+    func activateLicense(key: String) async {
+        await licenseStore.activate(key: key)
         reconcileSkinSelection()
+    }
+
+    /// Deactivate from the menu, then reconcile — a previously selected *paid* skin must re-lock now,
+    /// not at next relaunch. `reconcileSkinSelection` reverts it to the default when no longer unlocked.
+    func deactivateLicense() async {
+        await licenseStore.deactivate()
+        reconcileSkinSelection()
+    }
+
+    /// Re-validate if the last good validation is stale (called on menu open, rev #6).
+    func revalidateLicenseIfStale() {
+        guard licenseStore.isStale(maxAge: Self.revalidateStaleness) else { return }
+        Task { [weak self] in
+            await self?.licenseStore.validate()
+            self?.reconcileSkinSelection()
+        }
     }
 
     /// All triggers currently resolve to a full scan; the reason is retained for future routing.
@@ -319,6 +355,17 @@ final class AppCoordinator: ObservableObject {
             apply(record: result.record)
         } while rescanPending
         isScanning = false
+        await autoCleanIfEnabled()
+    }
+
+    /// Pro + opt-in only: reclaim ONLY `.autoSafe` candidates after a scan (never `.reviewNeeded`
+    /// node_modules/worktrees — they require explicit approval, rev #1). `reclaim` re-scans afterward,
+    /// which now runs cleanly because `isScanning` is already false (rev #4).
+    private func autoCleanIfEnabled() async {
+        guard autoReclaimPolicy.shouldAutoReclaim(isPro: licenseStore.isPro, autoCleanEnabled: autoCleanEnabled) else { return }
+        let safe = autoReclaimPolicy.autoCleanableItems(from: currentItems)
+        guard !safe.isEmpty else { return }
+        _ = await reclaim(approved: safe, dryRun: false)
     }
 
     /// Route approved items to their owning modules and reclaim them (honoring `dryRun`); after a
@@ -343,6 +390,26 @@ final class AppCoordinator: ObservableObject {
         }
         lastReclaimSummary = ReclaimRunSummary(kind: dryRun ? .dryRun : .live, outcomes: outcomes)
         return outcomes
+    }
+
+    /// One-click "reclaim all reviewed items". Pro-gated for a real run; dry-run preview is free.
+    @discardableResult
+    func reclaimAll(dryRun: Bool) async -> [ReclaimOutcome] {
+        guard gateAllows(scope: .all, dryRun: dryRun, label: "전체 회수") else { return [] }
+        return await reclaim(approved: currentItems, dryRun: dryRun)
+    }
+    /// Reclaim a single module's reviewed items. Free for every module (Docker included).
+    @discardableResult
+    func reclaimModule(id moduleId: String, dryRun: Bool) async -> [ReclaimOutcome] {
+        guard gateAllows(scope: .module(moduleId), dryRun: dryRun, label: moduleNames[moduleId] ?? moduleId) else { return [] }
+        let items = currentGrouped.first { $0.module == moduleId }?.items ?? []
+        return await reclaim(approved: items, dryRun: dryRun)
+    }
+    private func gateAllows(scope: ReclaimGate.Scope, dryRun: Bool, label: String) -> Bool {
+        switch reclaimGate.decide(scope: scope, isPro: licenseStore.isPro, dryRun: dryRun) {
+        case .allow: return true
+        case .requiresPro: proGateHit = label; return false
+        }
     }
 
     private func apply(record: ScanRecord) {
