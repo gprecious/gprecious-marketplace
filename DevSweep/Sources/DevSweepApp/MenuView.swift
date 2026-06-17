@@ -1,13 +1,15 @@
 import SwiftUI
 import DevSweepCore
 
-/// The popover content: the reclaimable total + last-scan time, the top modules by size, a
-/// "Scan now" action, a dry-run-toggled reclaim of the reviewed items, the skin picker with IAP
-/// buy/restore, and reward-free donation links.
+/// The popover content: the reclaimable total + last-scan time, the top modules by size (each a
+/// two-step confirm reclaim), a "Scan now" action, a free preview + a Pro-gated "reclaim all", the
+/// skin picker with a Pro lock, the DevSweep Pro section + license-key sheet, and donation links.
 struct MenuView: View {
     @ObservedObject var coordinator: AppCoordinator
-    @ObservedObject var skinStore: SkinStore
-    @State private var dryRun = true
+    @ObservedObject var licenseStore: LicenseStore
+    @State private var licenseKeyInput = ""
+    @State private var showingLicenseSheet = false
+    @State private var confirmingModuleId: String?   // per-module reclaim confirm (rev #9)
 
     /// FDA 설정 딥링크 런처(기본 실제 구현) + "나중에" 팝오버 닫기 콜백(status item이 주입).
     var settingsLauncher: SettingsLauncher = SystemSettingsLauncher()
@@ -27,10 +29,16 @@ struct MenuView: View {
             Divider()
             skinPicker
             Divider()
+            proSection
+            Divider()
             footer
         }
         .padding(16)
         .frame(width: 300)
+        .sheet(isPresented: $showingLicenseSheet) { licenseSheet }
+        .onChange(of: coordinator.proGateHit) { _, hit in
+            if hit != nil { showingLicenseSheet = true; coordinator.proGateHit = nil }
+        }
     }
 
     /// 권한 없을 때만 노출되는 경고 배너 — ⚠ + 설명 + [설정 열기]/[나중에]. "나중에"는 영구 dismiss 아님
@@ -97,15 +105,27 @@ struct MenuView: View {
         } else {
             VStack(alignment: .leading, spacing: 6) {
                 ForEach(coordinator.topModules) { module in
-                    HStack {
-                        Text(module.name)
-                            .font(.callout)
-                            .lineLimit(1)
-                        Spacer()
-                        Text(humanBytes(module.bytes))
-                            .font(.callout)
-                            .monospacedDigit()
-                            .foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Text(module.name).font(.callout).lineLimit(1)
+                            Spacer()
+                            Text(humanBytes(module.bytes)).font(.callout).monospacedDigit().foregroundStyle(.secondary)
+                        }
+                        .contentShape(Rectangle())
+                        .onTapGesture { confirmingModuleId = (confirmingModuleId == module.module) ? nil : module.module }
+
+                        if confirmingModuleId == module.module {
+                            HStack(spacing: 8) {
+                                Text("이 모듈을 휴지통으로 회수할까요?").font(.caption2).foregroundStyle(.secondary)
+                                Spacer()
+                                Button("회수") {
+                                    let id = module.module
+                                    confirmingModuleId = nil
+                                    Task { _ = await coordinator.reclaimModule(id: id, dryRun: false) }
+                                }.controlSize(.small)
+                                Button("취소") { confirmingModuleId = nil }.controlSize(.small)
+                            }
+                        }
                     }
                 }
             }
@@ -139,24 +159,14 @@ struct MenuView: View {
             .disabled(actionPresentation.scanDisabled)
             .animation(.default, value: coordinator.isScanning)
 
-            Toggle("드라이런(미삭제 시뮬레이션)", isOn: $dryRun)
-                .toggleStyle(.switch)
-                .font(.callout)
+            Button { Task { _ = await coordinator.reclaimAll(dryRun: true) } } label: {
+                Label("회수 미리보기", systemImage: "eye")
+            }
+            .disabled(actionPresentation.reclaimDisabled)
 
-            Button {
-                let items = coordinator.currentItems
-                let runDry = dryRun
-                Task { _ = await coordinator.reclaim(approved: items, dryRun: runDry) }
-            } label: {
-                if coordinator.isReclaiming {
-                    HStack(spacing: 8) {
-                        ProgressView()
-                            .controlSize(.small)
-                        Text(dryRun ? "미리보기 중…" : "회수 중…")
-                    }
-                } else {
-                    Label(dryRun ? "회수 미리보기" : "승인 회수 실행", systemImage: "trash")
-                }
+            Button { Task { _ = await coordinator.reclaimAll(dryRun: false) } } label: {
+                Label(licenseStore.isPro ? "전체 회수 실행" : "전체 회수 (Pro)",
+                      systemImage: licenseStore.isPro ? "trash" : "lock.fill")
             }
             .disabled(actionPresentation.reclaimDisabled)
 
@@ -200,88 +210,81 @@ struct MenuView: View {
 
     private var skinPicker: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("스킨")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-            ForEach(SkinCatalog.all, id: \.id) { skin in
-                skinRow(skin)
-            }
-
-            allAccessRow
-
-            Button("구매 복원") {
-                Task { await skinStore.restorePurchases() }
-            }
-            .font(.caption)
-            .buttonStyle(.link)
-            .disabled(skinStore.purchaseInFlight)
+            Text("스킨").font(.caption).foregroundStyle(.secondary)
+            ForEach(SkinCatalog.all, id: \.id) { skin in skinRow(skin) }
         }
     }
-
-    /// One skin row: a live preview + name, then a selection radio (free / unlocked) or a "Buy $X"
-    /// button (locked, sold standalone) or a lock glyph (locked, pack/All-Access-only).
     @ViewBuilder private func skinRow(_ skin: any SkinModule) -> some View {
-        let selectable = skinStore.canSelect(skin)
+        let selectable = licenseStore.canSelect(skin)
         HStack(spacing: 8) {
-            Image(nsImage: skin.image(for: previewState, height: 16))
-                .frame(width: 44, alignment: .leading)
-            Text(skin.displayName)
-                .font(.callout)
-                .foregroundStyle(selectable ? .primary : .secondary)
+            Image(nsImage: skin.image(for: previewState, height: 16)).frame(width: 44, alignment: .leading)
+            Text(skin.displayName).font(.callout).foregroundStyle(selectable ? .primary : .secondary)
             Spacer()
             if selectable {
                 Image(systemName: skin.id == coordinator.currentSkinId ? "checkmark.circle.fill" : "circle")
                     .foregroundStyle(skin.id == coordinator.currentSkinId ? Color.accentColor : Color.secondary)
-            } else if let product = ProductCatalog.singleSkinProduct(skinId: skin.id) {
-                Button(price(for: product.id)) {
-                    Task {
-                        if await skinStore.buy(product.id) {
-                            coordinator.setSkin(id: skin.id) // unlocked now → auto-select ("Keep it")
-                        }
-                    }
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.small)
-                .disabled(skinStore.purchaseInFlight)
             } else {
-                Image(systemName: "lock.fill")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
+                Label("Pro", systemImage: "lock.fill").font(.caption2).foregroundStyle(.secondary)
             }
         }
         .contentShape(Rectangle())
-        .onTapGesture {
-            if selectable { coordinator.setSkin(id: skin.id) } // no-op for locked skins
-        }
+        .onTapGesture { selectable ? coordinator.setSkin(id: skin.id) : (showingLicenseSheet = true) }
     }
 
-    /// All-Access bundle row — shown until every paid skin is owned. Anchored against single prices.
-    @ViewBuilder private var allAccessRow: some View {
-        if let allAccess = ProductCatalog.product(id: ProductCatalog.allAccessId),
-           skinStore.unlockedSkinIds.count < SkinCatalog.paid.count {
-            HStack(spacing: 8) {
-                Image(systemName: "sparkles")
-                    .frame(width: 44, alignment: .leading)
-                    .foregroundStyle(.secondary)
-                Text("올 액세스 — 모든 스킨")
-                    .font(.callout)
-                Spacer()
-                Button(price(for: allAccess.id)) {
-                    Task { _ = await skinStore.buy(allAccess.id) }
+    @ViewBuilder private var proSection: some View {
+        if licenseStore.isPro {
+            VStack(alignment: .leading, spacing: 6) {
+                Label("DevSweep Pro 활성화됨", systemImage: "checkmark.seal.fill").font(.callout).foregroundStyle(.green)
+                Toggle("스캔 후 자동 청소 (캐시류만)", isOn: Binding(
+                    get: { coordinator.autoCleanEnabled }, set: { coordinator.autoCleanEnabled = $0 }))
+                    .toggleStyle(.switch).font(.callout)
+                Button("이 기기에서 라이선스 해제") { Task { await coordinator.deactivateLicense() } }
+                    .font(.caption).buttonStyle(.link)
+            }
+        } else {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("DevSweep Pro — \(licenseStore.displayPrice)").font(.callout).fontWeight(.semibold)
+                Text("스캔 후 자동 청소 · 전 스킨 · 원클릭 전체 회수").font(.caption2).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                HStack(spacing: 8) {
+                    Button("Pro 구매") { NSWorkspace.shared.open(licenseStore.checkoutURL) }
+                        .buttonStyle(.borderedProminent).controlSize(.small)
+                    Button("라이선스 키 입력") { showingLicenseSheet = true }
+                        .buttonStyle(.bordered).controlSize(.small)
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-                .disabled(skinStore.purchaseInFlight)
             }
         }
+    }
+    private var licenseSheet: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("라이선스 키 입력").font(.headline)
+            TextField("XXXX-XXXX-XXXX-XXXX", text: $licenseKeyInput).textFieldStyle(.roundedBorder).frame(width: 280)
+            if case .invalid(let reason) = licenseStore.activationState {
+                Label(reason, systemImage: "exclamationmark.triangle").font(.caption).foregroundStyle(.red)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Text("키는 구매 후 받은 주문 이메일에서 확인할 수 있습니다.").font(.caption2).foregroundStyle(.secondary)
+            HStack {
+                Spacer()
+                Button("취소") { showingLicenseSheet = false }
+                Button("활성화") {
+                    Task {
+                        await coordinator.activateLicense(key: licenseKeyInput)
+                        if licenseStore.isPro { showingLicenseSheet = false }
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(licenseStore.activationState == .activating || licenseKeyInput.isEmpty)
+            }
+        }
+        .padding(20).frame(width: 340)
     }
 
     /// Reward-free donation footer (Apple 3.2.1 vii): voluntary support only, no perks offered or
     /// implied here, plus a reassurance that cleanup stays free.
     private var footer: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("모든 정리 기능은 계속 무료입니다.")
+            Text("핵심 정리는 무료 · Pro로 자동 청소·전 스킨")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
             HStack(spacing: 14) {
@@ -299,12 +302,5 @@ struct MenuView: View {
             .font(.caption)
             .buttonStyle(.link)
         }
-    }
-
-    /// Localized StoreKit price when loaded, else the catalog's recommended USD price.
-    private func price(for productId: String) -> String {
-        skinStore.products.first { $0.id == productId }?.displayPrice
-            ?? ProductCatalog.product(id: productId)?.displayPrice
-            ?? ""
     }
 }

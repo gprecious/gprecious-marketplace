@@ -25,7 +25,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         self.hostingView = NSHostingView(
             rootView: MenuView(
                 coordinator: coordinator,
-                skinStore: coordinator.skinStore,
+                licenseStore: coordinator.licenseStore,
                 settingsLauncher: SystemSettingsLauncher()
             )
         )
@@ -33,7 +33,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
 
         hostingView.rootView = MenuView(
             coordinator: coordinator,
-            skinStore: coordinator.skinStore,
+            licenseStore: coordinator.licenseStore,
             settingsLauncher: SystemSettingsLauncher(),
             onDismiss: { [weak self] in self?.menu.cancelTracking() }
         )
@@ -86,6 +86,8 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     func menuWillOpen(_ menu: NSMenu) {
         // 사용자가 열 때마다 권한 재확인 → granted 전환 시 배너 즉시 제거 + 재스캔(spec §4.3).
         coordinator.refreshFDA()
+        // 팝오버 오픈 시 라이선스가 stale(>6h)이면 재검증(rev #6).
+        coordinator.revalidateLicenseIfStale()
         updateMenuSize()
     }
 
