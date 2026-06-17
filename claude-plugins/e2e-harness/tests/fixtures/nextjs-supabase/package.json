@@ -1,0 +1,1 @@
+{ "name": "fx-next", "dependencies": { "next": "^15.0.0", "@supabase/supabase-js": "^2.45.0", "next-intl": "^3.20.0" } }
