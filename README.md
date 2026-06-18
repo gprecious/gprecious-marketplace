@@ -26,7 +26,7 @@ gprecious-marketplace/
 
 | 플러그인 | 설명 | 소스 |
 |---------|------|------|
-| research-engine | YouTube/arXiv/GitHub/blog/topic 심층 분석 + Notion 미러링 + /research-visualize (차트·Mermaid·PPT 슬라이드) | 외부 repo (`github.com/gprecious/research-engine`) |
+| research-engine | YouTube/arXiv/GitHub/blog/topic 심층 분석 + Notion·Obsidian(LLM-Wiki) 미러링 + /research-visualize (차트·Mermaid·PPT 슬라이드) | 외부 repo (`github.com/gprecious/research-engine`) |
 | app-release | 크로스 스택 모바일 스토어 릴리즈 파이프라인 (Expo/Capacitor). ASC + Play 메타데이터/스크린샷/상태/승격/거절대응 자동화 | `claude-plugins/app-release` |
 | cmux | cmux 멀티페인 위에서 Claude Code/Codex 세션을 역할별 페인(plan/design/test/dev/review)으로 자동 오케스트레이션. 패널 간 메시지 송수신 skill 포함 | `claude-plugins/cmux` |
 | herdr | herdr 위에서 Claude Code + Codex 워커를 visible TUI pane 으로 병렬 실행. v0.10 라우팅 게이트로 subagent/lightweight delegation 을 먼저 검토하고, visible TUI·별도 CLI/account/browser state·명시적 pane fan-out 이 필요할 때만 새 pane 생성 (3×3 grid + 탭 spillover, 자동 정리) | `claude-plugins/herdr` |
