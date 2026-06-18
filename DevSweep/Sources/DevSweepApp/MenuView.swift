@@ -160,9 +160,19 @@ struct MenuView: View {
             .animation(.default, value: coordinator.isScanning)
 
             Button { Task { _ = await coordinator.reclaimAll(dryRun: true) } } label: {
-                Label("회수 미리보기", systemImage: "eye")
+                HStack(spacing: 8) {
+                    if actionPresentation.showsReclaimProgress {
+                        ProgressView()
+                            .controlSize(.small)
+                    } else if let systemImage = actionPresentation.previewButtonSystemImage {
+                        Image(systemName: systemImage)
+                            .frame(width: 16)
+                    }
+                    Text(actionPresentation.previewButtonTitle)
+                }
             }
             .disabled(actionPresentation.reclaimDisabled)
+            .animation(.default, value: coordinator.isReclaiming)
 
             Button { Task { _ = await coordinator.reclaimAll(dryRun: false) } } label: {
                 Label(licenseStore.isPro ? "전체 회수 실행" : "전체 회수 (Pro)",

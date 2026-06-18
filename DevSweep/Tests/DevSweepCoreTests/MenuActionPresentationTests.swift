@@ -42,3 +42,17 @@ import Testing
     #expect(presentation.reclaimDisabled == false)
     #expect(presentation.unavailableMessage == nil)
 }
+
+@Test func menuActionPresentationLabelsDryRunWhileReclaiming() {
+    let presentation = MenuActionPresentation(
+        hasFullDiskAccess: true,
+        isScanning: false,
+        isReclaiming: true,
+        currentItemCount: 3,
+        hasDisplayedResults: true
+    )
+
+    #expect(presentation.previewButtonTitle == "미리보기 중…")
+    #expect(presentation.previewButtonSystemImage == nil)
+    #expect(presentation.showsReclaimProgress)
+}
