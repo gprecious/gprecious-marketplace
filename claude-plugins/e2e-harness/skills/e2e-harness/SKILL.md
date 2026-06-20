@@ -5,7 +5,8 @@ description: |
   project — especially "에이전트가 작성·검증·자가수정하는" Playwright E2E for web apps
   (Next.js/Vite/Remix/SvelteKit), or a verification-harness methodology for non-web
   (CLI/API). Detects the stack, picks a recipe, co-authors critical flows with the user,
-  scaffolds config+seed+specs+heal docs, and runs the harness. Works in Claude Code and Codex.
+  scaffolds config+seed+specs+heal docs, wires an AGENTS.md pointer so future agents
+  auto-run the harness after changes, and runs it. Works in Claude Code and Codex.
 ---
 
 # e2e-harness
@@ -52,7 +53,21 @@ bash "$SKILL/lib/scaffold.sh" --recipe <recipe> --target "$TARGET" \
 레이어링 규칙(헌법 ②): 브라우저에서 직접 부르는 외부 의존성은 `page.route` 인터셉트,
 SSR/BFF 가 서버에서 부르는 외부 의존성은 환경변수 고정 응답.
 
-## 6. 실행 + heal 루프 (헌법 ④·⑤)
+## 6. AGENTS.md 배선 (필수 — 미래 에이전트 자동 인지)
+생성만 하면 미래 에이전트가 하네스를 모른다. 대상 프로젝트의 `AGENTS.md` 에 관리 블록을
+박아, 코드 변경 후 자동으로 검증을 돌리고 실패 시 heal 하도록 만든다(발표: AGENTS.md = 하네스 1차 구성요소).
+```bash
+# 웹 레시피
+bash "$SKILL/lib/wire-agents.sh" --target "$TARGET" \
+  --run "pnpm test:e2e" --burnin "pnpm test:e2e:burnin" --doc "e2e/README.md"
+# 비웹(_fallback)
+bash "$SKILL/lib/wire-agents.sh" --target "$TARGET" \
+  --run "<runCommand>" --doc "VERIFICATION-HARNESS.md"
+```
+멱등(마커 `<!-- e2e-harness:start/end -->` 사이만 교체) — 재실행해도 중복되지 않고 기존 AGENTS.md 내용은 보존된다.
+대상에 `CLAUDE.md` 만 있고 `AGENTS.md` 가 없으면, `CLAUDE.md` 가 `AGENTS.md` 를 가리키는지 확인하고(없으면 한 줄 추가) AGENTS.md 에 배선한다.
+
+## 7. 실행 + heal 루프 (헌법 ④·⑤)
 웹 레시피:
 ```bash
 cd "$TARGET" && pnpm test:e2e   # 또는 npx playwright test
@@ -65,8 +80,8 @@ cd "$TARGET" && pnpm test:e2e   # 또는 npx playwright test
 3. 통과할 때까지 반복한다.
 4. 머지 전 번인(같은 스펙을 여러 번 반복 실행)으로 플래키가 없음을 확인한 뒤에야 "완료"라 선언한다(추정 금지).
 
-## 7. 보고
-- 생성/수정한 파일 목록.
+## 8. 보고
+- 생성/수정한 파일 목록(AGENTS.md 배선 포함).
 - 그린 증거 — 추정이 아니라 실제 테스트 통과 출력.
 - 다음에 하네스화할 만한 크리티컬 플로우 1개를 제안한다.
 
