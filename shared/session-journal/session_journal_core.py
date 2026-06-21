@@ -25,12 +25,18 @@ import json
 import os
 import pathlib
 import re
+import shlex
 import shutil
+import subprocess
 import sys
+import unicodedata
+import urllib.error
+import urllib.request
 from typing import Any
 
 
 DEFAULT_VAULT = "~/Documents/Obsidian/llm-agent-vault"
+DEFAULT_WIKI_SUBDIR = "LLM-Wiki"
 RELATED_KEYWORDS = [
     "Claude Code",
     "Codex",
@@ -209,10 +215,46 @@ def vault_root(explicit: str | None = None) -> pathlib.Path:
     return expand(DEFAULT_VAULT)
 
 
+def clean_subdir(value: str | None, default: str) -> str:
+    text = str(value or default).strip("/")
+    return text or default
+
+
+def wiki_vault_root(explicit: str | None = None) -> pathlib.Path:
+    """Resolve the curated LLM wiki vault.
+
+    This intentionally follows research-engine's wiki targeting policy:
+    explicit WIKI_VAULT first, then an Obsidian vault name plus LLM_WIKI_SUBDIR
+    (default LLM-Wiki), then a local ./wiki fallback.
+    """
+    if explicit:
+        return expand(explicit)
+    env_path = os.environ.get("WIKI_VAULT")
+    if env_path:
+        return expand(env_path)
+    name = os.environ.get("LLM_OBSIDIAN_VAULT_NAME")
+    if name:
+        resolved = resolve_named_vault(name)
+        if resolved:
+            return (resolved / clean_subdir(os.environ.get("LLM_WIKI_SUBDIR"), DEFAULT_WIKI_SUBDIR)).resolve()
+    return (pathlib.Path.cwd() / "wiki").resolve()
+
+
 def safe_id(value: Any, fallback: str = "unknown-session") -> str:
     text = str(value or "").strip() or fallback
     text = re.sub(r"[^A-Za-z0-9_.:-]+", "-", text)
     return text.strip("-")[:120] or fallback
+
+
+def slugify(value: Any, fallback: str = "lesson") -> str:
+    text = unicodedata.normalize("NFKD", str(value or ""))
+    text = text.encode("ascii", "ignore").decode("ascii").lower()
+    text = re.sub(r"[^a-z0-9]+", "-", text).strip("-")
+    return text[:80].strip("-") or fallback
+
+
+def yaml_string(value: Any) -> str:
+    return json.dumps(str(value or ""), ensure_ascii=False)
 
 
 def read_json_stdin() -> dict[str, Any]:
@@ -512,6 +554,234 @@ def summarize_session(session_id: str, vault: pathlib.Path) -> dict[str, Any]:
     return {"daily_note": str(daily), "raw_log": str(raw)}
 
 
+def load_candidate_payload(candidate_file: str | None) -> dict[str, Any]:
+    if candidate_file:
+        raw = pathlib.Path(candidate_file).expanduser().read_text(encoding="utf-8")
+    else:
+        raw = sys.stdin.read()
+    if not raw.strip():
+        return {"candidates": []}
+    data = json.loads(raw)
+    if isinstance(data, list):
+        return {"candidates": data}
+    if isinstance(data, dict):
+        return data
+    raise ValueError("candidate payload must be a JSON object or array")
+
+
+def clean_link(value: Any) -> str:
+    text = str(value or "").strip()
+    text = re.sub(r"^\[\[|\]\]$", "", text)
+    text = re.sub(r"[\r\n]+", " ", text).strip()
+    return text[:100]
+
+
+def clean_tag(value: Any) -> str:
+    text = slugify(value, "")
+    return text[:40]
+
+
+def candidate_is_complete(candidate: dict[str, Any]) -> bool:
+    return all(first_nonempty(str(candidate.get(key) or ""), 20) for key in ("title", "lesson", "why", "how_to_apply"))
+
+
+def unique_path(directory: pathlib.Path, stem: str, suffix: str = ".md") -> pathlib.Path:
+    path = directory / f"{stem}{suffix}"
+    if not path.exists():
+        return path
+    for index in range(2, 1000):
+        candidate = directory / f"{stem}-{index}{suffix}"
+        if not candidate.exists():
+            return candidate
+    raise RuntimeError(f"too many duplicate draft names for {stem}")
+
+
+def render_lesson_draft(
+    *,
+    candidate: dict[str, Any],
+    session_id: str,
+    agent: str,
+    workspace: str,
+    raw_log: pathlib.Path | None,
+) -> tuple[str, list[str]]:
+    title = first_nonempty(str(candidate.get("title") or ""), 140)
+    confidence = str(candidate.get("confidence") or "medium").strip() or "medium"
+    links = ["session-journal", "LLM-Wiki"]
+    if workspace:
+        links.append(workspace)
+    if agent:
+        links.append(agent)
+    links.extend(candidate.get("links") or [])
+    related = []
+    seen: set[str] = set()
+    for link in links:
+        clean = clean_link(link)
+        key = clean.lower()
+        if clean and key not in seen:
+            seen.add(key)
+            related.append(clean)
+
+    extra_tags = [clean_tag(item) for item in (candidate.get("tags") or [])]
+    tags = [tag for tag in [*AI_TAGS, "llm-wiki", "lesson", *extra_tags] if tag]
+    frontmatter = [
+        "---",
+        "type: lesson",
+        f"title: {yaml_string(title)}",
+        f"source: {yaml_string('session/' + session_id)}",
+        f"source_session: {yaml_string(session_id)}",
+        f"workspace: {yaml_string(workspace)}",
+        f"agent: {yaml_string(agent)}",
+        f"confidence: {yaml_string(confidence)}",
+        f"created: {yaml_string(today())}",
+        "tags:",
+        *[f"  - {tag}" for tag in tags],
+        "related:",
+        *[f"  - {yaml_string('[[' + item + ']]')}" for item in related],
+        "---",
+        "",
+    ]
+    raw_line = f"- raw log: `{raw_log}`" if raw_log else "- raw log: not resolved"
+    body = [
+        f"# {title}",
+        "",
+        "> [!warning] Draft lesson candidate. Review before promoting into the live LLM-Wiki graph.",
+        "",
+        "## Lesson",
+        str(candidate.get("lesson") or "").strip(),
+        "",
+        "## Why It Matters",
+        str(candidate.get("why") or "").strip(),
+        "",
+        "## How To Apply",
+        str(candidate.get("how_to_apply") or "").strip(),
+        "",
+        "## Source",
+        f"- session: `{session_id}`",
+        f"- workspace: `[[{workspace}]]`" if workspace else "- workspace: unknown",
+        f"- agent: `[[{agent}]]`" if agent else "- agent: unknown",
+        raw_line,
+        "",
+        "## Related",
+        *[f"- [[{item}]]" for item in related],
+        "",
+    ]
+    return "\n".join([*frontmatter, *body]), related
+
+
+def build_slack_message(session_id: str, drafts: list[dict[str, Any]], report_path: pathlib.Path) -> str:
+    lines = [
+        f"{len(drafts)} session-journal wiki draft candidate(s) created",
+        f"source session: {session_id}",
+        f"report: {report_path}",
+        "",
+    ]
+    for item in drafts:
+        lines.extend([
+            f"- {item['title']} ({item['confidence']})",
+            f"  path: {item['path']}",
+        ])
+    lines.extend(["", "Review the drafts before promoting them into the live LLM-Wiki graph."])
+    return "\n".join(lines).strip() + "\n"
+
+
+def send_slack_report(message: str) -> dict[str, Any]:
+    command = os.environ.get("SESSION_JOURNAL_SLACK_REPORT_COMMAND")
+    webhook = os.environ.get("SESSION_JOURNAL_SLACK_WEBHOOK_URL")
+    if command:
+        try:
+            completed = subprocess.run(
+                shlex.split(command),
+                input=message,
+                text=True,
+                capture_output=True,
+                timeout=20,
+                check=False,
+            )
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            return {"sent": False, "method": "command", "error": str(exc)}
+        if completed.returncode == 0:
+            return {"sent": True, "method": "command"}
+        return {
+            "sent": False,
+            "method": "command",
+            "error": (completed.stderr or completed.stdout or f"exit {completed.returncode}")[:1000],
+        }
+    if webhook:
+        payload = json.dumps({"text": message}).encode("utf-8")
+        request = urllib.request.Request(
+            webhook,
+            data=payload,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=20) as response:
+                return {"sent": 200 <= response.status < 300, "method": "webhook", "status": response.status}
+        except (urllib.error.URLError, TimeoutError) as exc:
+            return {"sent": False, "method": "webhook", "error": str(exc)}
+    return {"sent": False, "method": "none", "reason": "Slack reporting not configured"}
+
+
+def write_wiki_drafts(payload: dict[str, Any], wiki_vault: pathlib.Path) -> dict[str, Any]:
+    payload = redact(payload)
+    session_id = safe_id(payload.get("session_id"))
+    agent = str(payload.get("agent") or "agent")
+    workspace = str(payload.get("workspace") or "")
+    raw_log = raw_path_for(session_id)
+    raw_log_or_none = raw_log if raw_log.exists() else None
+    candidates = payload.get("candidates") or []
+    if not isinstance(candidates, list):
+        raise ValueError("candidates must be an array")
+
+    lessons_dir = wiki_vault / "_drafts" / "lessons"
+    reports_dir = wiki_vault / "_drafts" / "reports"
+    lessons_dir.mkdir(parents=True, exist_ok=True)
+    reports_dir.mkdir(parents=True, exist_ok=True)
+
+    drafts: list[dict[str, Any]] = []
+    skipped: list[dict[str, Any]] = []
+    for index, item in enumerate(candidates, start=1):
+        if not isinstance(item, dict):
+            skipped.append({"index": index, "reason": "candidate is not an object"})
+            continue
+        if not candidate_is_complete(item):
+            skipped.append({"index": index, "reason": "missing required title/lesson/why/how_to_apply"})
+            continue
+        title = first_nonempty(str(item.get("title") or ""), 140)
+        stem = f"{today()}-{session_id}-{slugify(title)}"
+        draft_path = unique_path(lessons_dir, stem)
+        content, related = render_lesson_draft(
+            candidate=item,
+            session_id=session_id,
+            agent=agent,
+            workspace=workspace,
+            raw_log=raw_log_or_none,
+        )
+        draft_path.write_text(content, encoding="utf-8")
+        drafts.append({
+            "title": title,
+            "path": str(draft_path),
+            "confidence": str(item.get("confidence") or "medium"),
+            "related": related,
+        })
+
+    report_path = unique_path(reports_dir, f"{today()}-{session_id}-wiki-draft-report")
+    if drafts:
+        message = build_slack_message(session_id, drafts, report_path)
+    else:
+        message = f"0 session-journal wiki draft candidates created\nsource session: {session_id}\n"
+    report_path.write_text(message, encoding="utf-8")
+    slack_report = send_slack_report(message) if drafts else {"sent": False, "method": "none", "reason": "no drafts"}
+    return {
+        "wiki_vault": str(wiki_vault),
+        "source_session": session_id,
+        "drafts": drafts,
+        "skipped": skipped,
+        "report": str(report_path),
+        "slack_report": slack_report,
+    }
+
+
 def run_self_test(vault: pathlib.Path) -> dict[str, Any]:
     work = "/Users/dev/gprecious-marketplace"  # a non-tmp (meaningful) workspace
     events = [
@@ -597,6 +867,10 @@ def main(argv: list[str] | None = None) -> int:
     where = sub.add_parser("where")
     where.add_argument("--vault")
 
+    wiki_draft = sub.add_parser("wiki-draft")
+    wiki_draft.add_argument("--wiki-vault")
+    wiki_draft.add_argument("--candidate-file")
+
     args = parser.parse_args(argv)
     vault = vault_root(getattr(args, "vault", None))
 
@@ -612,6 +886,13 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.command == "self-test":
         print(json.dumps(run_self_test(vault), ensure_ascii=False))
+        return 0
+    if args.command == "wiki-draft":
+        print(json.dumps(
+            write_wiki_drafts(load_candidate_payload(args.candidate_file), wiki_vault_root(args.wiki_vault)),
+            ensure_ascii=False,
+            indent=2,
+        ))
         return 0
     return 1
 

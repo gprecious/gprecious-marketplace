@@ -19,6 +19,22 @@ CODEX_HOOK="${CODEX_PLUGIN_ROOT}/hooks/session_journal_hook.py"
 CLAUDE_HOOK="${CLAUDE_PLUGIN_ROOT}/hooks/session_journal_hook.py"
 WORK="/Users/dev/gprecious-marketplace"   # a non-tmp (meaningful) workspace path
 
+# --- package completeness guard: fail on stub-only plugin cache regressions ---
+test -f "${CODEX_PLUGIN_ROOT}/.codex-plugin/plugin.json"
+test -f "${CODEX_PLUGIN_ROOT}/hooks/hooks.json"
+test -f "${CODEX_HOOK}"
+test -f "${CODEX_PLUGIN_ROOT}/skills/session-journal/SKILL.md"
+test -f "${CODEX_PLUGIN_ROOT}/skills/session-journal-wiki-drafts/SKILL.md"
+test -f "${CLAUDE_PLUGIN_ROOT}/.claude-plugin/plugin.json"
+test -f "${CLAUDE_PLUGIN_ROOT}/hooks/hooks.json"
+test -f "${CLAUDE_HOOK}"
+test -f "${CLAUDE_PLUGIN_ROOT}/skills/session-journal/SKILL.md"
+test -f "${CLAUDE_PLUGIN_ROOT}/skills/session-journal-wiki-drafts/SKILL.md"
+test "$(wc -c < "${CODEX_HOOK}" | tr -d ' ')" -gt 1000
+test "$(wc -c < "${CLAUDE_HOOK}" | tr -d ' ')" -gt 1000
+grep -q '\${PLUGIN_ROOT}/hooks/session_journal_hook.py' "${CODEX_PLUGIN_ROOT}/hooks/hooks.json"
+grep -q '\${CLAUDE_PLUGIN_ROOT}/hooks/session_journal_hook.py' "${CLAUDE_PLUGIN_ROOT}/hooks/hooks.json"
+
 # --- meaningful Codex session (real workspace, prompt + tools + result) ---
 env PLUGIN_ROOT="${CODEX_PLUGIN_ROOT}" python3 "${CODEX_HOOK}" hook --agent "Codex" <<JSON >/dev/null
 { "session_id": "codex-self-test", "hook_event_name": "SessionStart", "cwd": "${WORK}", "source": "startup", "model": "gpt-5" }
@@ -83,7 +99,58 @@ test "${COUNT}" -eq 1
 python3 "${ROOT}/shared/session-journal/session_journal_core.py" summarize --vault "${VAULT}" --session-id codex-self-test >/tmp/session-journal-summary.json
 grep -q "daily_note" /tmp/session-journal-summary.json
 
-# 8. trivial-cwd classification: macOS real temp paths are trivial; "tmp" as a
+# 8. Wiki draft curation writes only draft lesson notes and reports them to Slack.
+WIKI_VAULT="${TMP_DIR}/wiki-vault"
+CANDIDATES="${TMP_DIR}/wiki-candidates.json"
+SLACK_CAPTURE="${TMP_DIR}/slack-message.txt"
+SLACK_CMD="${TMP_DIR}/slack-capture.sh"
+cat >"${CANDIDATES}" <<JSON
+{
+  "session_id": "codex-self-test",
+  "agent": "Codex",
+  "workspace": "gprecious-marketplace",
+  "candidates": [
+    {
+      "title": "Keep session-journal capture separate from wiki curation",
+      "lesson": "Hooks should capture raw facts and readable summaries, while LLM-authored durable lessons stay in an explicit draft workflow.",
+      "why": "Automatic wiki writes previously produced noisy stubs and verbatim fragments.",
+      "how_to_apply": "Use session-journal Raw as source material, generate draft lessons, and promote only after review.",
+      "confidence": "high",
+      "links": ["session-journal", "LLM-Wiki"]
+    },
+    {
+      "title": "Report session lesson drafts before promotion",
+      "lesson": "Slack reports should aggregate newly created draft lesson candidates so review happens before live wiki changes.",
+      "why": "Reviewable batches reduce vault pollution and keep the team aware of what an agent wants to remember.",
+      "how_to_apply": "Send a concise Slack report listing draft paths, titles, confidence, and source session.",
+      "confidence": "medium",
+      "links": ["Slack", "session-journal"]
+    }
+  ]
+}
+JSON
+cat >"${SLACK_CMD}" <<'SH'
+#!/usr/bin/env bash
+cat >"${SESSION_JOURNAL_SLACK_CAPTURE}"
+SH
+chmod +x "${SLACK_CMD}"
+SESSION_JOURNAL_SLACK_REPORT_COMMAND="${SLACK_CMD}" \
+SESSION_JOURNAL_SLACK_CAPTURE="${SLACK_CAPTURE}" \
+python3 "${ROOT}/shared/session-journal/session_journal_core.py" wiki-draft \
+  --wiki-vault "${WIKI_VAULT}" \
+  --candidate-file "${CANDIDATES}" \
+  >/tmp/session-journal-wiki-draft.json
+
+test ! -d "${WIKI_VAULT}/concepts"
+DRAFT_COUNT="$(find "${WIKI_VAULT}/_drafts/lessons" -type f -name '*.md' | wc -l | tr -d ' ')"
+test "${DRAFT_COUNT}" -eq 2
+grep -R -q 'Keep session-journal capture separate from wiki curation' "${WIKI_VAULT}/_drafts/lessons"
+grep -R -q 'How To Apply' "${WIKI_VAULT}/_drafts/lessons"
+grep -q '2 session-journal wiki draft candidate' "${SLACK_CAPTURE}"
+grep -q 'Report session lesson drafts before promotion' "${SLACK_CAPTURE}"
+grep -q '"slack_report"' /tmp/session-journal-wiki-draft.json
+
+# 9. trivial-cwd classification: macOS real temp paths are trivial; "tmp" as a
 #    substring of a real project dir is NOT a false positive.
 python3 - "${ROOT}" <<'PY'
 import sys, importlib.util

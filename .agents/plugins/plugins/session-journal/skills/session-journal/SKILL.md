@@ -50,8 +50,8 @@ The shared core resolves the vault in this order:
 3. **Default** — `~/Documents/Obsidian/llm-agent-vault`.
 
 For Codex, export these from `~/.zshenv` (or your shell profile / Codex config) so
-the shared core sees them. (Claude Code uses the `env` block of
-`~/.claude/settings.json`.)
+the shared core sees them. Claude Code uses the `env` block of
+`~/.claude/settings.json`.
 
 > **Pin explicit when a name is ambiguous.** If a machine has **more than one**
 > vault with the same folder name (e.g. a live local copy plus a stale iCloud
@@ -91,7 +91,7 @@ vault, in which case pin `LLM_OBSIDIAN_VAULT` explicitly there.
 ## Verifying setup
 
 ```bash
-python3 "${PLUGIN_ROOT}/hooks/session_journal_hook.py" where
+python3 "${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT}}/hooks/session_journal_hook.py" where
 ```
 
 Prints `resolved_vault`, `resolution_mode` (explicit/name/default), the env seen,
@@ -103,11 +103,11 @@ same-named vault was found — pin `LLM_OBSIDIAN_VAULT`.
 ## Manual summary refresh
 
 ```bash
-python3 "${PLUGIN_ROOT}/hooks/session_journal_hook.py" summarize --session-id <session-id>
+python3 "${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT}}/hooks/session_journal_hook.py" summarize --session-id <session-id>
 ```
 
-If `PLUGIN_ROOT` is unavailable, run the same script from the installed plugin's
-`hooks/` directory (or the marketplace clone's
+If neither plugin root variable is available, run the same script from the installed
+plugin's `hooks/` directory (or the marketplace clone's
 `shared/session-journal/session_journal_core.py`).
 
 ## Curating durable knowledge (on demand)
@@ -121,6 +121,10 @@ hook. When the user asks to "save what we learned" / "make a wiki note":
 - Prefer the proper curated wiki: **research-engine `/wiki`** (the LLM-authored
   Obsidian wiki under `LLM-Wiki/`), or the user's own notes. Read the source
   session from `Raw/` if you need the details.
+- For reviewable lesson drafts with Slack reporting, use the
+  `session-journal-wiki-drafts` skill. It writes only to
+  `LLM-Wiki/_drafts/lessons/` and `_drafts/reports/`; live wiki promotion stays
+  explicit.
 - Never save secrets/credentials (the core also redacts obvious token/key/password
   patterns), transient logs, or low-value chatter.
 - Avoid creating link-only stub notes — a note must carry real distilled content.
