@@ -38,6 +38,12 @@
       "category": "productivity"
     },
     {
+      "name": "loop-engineering",
+      "description": "반복 업무를 루프로 만들지 판정하고 trigger·state·verification·human-gate·stop 5요소 + 가드레일 7종 + 지표 6종으로 설계(/loop-design)·감사(/loop-audit)하는 거버넌스 레이어. 실행은 기존 엔진(herdr·/loop·Cron·Workflow·Codex Automations)에 위임. control plane은 docs/loops/ 파일 기본 + GitHub/Slack 어댑터.",
+      "source": "./claude-plugins/loop-engineering",
+      "category": "productivity"
+    },
+    {
       "name": "e2e-harness",
       "description": "대상 스택을 감지해 맞춤 E2E/검증 하네스를 대화형 생성하는 Claude Code + Codex 공용 스킬 (harness-engineering 메타패턴 + 스택 레시피).",
       "source": "./claude-plugins/e2e-harness",
