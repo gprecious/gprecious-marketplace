@@ -112,6 +112,18 @@
       },
       "category": "Productivity",
       "description": "Codex/Claude Code 세션을 Obsidian vault에 기록하고, 별도 skill로 LLM-Wiki lesson draft와 Slack 묶음 보고를 생성합니다."
+    },
+    {
+      "name": "loop-engineering",
+      "source": {
+        "source": "local",
+        "path": "./.agents/plugins/plugins/loop-engineering"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
     }
   ]
 }

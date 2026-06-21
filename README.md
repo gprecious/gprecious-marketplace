@@ -34,6 +34,7 @@ gprecious-marketplace/
 | growth-marketer | 모바일 앱·웹/SaaS 마케팅 자동화. 서비스 분석(ICP·VOC) → 채널 추천 → 카피·플레이북·CRO·draft 캠페인 | `claude-plugins/growth-marketer` |
 | goalcraft | 요구사항·버그·작업 설명을 실행 주체(Claude Code/Codex)에 맞춘 goal 최적화 프롬프트로 변환. executor-adaptive — 누락 필드(완료조건·범위·검증) 질문 후 복붙용 프롬프트 생성, 장기작업은 /goal 활용 | `claude-plugins/goalcraft` |
 | session-journal | Claude Code/Codex 세션을 Obsidian vault에 기록 — 일자별 단일 노트(`Journal/<date>.md`)에 의미있는 세션만 시간순 요약, raw 로그는 vault 밖(`$XDG_STATE_HOME`, retention), hook 자동 wiki 없음. 별도 skill로 LLM-Wiki draft와 Slack 묶음 보고 | `claude-plugins/session-journal` |
+| loop-engineering | 반복 업무를 루프로 만들지 판정 + 5요소·가드레일·지표로 설계(/loop-design)·감사(/loop-audit)하는 거버넌스 레이어. 실행은 기존 엔진 위임, control plane은 docs/loops/ 파일 기본 | `claude-plugins/loop-engineering` |
 
 ### 설치 방법
 
@@ -46,6 +47,7 @@ claude /install hetzner-master@gprecious-marketplace
 claude /install growth-marketer@gprecious-marketplace
 claude /install goalcraft@gprecious-marketplace
 claude /install session-journal@gprecious-marketplace
+claude /install loop-engineering@gprecious-marketplace
 
 # app-release 는 최초 설치 후 한 번:
 cd ~/.claude/plugins/marketplaces/gprecious-marketplace/claude-plugins/app-release && npm install
@@ -75,6 +77,7 @@ Claude marketplace에 있는 플러그인은 모두 Codex marketplace에도 노�
 | growth-marketer | 모바일 앱·웹/SaaS 마케팅 자동화. 서비스 분석 → 채널 추천 → 카피·플레이북 | `.agents/plugins/plugins/growth-marketer` |
 | goalcraft | 요구사항을 실행 주체(Claude Code/Codex)에 맞춘 goal 최적화 프롬프트로 변환. executor-adaptive + 누락 필드 질문 + /goal 장기작업 | `.agents/plugins/plugins/goalcraft` |
 | session-journal | Codex/Claude hook 이벤트를 일자별 단일 노트(`Journal/<date>.md`, 의미있는 세션만 시간순)로 저장, raw log는 vault 밖(`$XDG_STATE_HOME`, retention). hook 자동 wiki 없음, 별도 skill로 LLM-Wiki draft와 Slack 묶음 보고 | `.agents/plugins/plugins/session-journal` |
+| loop-engineering | 반복 업무를 루프로 만들지 판정 + 5요소·가드레일·지표로 설계·감사하는 거버넌스 레이어 (Codex는 skill 직접 실행, commands 없음). 실행은 기존 엔진 위임, control plane은 docs/loops/ 파일 기본 | `.agents/plugins/plugins/loop-engineering` |
 
 ### 설치 방법
 
@@ -91,6 +94,7 @@ codex plugin add hetzner-master@gprecious-marketplace
 codex plugin add growth-marketer@gprecious-marketplace
 codex plugin add goalcraft@gprecious-marketplace
 codex plugin add session-journal@gprecious-marketplace
+codex plugin add loop-engineering@gprecious-marketplace
 ```
 
 GitHub에서 직접 추가할 때는 repo root 아래 `.agents/plugins`만 sparse checkout하면 된다:

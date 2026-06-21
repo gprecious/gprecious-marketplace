@@ -1,6 +1,6 @@
 {
   "name": "gprecious-marketplace",
-  "version": "1.2.4",
+  "version": "1.3.0",
   "owner": {
     "name": "gprecious",
     "email": "gprecious@users.noreply.github.com"
@@ -69,6 +69,12 @@
         "url": "https://github.com/gprecious/hetzner-master.git"
       },
       "homepage": "https://github.com/gprecious/hetzner-master",
+      "category": "productivity"
+    },
+    {
+      "name": "loop-engineering",
+      "description": "반복 업무를 루프로 만들지 판정하고 trigger·state·verification·human-gate·stop 5요소 + 가드레일 7종 + 지표 6종으로 설계(/loop-design)·감사(/loop-audit)하는 거버넌스 레이어. 실행은 기존 엔진(herdr·/loop·Cron·Workflow·Codex Automations)에 위임. control plane은 docs/loops/ 파일 기본 + GitHub/Slack 어댑터.",
+      "source": "./claude-plugins/loop-engineering",
       "category": "productivity"
     }
   ]
