@@ -1,0 +1,45 @@
+{
+  "skill_name": "loopcraft",
+  "evals": [
+    {
+      "id": 0,
+      "name": "vague-recurring-fixed-interval",
+      "prompt": "preview 배포되면 콘솔 에러 점검 계속 돌려줘. /loop 프롬프트로 만들어줘.",
+      "expected_output": "Identifies this as a recurring/polling task and picks fixed-interval (or asks the cadence if ambiguous). Produces a single fenced /loop command line with an interval, a no-op-friendly one-line report ('clean' when no errors), report-only behavior (no auto-fix without a gate), and an objective stop ('clean twice in a row' or user-stop). Names the verification sensor (console + network, smoke 200). Output is a copy-pasteable block with a mode label above it.",
+      "files": [],
+      "assertions": []
+    },
+    {
+      "id": 1,
+      "name": "self-paced-convergence",
+      "prompt": "CI 통과하고 리뷰 코멘트 다 처리될 때까지 반복하는 /loop 프롬프트 만들어줘",
+      "expected_output": "Recognizes a convergent task with a finish line → self-paced (interval omitted). Bakes in an OBJECTIVE stop condition (CI run green AND zero unresolved review threads), an iteration ceiling (e.g. ~20-25) plus a no-progress stop, root-cause fixing (don't weaken tests), reads prior iteration before acting, and a human gate before merge. Shows verification (failing-then-passing job status) each pass. Single fenced /loop block.",
+      "files": [],
+      "assertions": []
+    },
+    {
+      "id": 2,
+      "name": "maintenance-loopmd",
+      "prompt": "이 브랜치 PR 계속 돌봐주는 loop 만들어줘",
+      "expected_output": "Routes to loop.md-default: produces a .claude/loop.md FILE BODY (not a /loop command), conservative maintenance scope (CI red → fix root cause, new review comments → resolve, conflicts), report-and-rest when quiet, and explicit 'do not merge or force-push'. Mode label names the file path. Mentions it is reloaded each iteration / 25KB cap if relevant.",
+      "files": [],
+      "assertions": []
+    },
+    {
+      "id": 3,
+      "name": "single-shot-reject-route-to-goalcraft",
+      "prompt": "로그인 버그 한 번 고치는 거 /loop 으로 만들어줘",
+      "expected_output": "Detects this is a SINGLE run (one fix, one finish — no repetition). Does NOT force a loop; explains a /loop would just re-declare done every iteration, and routes the user to goalcraft for a single goal-optimized prompt instead. Does not fabricate a recurring stop condition for a non-recurring task.",
+      "files": [],
+      "assertions": []
+    },
+    {
+      "id": 4,
+      "name": "missing-stop-condition-asks",
+      "prompt": "백그라운드로 계속 코드 정리시키는 /loop 만들어줘",
+      "expected_output": "Flags that the most dangerous gap — an objective stop condition — is missing, and asks targeted questions (stop signal? ceiling? verification command?) before converting, OR states explicit assumptions if told not to ask. Refuses to emit a loop with a subjective 'until it's clean' stop; insists on a checkable signal + ceiling. Prioritizes stop-condition and ceiling over interval.",
+      "files": [],
+      "assertions": []
+    }
+  ]
+}
