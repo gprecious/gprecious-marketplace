@@ -17,6 +17,7 @@ gprecious-marketplace/
 │   ├── goalcraft/
 │   ├── growth-marketer/
 │   ├── herdr/
+│   ├── loopcraft/
 │   └── session-journal/
 └── opencode-plugins/        # OpenCode 플러그인
     └── youtube-shorts-orchestrator/
@@ -33,6 +34,7 @@ gprecious-marketplace/
 | hetzner-master | Hetzner Proxmox VE 8 lab 배포·운영 runbook. LXC, Terraform state safety, Ansible rollout, Tailscale, monitoring, Supabase self-hosted LXC 템플릿(프로젝트별 복제) 포함 | 외부 repo (`github.com/gprecious/hetzner-master`) |
 | growth-marketer | 모바일 앱·웹/SaaS 마케팅 자동화. 서비스 분석(ICP·VOC) → 채널 추천 → 카피·플레이북·CRO·draft 캠페인 | `claude-plugins/growth-marketer` |
 | goalcraft | 요구사항·버그·작업 설명을 실행 주체(Claude Code/Codex)에 맞춘 goal 최적화 프롬프트로 변환. executor-adaptive — 누락 필드(완료조건·범위·검증) 질문 후 복붙용 프롬프트 생성, 장기작업은 /goal 활용 | `claude-plugins/goalcraft` |
+| loopcraft | 반복 업무를 Claude Code /loop 용 프롬프트로 변환. goalcraft의 loop 형제 — 모드 판정(고정 interval/self-paced/loop.md) 후 객관적 종료조건·iteration ceiling·verification 박은 복붙용 /loop 프롬프트. 단발은 goalcraft, 루프 거버넌스는 loop-engineering (Claude 전용) | `claude-plugins/loopcraft` |
 | session-journal | Claude Code/Codex 세션을 Obsidian vault에 기록 — 일자별 단일 노트(`Journal/<date>.md`)에 의미있는 세션만 시간순 요약, raw 로그는 vault 밖(`$XDG_STATE_HOME`, retention), hook 자동 wiki 없음. 별도 skill로 LLM-Wiki draft와 Slack 묶음 보고 | `claude-plugins/session-journal` |
 | loop-engineering | 반복 업무를 루프로 만들지 판정 + 5요소·가드레일·지표로 설계(/loop-design)·감사(/loop-audit)하는 거버넌스 레이어. 실행은 기존 엔진 위임, control plane은 docs/loops/ 파일 기본 | `claude-plugins/loop-engineering` |
 
@@ -46,6 +48,7 @@ claude /install herdr@gprecious-marketplace
 claude /install hetzner-master@gprecious-marketplace
 claude /install growth-marketer@gprecious-marketplace
 claude /install goalcraft@gprecious-marketplace
+claude /install loopcraft@gprecious-marketplace
 claude /install session-journal@gprecious-marketplace
 claude /install loop-engineering@gprecious-marketplace
 
