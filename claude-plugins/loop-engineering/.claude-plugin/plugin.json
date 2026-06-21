@@ -1,0 +1,18 @@
+{
+  "name": "loop-engineering",
+  "version": "0.1.0",
+  "description": "반복 업무를 루프로 만들지 판정하고 trigger·state·verification·human-gate·stop의 5요소 + 가드레일 7종 + 지표 6종으로 설계·감사하는 거버넌스 레이어. 실행은 직접 하지 않고 기존 엔진(herdr·/loop·Cron·Workflow·Codex Automations)에 매핑. /loop-design 으로 루프 스펙 생성, /loop-audit 으로 no-op precision·드리프트 점검. control plane 기본값은 repo 내 docs/loops/ 파일, GitHub Issue·Slack은 어댑터.",
+  "author": {
+    "name": "gprecious",
+    "email": "gprecious@users.noreply.github.com"
+  },
+  "keywords": [
+    "loop-engineering",
+    "agent-loops",
+    "automation",
+    "governance",
+    "ops",
+    "claude-code",
+    "codex"
+  ]
+}

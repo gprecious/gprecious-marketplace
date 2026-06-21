@@ -30,6 +30,7 @@ gprecious-marketplace/
 | app-release | 크로스 스택 모바일 스토어 릴리즈 파이프라인 (Expo/Capacitor). ASC + Play 메타데이터/스크린샷/상태/승격/거절대응 자동화 | `claude-plugins/app-release` |
 | cmux | cmux 멀티페인 위에서 Claude Code/Codex 세션을 역할별 페인(plan/design/test/dev/review)으로 자동 오케스트레이션. 패널 간 메시지 송수신 skill 포함 | `claude-plugins/cmux` |
 | herdr | herdr 위에서 Claude Code + Codex 워커를 visible TUI pane 으로 병렬 실행. v0.10 라우팅 게이트로 subagent/lightweight delegation 을 먼저 검토하고, visible TUI·별도 CLI/account/browser state·명시적 pane fan-out 이 필요할 때만 새 pane 생성 (3×3 grid + 탭 spillover, 자동 정리) | `claude-plugins/herdr` |
+| loop-engineering | 반복 업무를 루프로 만들지 판정 + 5요소·가드레일·지표로 설계(/loop-design)·감사(/loop-audit)하는 거버넌스 레이어. 실행은 기존 엔진 위임, control plane은 docs/loops/ 파일 기본 | `claude-plugins/loop-engineering` |
 | hetzner-master | Hetzner Proxmox VE 8 lab 배포·운영 runbook. LXC, Terraform state safety, Ansible rollout, Tailscale, monitoring, Supabase self-hosted LXC 템플릿(프로젝트별 복제) 포함 | 외부 repo (`github.com/gprecious/hetzner-master`) |
 | growth-marketer | 모바일 앱·웹/SaaS 마케팅 자동화. 서비스 분석(ICP·VOC) → 채널 추천 → 카피·플레이북·CRO·draft 캠페인 | `claude-plugins/growth-marketer` |
 | goalcraft | 요구사항·버그·작업 설명을 실행 주체(Claude Code/Codex)에 맞춘 goal 최적화 프롬프트로 변환. executor-adaptive — 누락 필드(완료조건·범위·검증) 질문 후 복붙용 프롬프트 생성, 장기작업은 /goal 활용 | `claude-plugins/goalcraft` |
