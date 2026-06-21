@@ -1,0 +1,17 @@
+{
+  "name": "loopcraft",
+  "version": "0.1.0",
+  "description": "반복 업무 요구사항을 Claude Code /loop 용 프롬프트로 변환하는 skill. goalcraft의 loop 형제 — 모드 판정(고정 interval/self-paced/loop.md) 후 객관적 종료조건·iteration ceiling·verification을 박은 복붙용 /loop 프롬프트 생성. 단발은 goalcraft, 루프 거버넌스는 loop-engineering.",
+  "author": {
+    "name": "gprecious",
+    "email": "gprecious@users.noreply.github.com"
+  },
+  "keywords": [
+    "loop",
+    "prompt-engineering",
+    "recurring",
+    "automation",
+    "claude-code",
+    "scheduled-tasks"
+  ]
+}
