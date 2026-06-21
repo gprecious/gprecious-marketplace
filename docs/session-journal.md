@@ -213,6 +213,40 @@ wiki under `LLM-Wiki/`). A durable note must be a *distilled summary* — the
 lesson, the key decision, the reusable pattern, and how to apply it later — never
 a verbatim copy of the session. Read the source session from `Raw/` for details.
 
+### Drafting Lessons into LLM-Wiki
+
+The separate `session-journal-wiki-drafts` skill turns raw session logs into
+reviewable lesson drafts. The LLM selects only durable candidates, then the
+deterministic helper writes them under the wiki draft area:
+
+```bash
+python3 <plugin-root>/hooks/session_journal_hook.py wiki-draft \
+  --candidate-file /tmp/session-journal-wiki-candidates.json
+```
+
+The candidate file is JSON with `session_id`, `agent`, `workspace`, and a
+`candidates[]` array containing `title`, `lesson`, `why`, `how_to_apply`,
+`confidence`, and optional `links`/`tags`. The helper writes only:
+
+```text
+<LLM-Wiki>/_drafts/lessons/YYYY-MM-DD-<session>-<slug>.md
+<LLM-Wiki>/_drafts/reports/YYYY-MM-DD-<session>-wiki-draft-report.md
+```
+
+It never writes live `concepts/`, `entities/`, or `synthesis/` pages; promotion is
+a separate human-approved step.
+
+Wiki target resolution follows research-engine's policy: `--wiki-vault` or
+`WIKI_VAULT`, then `LLM_OBSIDIAN_VAULT_NAME` + `LLM_WIKI_SUBDIR` (default
+`LLM-Wiki`), then local `./wiki`.
+
+When drafts are created, the helper sends one aggregated Slack report if either
+`SESSION_JOURNAL_SLACK_WEBHOOK_URL` or `SESSION_JOURNAL_SLACK_REPORT_COMMAND` is
+configured. The command form receives the report body on stdin, which allows
+Hermes or any local Slack sender to be used without shell quoting large messages.
+If Slack is not configured, the report markdown is still written under
+`_drafts/reports/`.
+
 ## Obsidian Links
 
 Session notes still include wikilinks for graph navigation:
@@ -241,6 +275,8 @@ Its cross-session learning layer uses:
 - the durable insight layer is **research-engine `/wiki`** (`LLM-Wiki/`),
   populated on demand — not auto-written by this plugin
 - Obsidian wikilinks make related concepts inspectable through the graph
+- `session-journal-wiki-drafts` can create draft lesson candidates in
+  `LLM-Wiki/_drafts/lessons/` and report the batch to Slack
 
 It does not auto-trigger `/dream`, `/evolve`, or `/wiki`; it links to those
 concepts so later research-engine work can reuse the captured sessions.

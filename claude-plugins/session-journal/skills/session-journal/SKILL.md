@@ -49,8 +49,9 @@ The shared core resolves the vault in this order:
    subfolder. Portable: the same env works on every machine.
 3. **Default** — `~/Documents/Obsidian/llm-agent-vault`.
 
-Set these for Claude Code in the `env` block of `~/.claude/settings.json`; for
-Codex in `~/.zshenv` (the shared core reads the same vars).
+For Codex, export these from `~/.zshenv` (or your shell profile / Codex config) so
+the shared core sees them. Claude Code uses the `env` block of
+`~/.claude/settings.json`.
 
 > **Pin explicit when a name is ambiguous.** If a machine has **more than one**
 > vault with the same folder name (e.g. a live local copy plus a stale iCloud
@@ -80,8 +81,7 @@ vault, in which case pin `LLM_OBSIDIAN_VAULT` explicitly there.
 - **New machine**: (1) connect the vault via Obsidian Sync so Obsidian registers
   it locally, (2) install the plugin + trust hooks, (3) set the name env vars,
   (4) restart and verify.
-- **Already-installed machine**: update the plugin (`/plugin`, or marketplace
-  update + reinstall), add the env vars, restart, verify.
+- **Already-installed machine**: update the plugin, add the env vars, restart, verify.
 - **Headless (no Obsidian app)**: name resolution can't read `obsidian.json` and
   falls back to default — set an explicit `LLM_OBSIDIAN_VAULT` there instead.
 - **Selective sync**: keep `AI-Journal/` included. Raw `.jsonl` logs now live
@@ -91,7 +91,7 @@ vault, in which case pin `LLM_OBSIDIAN_VAULT` explicitly there.
 ## Verifying setup
 
 ```bash
-python3 "${CLAUDE_PLUGIN_ROOT}/hooks/session_journal_hook.py" where
+python3 "${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT}}/hooks/session_journal_hook.py" where
 ```
 
 Prints `resolved_vault`, `resolution_mode` (explicit/name/default), the env seen,
@@ -103,10 +103,10 @@ same-named vault was found — pin `LLM_OBSIDIAN_VAULT`.
 ## Manual summary refresh
 
 ```bash
-python3 "${CLAUDE_PLUGIN_ROOT}/hooks/session_journal_hook.py" summarize --session-id <session-id>
+python3 "${PLUGIN_ROOT:-${CLAUDE_PLUGIN_ROOT}}/hooks/session_journal_hook.py" summarize --session-id <session-id>
 ```
 
-If `CLAUDE_PLUGIN_ROOT` is unavailable, run the same script from the installed
+If neither plugin root variable is available, run the same script from the installed
 plugin's `hooks/` directory (or the marketplace clone's
 `shared/session-journal/session_journal_core.py`).
 
@@ -121,6 +121,10 @@ hook. When the user asks to "save what we learned" / "make a wiki note":
 - Prefer the proper curated wiki: **research-engine `/wiki`** (the LLM-authored
   Obsidian wiki under `LLM-Wiki/`), or the user's own notes. Read the source
   session from `Raw/` if you need the details.
+- For reviewable lesson drafts with Slack reporting, use the
+  `session-journal-wiki-drafts` skill. It writes only to
+  `LLM-Wiki/_drafts/lessons/` and `_drafts/reports/`; live wiki promotion stays
+  explicit.
 - Never save secrets/credentials (the core also redacts obvious token/key/password
   patterns), transient logs, or low-value chatter.
 - Avoid creating link-only stub notes — a note must carry real distilled content.
