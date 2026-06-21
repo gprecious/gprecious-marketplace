@@ -1,6 +1,6 @@
 {
   "name": "loop-engineering",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Design and audit controlled agent loops — judge if a repetitive task should be a loop, then spec it with trigger·state·verification·human-gate·stop + 7 guardrails + 6 metrics, mapping execution onto existing engines. Does not run loops itself.",
   "author": {
     "name": "gprecious",
