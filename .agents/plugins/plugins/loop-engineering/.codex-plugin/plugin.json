@@ -1,0 +1,35 @@
+{
+  "name": "loop-engineering",
+  "version": "0.1.0",
+  "description": "Design and audit controlled agent loops — judge if a repetitive task should be a loop, then spec it with trigger·state·verification·human-gate·stop + 7 guardrails + 6 metrics, mapping execution onto existing engines. Does not run loops itself.",
+  "author": {
+    "name": "gprecious",
+    "email": "gprecious@users.noreply.github.com",
+    "url": "https://github.com/gprecious"
+  },
+  "repository": "https://github.com/gprecious/gprecious-marketplace",
+  "keywords": [
+    "loop-engineering",
+    "agent-loops",
+    "automation",
+    "governance",
+    "ops",
+    "claude-code",
+    "codex"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Loop Engineering",
+    "shortDescription": "Design & audit controlled agent loops (not a runner).",
+    "longDescription": "Turn a repetitive, reviewable task into a controlled agent loop. Judges loop-fitness with 4 criteria, designs trigger·state·verification·human-gate·stop with 7 guardrails and 6 metrics, maps it onto an existing engine (loop/Cron/herdr/Workflow/Automations), and writes a spec to docs/loops/. Audits registered loops for completeness, drift, and no-op precision. Does not execute loops.",
+    "developerName": "gprecious",
+    "category": "Productivity",
+    "capabilities": ["Interactive"],
+    "defaultPrompt": [
+      "이 반복 업무를 통제된 루프로 설계해줘.",
+      "Design a controlled loop for this recurring task.",
+      "등록된 루프들을 감사해줘 (loop audit)."
+    ],
+    "brandColor": "#0EA5E9"
+  }
+}
