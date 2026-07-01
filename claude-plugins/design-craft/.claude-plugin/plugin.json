@@ -1,0 +1,19 @@
+{
+  "name": "design-craft",
+  "version": "0.1.0",
+  "description": "프론트엔드 UI를 '더 나은 디자인 + anti-slop'으로 만드는 decision-first 스킬 (Claude Code + Codex 공용). surface 분류 → 코드 이전 방향 결정(토큰·signature) → 발산/수렴 → named banlist로 기본 룩 탈출 → 수치화된 craft 기준으로 빌드 → 렌더 스크린샷 critic 게이트. Anthropic frontend-design 방법론 + WCAG/타이포/색/모션 fundamentals + AI-slop 카탈로그 종합.",
+  "author": {
+    "name": "gprecious",
+    "email": "gprecious@users.noreply.github.com"
+  },
+  "keywords": [
+    "design",
+    "frontend",
+    "ui-ux",
+    "anti-slop",
+    "design-system",
+    "accessibility",
+    "claude-code",
+    "codex"
+  ]
+}
