@@ -1,6 +1,6 @@
 {
   "name": "gprecious-marketplace",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "owner": {
     "name": "gprecious",
     "email": "gprecious@users.noreply.github.com"
@@ -81,6 +81,12 @@
       "name": "loop-engineering",
       "description": "반복 업무를 루프로 만들지 판정하고 trigger·state·verification·human-gate·stop 5요소 + 가드레일 7종 + 지표 6종으로 설계(/loop-design)·감사(/loop-audit)하는 거버넌스 레이어. 실행은 기존 엔진(herdr·/loop·Cron·Workflow·Codex Automations)에 위임. control plane은 docs/loops/ 파일 기본 + GitHub/Slack 어댑터.",
       "source": "./claude-plugins/loop-engineering",
+      "category": "productivity"
+    },
+    {
+      "name": "design-craft",
+      "description": "프론트엔드 UI를 '더 나은 디자인 + anti-slop'으로 만드는 decision-first 스킬 (Claude Code + Codex 공용). surface 분류 → 코드 이전 방향 결정(토큰·signature) → 발산/수렴 → named banlist로 기본 룩 탈출 → 수치화된 craft 기준으로 빌드 → 렌더 스크린샷 critic 게이트. Anthropic frontend-design 방법론 + WCAG/타이포/색/모션 fundamentals + AI-slop 카탈로그 종합.",
+      "source": "./claude-plugins/design-craft",
       "category": "productivity"
     }
   ]
