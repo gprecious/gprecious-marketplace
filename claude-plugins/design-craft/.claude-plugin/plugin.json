@@ -1,7 +1,7 @@
 {
   "name": "design-craft",
-  "version": "0.1.0",
-  "description": "프론트엔드 UI를 '더 나은 디자인 + anti-slop'으로 만드는 decision-first 스킬 (Claude Code + Codex 공용). surface 분류 → 코드 이전 방향 결정(토큰·signature) → 발산/수렴 → named banlist로 기본 룩 탈출 → 수치화된 craft 기준으로 빌드 → 렌더 스크린샷 critic 게이트. Anthropic frontend-design 방법론 + WCAG/타이포/색/모션 fundamentals + AI-slop 카탈로그 종합.",
+  "version": "0.2.0",
+  "description": "프론트엔드 UI를 '더 나은 디자인 + anti-slop'으로 만드는 decision-first 스킬 (Claude Code + Codex 공용). surface 분류 → 코드 이전 방향 결정(OKLCH 토큰·signature) → 발산/수렴 → named banlist로 기본 룩 탈출 → 수치화된 craft 기준으로 빌드 → 렌더 critic + Design TDD 게이트. Anthropic frontend-design 방법론 + WCAG/타이포/색/모션 fundamentals + AI-slop 카탈로그 + WebGL/shader/3D(R3F) signature 모듈 + page→system(design.md)→test 스케일업.",
   "author": {
     "name": "gprecious",
     "email": "gprecious@users.noreply.github.com"
@@ -13,6 +13,9 @@
     "anti-slop",
     "design-system",
     "accessibility",
+    "webgl",
+    "3d",
+    "oklch",
     "claude-code",
     "codex"
   ]

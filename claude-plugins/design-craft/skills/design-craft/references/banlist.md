@@ -10,6 +10,7 @@ Open at Gate 3 (anti-default critique). These are the highest-frequency clichés
 - App/dashboard built as a stacked-card mosaic only.
 - A card inside the marketing hero, making the first viewport a dashboard instead of a poster.
 - Top-right "More / Learn more / View all ›" idiom everywhere.
+- Reflexive single **centered hero CTA** (one centered call-to-action as the default hero) — center only when the composition earns it.
 
 ## B. Cards / components
 - `rounded-xl + border + shadow-sm + p-6` cards everywhere ("cardocalypse").
@@ -31,7 +32,7 @@ Open at Gate 3 (anti-default critique). These are the highest-frequency clichés
 - "Dark luxury" clone: near-black + acid-green/vermilion + huge serif applied to every brief.
 
 ## D. Typography / copy
-- Inter / system-ui as the entire identity.
+- **Inter / Geist** (or a single system-ui stack) as the entire identity — the reflexive agent defaults. Name them as banned in the prompt so the model looks elsewhere.
 - Display and body sharing the same `600/700/800` weight ramp.
 - Global `letter-spacing: -0.02em`.
 - Marketing filler: "Unlock the power of…", "All-in-one solution", "Built for X", "Designed for Y".
@@ -41,7 +42,7 @@ Open at Gate 3 (anti-default critique). These are the highest-frequency clichés
 - Cream background + oversized editorial serif as a reflexive default ("neo-slop").
 
 ## E. Icons / images / media
-- Stroke-2 round-cap line-icon set sprinkled as decoration.
+- Stroke-2 round-cap line-icon set (especially **Lucide**) sprinkled as decoration.
 - Emoji bullets / rocket / sparkle standing in for hierarchy.
 - Stock-photo-vibe hero, blurry people photos, generic 3D shapes.
 - Abstract mockup where the real product/venue/object should be shown.
