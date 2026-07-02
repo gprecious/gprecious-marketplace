@@ -11,7 +11,10 @@ registry.md를 읽어 등록 루프 목록을 만든다. 없으면 "등록된 �
 
 각 루프의 spec.md를 읽고:
 
-- **완결성**: 5요소·가드레일 7종에 빈칸이 있으면 FLAG.
+- **완결성**: 5요소 + 보강 3필드(scope/boundary·forbidden actions·retry rule)·가드레일 7종에 빈칸이 있으면 FLAG.
+- **stop 판별성**: stop condition이 "리뷰어가 성공/실패를 판별 가능한" 형태인가?
+  기준: **리뷰어가 goal 성공 여부를 말할 수 없으면 goal을 다시 써라.** 판별 불가하면 FLAG(재작성 권고).
+  backend=/goal이면 verification 증거가 대화에 출력되도록 설계됐는지도 확인(평가자는 transcript만 본다).
 - **드리프트**: verification에 적힌 명령/경로, backend가 실제로 존재하는지 확인
   (예: `pnpm lint` 스크립트 존재, 참조 파일 존재). 없으면 FLAG.
 - **stage 적정성**: `scheduled`인데 evidence가 빈약하거나 no-op precision 근거 없으면 FLAG(강등 권고).

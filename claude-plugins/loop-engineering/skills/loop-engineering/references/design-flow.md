@@ -16,7 +16,7 @@
 - 큰 리스크/되돌리기 어려움 → 사람이 직접 처리 권고
   4기준 PASS여야 다음으로 진행.
 
-## 2. 5요소 설계 (대화형)
+## 2. 5요소 + 보강 3필드 설계 (대화형)
 
 `templates/loop-spec.md`를 채운다. 각 요소를 한 번에 하나씩 묻는다:
 
@@ -24,8 +24,17 @@
 2. **state** — 사이클 사이 무엇을 어디에 저장? (기본 file: `docs/loops/<name>/`)
 3. **verification** — **실행 가능한 센서**여야 한다. "잘 됐는지 확인"이 아니라 `pnpm lint` exit 0,
    console 에러 0, 스크린샷 diff 같은 결정론적 명령. 없으면 만들 수 있는지 함께 설계.
+   **backend가 `/goal`이면** 센서 결과를 에이전트가 **대화에 출력**하도록 설계한다 — 평가자(fast model)는
+   파일·명령에 접근하지 못하고 transcript만 보고 판정하므로, 증거가 대화에 없으면 goal이 확정되지 않는다.
 4. **human gate** — 어디에 둘지. principles.md 기준(넓은 scope·배포 영향·product taste). 저위험이면 "없음".
 5. **stop condition** — objective metric 우선. 주관적이면 rubric+independent checker+threshold+hard cap 강제.
+
+이어서 Good Goal Shape 기준 **보강 3필드**를 함께 채운다(빈칸 불가). triage·가드레일과 겹쳐 보여도,
+프롬프트/spec에 명시적으로 박히는 별개 필드다:
+
+6. **scope/boundary** — 루프가 건드릴 수 있는 범위(어느 repo·브랜치·경로·배포 1개 등). "무엇을 할 수 있나".
+7. **forbidden actions** — 절대 금지 목록(secrets 커밋·IAM/billing 변경·data 삭제·리뷰 없는 merge). "무엇이 금지인가".
+8. **retry rule** — 실패 후 무엇을 하나. 기본: **가장 작은 확인된 원인부터** 수정·재검증, 테스트 약화 금지.
 
 ## 3. 가드레일 7종 (빈칸 불가)
 
@@ -35,6 +44,8 @@
 ## 4. backend 매핑 (1개)
 
 `backend-mapping.md` 결정표로 정확히 1개 backend 지정. 2개 이상 필요하면 루프를 쪼개라고 안내.
+단, 완료가 "스케줄 트리거 + goal 수렴"의 합성이면 backend-mapping의 **합성 시스템** 절을 따른다
+(예외적으로 trigger+`/goal` 2개 표기 허용, trigger·stop·human gate가 3부분을 각각 담을 것).
 
 ## 5. control plane
 

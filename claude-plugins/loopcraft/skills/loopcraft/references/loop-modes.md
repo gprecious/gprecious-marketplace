@@ -68,3 +68,7 @@ It's reloaded **every iteration** (edit while running to refine), and content pa
   > each and resolve the thread. Do not merge or force-push. If everything is green and
   > quiet, say so in one line and do nothing else.
   > ```
+
+---
+
+> **Not a `/loop` mode: `/goal`.** "Keep working until this condition holds" (no interval, no re-check delay) is Claude Code's `/goal`, which **goalcraft** owns — see its `references/claude-code.md`. Route those requests there; loopcraft stays `/loop`-only.

@@ -5,8 +5,8 @@ description: Use when the user wants to turn a repetitive, reviewable task into 
 
 # loop-engineering
 
-반복 업무를 **루프로 만들지 판정**하고 5요소·가드레일·지표로 **설계·감사**하는 거버넌스 레이어.
-**실행은 하지 않는다** — 기존 엔진에 매핑만 한다.
+반복 업무를 **루프로 만들지 판정**하고 5요소(+scope/forbidden/retry 보강)·가드레일·지표로 **설계·감사**하는 거버넌스 레이어.
+**실행은 하지 않는다** — 기존 엔진(`/loop`·`/goal`·Cron·herdr·Workflow·Codex Automations 등)에 매핑만 한다.
 
 ## 핵심 원칙 (요약, 전문은 references/principles.md)
 

@@ -4,12 +4,16 @@ Pull the closest recipe as a starting shape, then specialize it. Every recipe al
 
 ## Stop-condition sentence templates
 
-Two patterns cover almost every loop. Default to one of them:
+Two patterns cover the *done*-signal. Default to one of them:
 
 - **Stop-when:** *"Stop when `<objective signal>`, progress stalls for N iterations, or the budget/ceiling is reached."*
 - **Continue-until:** *"Continue until no `<problem type>` remains, or after N iterations."*
 
-The signal must be something the agent reads from the environment — an exit code, a count reaching zero, a status flipping — never "until it looks right". And per the ralph `completion-promise` rule: **the agent may declare done only when the statement is unequivocally true; it must not fake completion to escape the loop.** Put that obligation in the prompt for self-paced loops.
+Then add a **separate early-stop line** — the escape hatches that abort-and-ask rather than declaring done:
+
+- **Stop-early:** *"Stop early and ask if: the same failure repeats twice, a step needs product judgment, or a permission/secret is missing."*
+
+Keeping *done* and *escape* apart is what stops a loop from either grinding forever on an unresolvable blocker or quietly declaring victory to escape one. The done-signal must be something the agent reads from the environment — an exit code, a count reaching zero, a status flipping — never "until it looks right". And per the ralph `completion-promise` rule: **the agent may declare done only when the statement is unequivocally true; it must not fake completion to escape the loop.** Put that obligation in the prompt for self-paced loops.
 
 ## Recipes (개발 맥락 few-shot)
 
@@ -33,6 +37,8 @@ Each is `input (거친 요구) → output`. The mode label tells you which `loop
 **6. dep-bump-check** — *"의존성 업데이트 있나 매일 한 번 확인"* · fixed-interval
 > `/loop 1d Check for outdated dependencies with the project's package manager. If everything is current, say so in one line. If updates exist, list them grouped by major/minor/patch with changelog links — but don't modify any lockfile or open a PR. Flag any with known advisories.`
 
+(For "keep working until a condition holds" with no interval — a backlog to drain, a migration to finish — that's a `/goal`, not a `/loop`; route to **goalcraft**.)
+
 ## Anti-patterns (catch these in the input and fix them)
 
 | Anti-pattern | Why it breaks | Fix |
@@ -43,3 +49,4 @@ Each is `input (거친 요구) → output`. The mode label tells you which `loop
 | Irreversible action on a timer | Fixed-interval push/deploy with no gate | Add a human gate, or make the tick report-only |
 | Subjective "better" judged once | One lucky iteration ends a quality loop (Goodhart) | Rubric + threshold, or repeated measurement before concluding |
 | Mega-loop (several jobs per tick) | Quality degrades, hard to verify | One focused job per iteration; split the rest into separate loops |
+| "Merge when done." | Removes the review boundary — self-merges unreviewed work | Keep the human gate: `merge only when CI is green and no change is requested; stop and ask otherwise` |
