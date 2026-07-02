@@ -78,5 +78,16 @@ Final report must include:
 - checks skipped, with the reason
 ```
 
+## Design TDD — test the design like code (for persistent projects)
+
+The screenshot critique above is a manual gate. For real multi-page projects, harden it into a loop.
+
+- **Tests before code.** Write the checks *before* implementing. If you write them after, the agent optimizes tests toward the code already in context and the gate is meaningless. The `design.md` (visual system source of truth) becomes the test source: every anti-pattern, color rule, spacing constraint, and type choice becomes a programmatic check.
+- **Three test kinds:** (1) **static** anti-pattern checks (grep/AST for banlist items — centered-only hero CTA, Inter/Geist, `transition: all`, gradient+glassmorphism, missing `prefers-reduced-motion`, images without width/height); (2) **visual regression** via Playwright screenshots (`toHaveScreenshot`); (3) helper/component tests.
+- **Pixel-diff TDD loop (optional tooling):** Vizzly Test CLI (`@vizzly-testing/cli`) runs a local dashboard, captures Playwright screenshots, and emits agent-readable JSON diff clusters (`vizzly context build --agent --json`) — each rejected diff becomes feedback for the next pass so the design converges to intent, not the agent's guess. Trust model: agent observes, human approves.
+- **Living external audit (optional):** run Vercel Labs' `web-design-guidelines` skill — a thin wrapper that fetches an actively-maintained rules doc at runtime (accessibility, focus-visible, `transition: all` ban, curly quotes, tabular-nums, explicit image dimensions, list virtualization…) and reports `file:line` findings. Because rules live upstream, they stay current without reinstalling. Compose it as an extra gate; don't hardcode a frozen copy.
+
+Prefer structured, machine-readable feedback (file:line, JSON diff clusters) over binary pass/fail — it's what lets the next iteration actually improve.
+
 ## Sources
-Playwright (visual comparisons, accessibility testing) · WCAG 2.2 target-size 2.5.5 · web.dev prefers-reduced-motion · self-critique / iterative-refinement research (Self-Refine, Reflexion). Full URLs in the accompanying research report.
+Playwright (visual comparisons `toHaveScreenshot`, accessibility testing) · WCAG 2.2 target-size 2.5.5 · web.dev prefers-reduced-motion · vercel-labs/web-interface-guidelines + agent-skills (`web-design-guidelines`) · vizzly-testing/cli · self-critique / iterative-refinement research (Self-Refine, Reflexion). Full URLs in the accompanying research trail.

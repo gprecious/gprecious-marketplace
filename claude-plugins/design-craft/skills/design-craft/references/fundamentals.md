@@ -23,6 +23,7 @@ Open during Gate 1 (deciding tokens) and Gate 4 (building). Every rule is a chec
 | Palette size | surfaces 2–4, text 2–3, primary 1, secondary 0–1, semantic 4. Outside marketing, **one** saturated hue leads. |
 | 60-30-10 | 60% neutral/surface, 30% secondary, 10% accent. Accent only on CTA / active / current / critical. |
 | Harmony | calm/product: analogous or mono + accent. marketing: complementary only on the CTA. dashboard: semantic colors must not clash with data meaning. |
+| Color space | Define colors in **OKLCH** (perceptually-uniform Lightness·Chroma·Hue), not raw hex/HSL: even brightness across hues, predictable contrast, and smoother gradients (hex gradients often band). Ship as CSS vars. |
 | Dark mode | Redesign, don't invert. Dark surface ~`#0b0d10` with 2–3 elevation steps; lower accent saturation vs light; avoid pure-white body text. |
 | State color | success/warning/danger/info never by color alone — pair icon/text/label. |
 | Fail if | purple→blue gradient as default hero/CTA; gray text on colored bg; every CTA a gradient; semantic colors used as brand decoration. |
@@ -52,6 +53,7 @@ Open during Gate 1 (deciding tokens) and Gate 4 (building). Every rule is a chec
 | Item | Rule |
 |---|---|
 | Grid | desktop marketing: 12-col or asymmetric editorial. app/dashboard: nav / workspace / inspector regions first. mobile: single column + near-thumb primary action. |
+| Symmetry | Choose deliberately: **symmetric** (even grid, balanced → professional, formal) vs **asymmetric** (negative space, room to experiment → artistic, "lets the design breathe"). Pick by product character; don't default to centered symmetry. |
 | Whitespace | structure, not decoration. Edge padding: mobile 16–20, tablet 24–32, desktop 40–80. Long body max-width ~65ch. |
 | Alignment | same functional group shares an x-axis; ≤ 2 floating alignments; numbers/money right-aligned / tabular-nums. |
 | Cards | only for repeated items, selectable entities, or modal/tool frames. **Never** wrap a hero, a whole section, or a plain text block in a card. |

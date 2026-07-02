@@ -56,10 +56,10 @@ JOB: the single job of this screen
 VISUAL THESIS: what the first viewport proves in one sentence
 COMPONENT SOURCE: existing design system / library, or "new"
 TOKENS:
-  color:   4–6 named hex values (roles, not random)
-  type:    display / body / utility roles (2+ real typefaces, chosen not defaulted)
-  layout:  one sentence + optional ASCII wireframe
-  signature: the ONE element this screen is remembered by
+  color:   4–6 named roles in OKLCH (perceptually uniform, smoother gradients), not raw hex
+  type:    display / body / utility roles (2+ real typefaces, chosen not defaulted — never Inter/Geist by reflex)
+  layout:  symmetric vs asymmetric (by product character) + one sentence / ASCII wireframe
+  signature: the ONE element this screen is remembered by (if GPU/3D-driven → references/gpu-visuals.md)
 ANTI-DEFAULTS: 3 specific clichés this brief must avoid
 ```
 
@@ -113,10 +113,20 @@ Guard against **over-correction**: weird/maximalist/glassy/luxury-editorial esca
 Keep `references/fundamentals.md` open during Gates 1 and 4. The non-negotiable numbers:
 
 - **Type**: body ≥16px (dense UI ≥14px); line length 45–75ch (never >90ch, CJK ≤40em); body line-height 1.45–1.65; display vs body are different, justified faces; no global negative letter-spacing.
-- **Color**: text contrast ≥4.5:1 (large ≥3:1; AAA target 7:1); UI borders/focus/icons ≥3:1; 60-30-10, one saturated accent reserved for action/status; dark mode is redesigned, not inverted; color is never the only carrier of state.
+- **Color**: define in **OKLCH** (perceptually uniform); text contrast ≥4.5:1 (large ≥3:1; AAA target 7:1); UI borders/focus/icons ≥3:1; 60-30-10, one saturated accent reserved for action/status; dark mode is redesigned, not inverted; color is never the only carrier of state.
 - **Spacing/layout**: 4/8 scale (0,2,4,8,12,16,24,32,48,64,96); intra-group spacing ≤ ½ inter-group; cards only for repeated entities / choices / modals / tool frames — never wrap a hero or a page section in a card; no horizontal scroll at 360px.
 - **Hierarchy**: in 5 seconds a screenshot answers "what is it, for whom, what next?"; emphasis order = position/size > spacing > weight > color > motion; one job + one headline per section; controlled CTA count.
 - **Motion**: transform/opacity only; durations micro 50–100 / short 150–250 / medium 250–400ms; different easing for enter/exit/move; `prefers-reduced-motion` removes non-essential motion; every motion explains hierarchy, state, causality, or story.
+
+---
+
+## Scaling up: one page → system → test
+
+A single screen is Gates 1–5. Beyond that, three levels separate custom from templated:
+
+- **Page** — the six gates above, for one surface.
+- **System** — for multi-page work, keep a persistent **`design.md`** (the visual system: OKLCH palette, type roles, spacing/radius/motion tokens, anti-patterns) *separate from* project context (`CLAUDE.md` / `AGENTS.md`). Any agent should grasp the visual system from `design.md` alone. Put a line at its top telling agents to append newly-decided values, so it compounds each session. This is what stops page 2 (dashboard/auth) from drifting off the landing page's style.
+- **Test** — turn `design.md`'s anti-patterns into programmatic checks and run them *before* building (see `references/verification.md` → Design TDD). Structured, machine-readable feedback beats "looks good."
 
 ---
 
@@ -140,4 +150,5 @@ The core workflow above is host-neutral markdown — it runs identically in both
 
 - `references/fundamentals.md` — typography/color/spacing/hierarchy/layout/motion as checkable rules + numbers, and the per-surface playbook. Open at Gate 1 and Gate 4.
 - `references/banlist.md` — the extended AI-slop catalog (7 categories) + escape techniques + over-correction guard. Open at Gate 3.
-- `references/verification.md` — browser render gates, the screenshot self-critique prompt, the quality-gate table, and the rework loop. Open at Gate 5.
+- `references/verification.md` — browser render gates, the screenshot self-critique prompt, the quality-gate table, the rework loop, and **Design TDD** (anti-patterns→tests, Playwright/Vizzly, living external audit). Open at Gate 5.
+- `references/gpu-visuals.md` — WebGL / shader / 3D (R3F + Next.js) as a deliberate **signature**: when to use, the 2–3 color restraint that makes 3D carry emotion, the Lenis+GSAP scroll-camera pattern, and non-negotiable perf / reduced-motion / SEO guardrails (+ "WebGL slop" guard). Open at Gate 1/4 when the signature is GPU-driven.

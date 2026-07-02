@@ -27,11 +27,12 @@
 
 ```
 skills/design-craft/
-├── SKILL.md                    # 6 게이트 워크플로우 (host-neutral) + Claude/Codex 발동법
+├── SKILL.md                    # 6 게이트 + page→system(design.md)→test 스케일업 + Claude/Codex 발동법
 └── references/
-    ├── fundamentals.md         # 타이포·색·스페이싱·위계·레이아웃·모션 규칙 + surface 플레이북
+    ├── fundamentals.md         # 타이포·색(OKLCH)·스페이싱·위계·레이아웃(대칭/비대칭)·모션 규칙 + surface 플레이북
     ├── banlist.md              # AI-slop 카탈로그 7종 + 탈출 기법 + 과교정 가드
-    └── verification.md         # 브라우저 게이트 + screenshot critic 프롬프트 + 품질표 + 리워크 루프
+    ├── verification.md         # 브라우저 게이트 + screenshot critic + 품질표 + 리워크 루프 + Design TDD(Playwright/Vizzly·라이브 규칙 감사)
+    └── gpu-visuals.md          # WebGL/shader/3D(R3F+Next.js) signature 모듈 — 2색 절제·Lenis+GSAP·성능/reduced-motion/SEO 가드 + WebGL slop 가드
 ```
 
 progressive disclosure — 메인 SKILL.md는 워크플로우만, 딥한 표는 게이트가 지시할 때 references를 연다.
